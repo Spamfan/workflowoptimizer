@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Workflow Optimizer (WFO)</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body class="wfo-body">
+
+  <!-- Top App Navigation & Status Bar -->
+  <header class="wfo-app-bar">
+    <div class="wfo-brand-group">
+      <div class="wfo-logo-icon">⚡</div>
+      <div class="wfo-brand-titles">
+        <h1 class="wfo-app-title">Workflow Optimizer</h1>
+        <span class="wfo-app-version">v0.1.0</span>
+      </div>
+    </div>
+
+    <div class="wfo-header-actions">
+      <div id="wfo-status-badge" class="wfo-badge wfo-badge-synced">
+        <span class="wfo-status-dot"></span>
+        <span class="wfo-status-text">Local Ready</span>
+      </div>
+      <button id="btn-settings" class="wfo-btn wfo-btn-pill wfo-btn-tonal" title="Store Settings & Pairing">
+        ⚙️ Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Responsive Decoupled Workspace Grid -->
+  <main class="wfo-workspace-grid">
+    <!-- Slot: Prints Hub (Active Module) -->
+    <section id="slot-prints" class="wfo-slot-container"></section>
+
+    <!-- Slot: Optimizer Engine (Sprint 2 Placeholder) -->
+    <section id="slot-optimizer" class="wfo-slot-container"></section>
+
+    <!-- Slot: IRIS Scanner (Sprint 3 Placeholder) -->
+    <section id="slot-scanner" class="wfo-slot-container"></section>
+
+    <!-- Slot: Installment Manager (Sprint 4 Placeholder) -->
+    <section id="slot-im" class="wfo-slot-container"></section>
+  </main>
+
+  <!-- Non-blocking Toast Feedback Anchor -->
+  <div id="wfo-toast-container" class="wfo-toast-container" aria-live="polite"></div>
+
+  <!-- Off-Screen Sandbox for Direct Zero-Download Printing -->
+  <iframe id="wfo-print-frame" class="wfo-print-sandbox" aria-hidden="true" tabindex="-1"></iframe>
+
+</body>
+</html>
