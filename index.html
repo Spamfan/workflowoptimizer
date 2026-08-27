@@ -140,9 +140,20 @@
     #login-view {
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       flex: 1;
-      padding-bottom: 80px;
+      padding-top: 8vh;
+      padding-bottom: 40px;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    .shake {
+      animation: shake 0.3s ease-in-out;
     }
 
     .login-card {
@@ -347,16 +358,16 @@
         <form id="login-form">
           <div class="form-group">
             <label for="store-number">Store Number:</label>
-            <input type="text" id="store-number" inputmode="numeric" required autocomplete="off" />
+            <input type="text" id="store-number" inputmode="numeric" maxlength="4" required autocomplete="off" />
           </div>
           <div class="form-group">
             <label for="store-passcode">Store Passcode:</label>
-            <input type="password" id="store-passcode" required autocomplete="off" />
+            <input type="password" id="store-passcode" inputmode="numeric" maxlength="6" required autocomplete="off" />
           </div>
           <div class="login-footer">
             <button type="button" id="terms-open-btn" class="link-btn">Terms of use</button>
             <button type="submit" id="login-btn" class="btn-primary">
-              <span id="login-btn-text">Enter</span>
+              <span id="login-btn-text">Log in</span>
               <span id="login-spinner" class="spinner hidden"></span>
             </button>
           </div>
@@ -403,10 +414,7 @@
   <div id="terms-modal" class="modal-backdrop">
     <div class="modal-box">
       <h3>Terms of Use</h3>
-      <p>
-        Workflow Optimizer is an unofficial, independent workflow tool developed to streamline daily store tasks for WSP employees.
-        All store configurations remain within your session.
-      </p>
+      <p>Terms of use hasn't been made yet.</p>
       <div class="modal-footer">
         <button id="terms-close-btn" class="btn-primary">Close</button>
       </div>
@@ -415,7 +423,9 @@
 
   <!-- VANILLA JS ENGINE -->
   <script>
-    /* Workflow Optimizer v0.0.1 */
+    /* Workflow Optimizer v0.0.2 */
+    const TEST_PIN = '102030';
+
     const State = {
       storeNumber: '',
       storePasscode: '',
@@ -423,6 +433,7 @@
     };
 
     // DOM Elements
+    const loginCard = document.querySelector('.login-card');
     const loginView = document.getElementById('login-view');
     const dashboardView = document.getElementById('dashboard-view');
     const loginForm = document.getElementById('login-form');
@@ -439,15 +450,39 @@
     const termsOpenBtn = document.getElementById('terms-open-btn');
     const termsCloseBtn = document.getElementById('terms-close-btn');
 
-    // Login Handler
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Strict Numeric Input Filter & Auto-Advance
+    storeNumberInput.addEventListener('input', () => {
+      storeNumberInput.value = storeNumberInput.value.replace(/\D/g, '').slice(0, 4);
+      if (storeNumberInput.value.length === 4) {
+        storePasscodeInput.focus();
+      }
+    });
+
+    storePasscodeInput.addEventListener('input', () => {
+      storePasscodeInput.value = storePasscodeInput.value.replace(/\D/g, '').slice(0, 6);
+      if (storePasscodeInput.value.length === 6) {
+        attemptLogin();
+      }
+    });
+
+    // Login Execution
+    function attemptLogin() {
       const num = storeNumberInput.value.trim();
       const pass = storePasscodeInput.value.trim();
 
-      if (!num || !pass) return;
+      if (num.length < 4 || pass.length < 6) return;
 
-      // Snappy micro-interaction state
+      if (pass !== TEST_PIN) {
+        // Invalid PIN Feedback
+        loginCard.classList.remove('shake');
+        void loginCard.offsetWidth; // Force reflow
+        loginCard.classList.add('shake');
+        storePasscodeInput.value = '';
+        storePasscodeInput.focus();
+        return;
+      }
+
+      // Valid PIN
       loginBtnText.textContent = 'Verifying...';
       loginSpinner.classList.remove('hidden');
 
@@ -457,11 +492,16 @@
         State.isLoggedIn = true;
 
         loginSpinner.classList.add('hidden');
-        loginBtnText.textContent = 'Enter';
+        loginBtnText.textContent = 'Log in';
 
         loginView.style.display = 'none';
         dashboardView.style.display = 'block';
       }, 200);
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      attemptLogin();
     });
 
     // Print Button Handler
@@ -475,11 +515,24 @@
       }, 500);
     });
 
-    // Terms Modal Handlers
+    // Universal Modal Dismiss Handlers
+    function closeAllModals() {
+      document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+    }
+
     termsOpenBtn.addEventListener('click', () => termsModal.classList.add('open'));
-    termsCloseBtn.addEventListener('click', () => termsModal.classList.remove('open'));
-    termsModal.addEventListener('click', (e) => {
-      if (e.target === termsModal) termsModal.classList.remove('open');
+    termsCloseBtn.addEventListener('click', closeAllModals);
+
+    // Click outside backdrop
+    document.querySelectorAll('.modal-backdrop').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeAllModals();
+      });
+    });
+
+    // Escape Key Listener
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAllModals();
     });
   </script>
 </body>
