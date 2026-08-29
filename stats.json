@@ -1,4 +1,5 @@
 {
+  "ping": "pong",
   "devices": {
     "a12": {
       "name": "Galaxy A12",
