@@ -90,6 +90,15 @@
       font-weight: 600;
       margin-bottom: 1.5rem;
     }
+    .version-badge {
+      font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
     .status-success {
       background-color: rgba(34, 197, 94, 0.15);
       color: var(--success);
@@ -123,8 +132,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>WFO Network Probe</h1>
-    <p class="sub">Testing live connection to <code>stats.json</code></p>
+    <h1>WFO Network Probe <span class="version-badge">v0.1</span></h1>
+    <p class="sub">Testing live connection via <code>GitHub REST API</code></p>
 
     <div id="status" class="status-badge status-success">Connecting...</div>
 
@@ -166,19 +175,33 @@
       const startTime = performance.now();
 
       try {
-        // Cache-busting parameter (?t=...) ensures fresh data when testing edits on GitHub
-        const response = await fetch('./stats.json?t=' + Date.now());
+        let data;
+        let transport = 'GitHub REST API';
 
-        if (!response.ok) {
-          throw new Error('HTTP ' + response.status);
+        // 1. Try instant GitHub REST API first (0-delay updates)
+        try {
+          const apiRes = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
+            headers: { 'Accept': 'application/vnd.github.v3+json' },
+            cache: 'no-store'
+          });
+          if (!apiRes.ok) throw new Error('API ' + apiRes.status);
+          const rawApiData = await apiRes.json();
+          // Decode Base64 content from GitHub API
+          const decodedJsonString = decodeURIComponent(escape(atob(rawApiData.content.replace(/\s/g, ''))));
+          data = JSON.parse(decodedJsonString);
+        } catch (apiErr) {
+          // 2. Fallback to local ./stats.json if API is restricted or rate-limited
+          transport = 'Local Fallback';
+          const localRes = await fetch('./stats.json?t=' + Date.now());
+          if (!localRes.ok) throw new Error('Local ' + localRes.status);
+          data = await localRes.json();
         }
 
-        const data = await response.json();
         const endTime = performance.now();
         const duration = (endTime - startTime).toFixed(1);
 
         statusEl.className = 'status-badge status-success';
-        statusEl.textContent = 'Connected (HTTP 200 OK)';
+        statusEl.textContent = `Connected via ${transport} (HTTP 200 OK)`;
 
         pingEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
         latencyEl.textContent = duration + ' ms';
