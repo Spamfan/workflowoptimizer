@@ -3,229 +3,574 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WFO - Test Probe</title>
+  <title>Workflow Optimizer</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #38bdf8;
-      --success: #22c55e;
-      --danger: #ef4444;
-      --border: #334155;
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-main: #1c1e21;
+      --text-sub: #606770;
+      --primary: #1877f2;
+      --primary-hover: #166fe5;
+      --danger: #d93025;
+      --danger-hover: #b3241c;
+      --border: #dadddf;
     }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
+
     body {
-      background-color: var(--bg);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background-color: var(--bg-color);
+      color: var(--text-main);
       min-height: 100vh;
-      padding: 1rem;
-    }
-    .card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 2rem;
-      max-width: 480px;
-      width: 100%;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-    h1 {
-      font-size: 1.35rem;
-      margin-bottom: 0.5rem;
-      color: var(--primary);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
+      position: relative;
     }
-    p.sub {
+
+    /* --- TOP BAR CONTROLS --- */
+    #top-left-controls {
+      position: fixed;
+      top: 14px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    #version-text {
       font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-    }
-    .metric-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .metric {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-    }
-    .metric-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 0.25rem;
-    }
-    .metric-value {
-      font-size: 1.25rem;
       font-weight: 700;
-      color: var(--text);
-      word-break: break-all;
+      color: var(--text-sub);
+      user-select: none;
     }
-    .metric-value.highlight {
-      color: var(--primary);
+
+    #top-right-hub {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      z-index: 100;
     }
-    .status-badge {
+
+    /* --- MATERIAL 3 PILL BUTTONS --- */
+    .pill-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.25rem 0.6rem;
+      justify-content: center;
+      gap: 6px;
       border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      margin-bottom: 1.5rem;
-    }
-    .version-badge {
-      font-size: 0.75rem;
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--primary);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      padding: 0.15rem 0.45rem;
-      border-radius: 6px;
-      font-weight: 600;
-    }
-    .status-success {
-      background-color: rgba(34, 197, 94, 0.15);
-      color: var(--success);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-    .status-error {
-      background-color: rgba(239, 68, 68, 0.15);
-      color: var(--danger);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    button {
-      width: 100%;
-      background-color: var(--primary);
-      color: #0f172a;
-      border: none;
-      border-radius: 8px;
-      padding: 0.75rem;
-      font-size: 0.95rem;
+      padding: 8px 18px;
+      font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      text-decoration: none;
+      transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+      border: 1px solid transparent;
+      user-select: none;
     }
-    button:hover {
-      opacity: 0.9;
+
+    .pill-btn:active {
+      transform: scale(0.98);
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+
+    .btn-hub {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-hub:hover {
+      background-color: #e4e6eb;
+    }
+
+    .btn-hub svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn-logout {
+      background-color: var(--danger);
+      color: #ffffff;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-logout:hover {
+      background-color: var(--danger-hover);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--text-sub);
+      border-color: var(--border);
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+    }
+
+    .btn-secondary:hover {
+      background-color: #e4e6eb;
+      color: var(--text-main);
+    }
+
+    /* --- GATEKEEPER / LOGIN VIEW --- */
+    #login-view {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 20px;
+    }
+
+    .login-card {
+      background-color: var(--card-bg);
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+
+    .login-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      color: var(--text-main);
+    }
+
+    .login-desc {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-sub);
+      margin-bottom: 24px;
+    }
+
+    #pin-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1.2rem;
+      text-align: center;
+      border: 2px solid var(--primary);
+      border-radius: 9999px;
+      margin-bottom: 16px;
+      letter-spacing: 4px;
+      outline: none;
+      background-color: #ffffff;
+    }
+
+    #pin-error {
+      color: var(--danger);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* --- DASHBOARD VIEW --- */
+    #dashboard-view {
+      width: 100%;
+      max-width: 1100px;
+      padding: 80px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .header-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .main-title {
+      font-size: 2.75rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .main-subtitle {
+      font-size: 1rem;
+      color: var(--text-sub);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .main-title {
+        font-size: 2rem;
+      }
+    }
+
+    /* --- DASHBOARD CARDS --- */
+    .dash-card {
+      background-color: var(--card-bg);
+      border-radius: 18px;
+      padding: 24px;
+      min-height: 240px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .icon-btn {
+      background: #f0f2f5;
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .icon-btn:hover {
+      background-color: #e4e6eb;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .ping-display-box {
+      background-color: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ping-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .ping-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .ping-status {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .placeholder-text {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+      font-style: italic;
+    }
+
+    /* --- ANIMATIONS --- */
+    .spinning {
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* --- MODAL --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>WFO Network Probe <span class="version-badge">v0.1</span></h1>
-    <p class="sub">Testing live connection via <code>GitHub REST API</code></p>
 
-    <div id="status" class="status-badge status-success">Connecting...</div>
+  <!-- Top-Left Version & Logout -->
+  <div id="top-left-controls">
+    <div id="version-text"></div>
+    <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
+  </div>
 
-    <div class="metric-grid">
-      <div class="metric">
-        <div class="metric-label">Ping Response</div>
-        <div id="ping-val" class="metric-value highlight">--</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Round-Trip Latency</div>
-        <div id="latency-val" class="metric-value">-- ms</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Devices Loaded</div>
-        <div id="devices-val" class="metric-value">--</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Colors Loaded</div>
-        <div id="colors-val" class="metric-value">--</div>
+  <!-- Persistent Top-Right Hub Link -->
+  <div id="top-right-hub">
+    <a href="https://spamfan.github.io" target="_self" class="pill-btn btn-hub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>spamfan.github.io</span>
+    </a>
+  </div>
+
+  <!-- GATEKEEPER / LOGIN VIEW -->
+  <div id="login-view">
+    <div class="login-card">
+      <h2 class="login-title">PROPRIETARY CONTENT</h2>
+      <p class="login-desc">
+        Unauthorized access and/or sharing is forbidden. To gain access, agree to these terms by inputting the passcode or pin given to you by the device administrator.
+      </p>
+      <input type="tel" id="pin-input" placeholder="Enter PIN" style="-webkit-text-security: disc;" autofocus>
+      <div id="pin-error">Incorrect PIN</div>
+      <div class="btn-group">
+        <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
+        <button id="btn-terms" class="pill-btn btn-secondary">Terms of Use</button>
       </div>
     </div>
+  </div>
 
-    <button id="test-btn" onclick="testConnection()">Re-test Latency</button>
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboard-view" style="display: none;">
+    <div class="header-section">
+      <h1 class="main-title">workflow optimizer</h1>
+      <p class="main-subtitle">an unofficial resource for WSP employees</p>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Card 1: Print inventory -->
+      <div class="dash-card">
+        <div class="card-header">
+          <h2 class="card-title">Print inventory</h2>
+          <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
+            <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="ping-display-box">
+            <span class="ping-label">Live Ping Value:</span>
+            <span id="ping-value" class="ping-value">--</span>
+          </div>
+          <div id="ping-status" class="ping-status">Ready</div>
+        </div>
+      </div>
+
+      <!-- Card 2: Other -->
+      <div class="dash-card">
+        <div class="card-header">
+          <h2 class="card-title">Other</h2>
+        </div>
+        <div class="card-body">
+          <p class="placeholder-text">Future tools and document printing placeholder...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMS MODAL -->
+  <div id="terms-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <p>Terms of use haven't been made yet.</p>
+      <div class="modal-actions">
+        <button id="btn-terms-close" class="pill-btn btn-primary" style="width: auto;">Okay</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    async function testConnection() {
-      const btn = document.getElementById('test-btn');
-      const statusEl = document.getElementById('status');
-      const pingEl = document.getElementById('ping-val');
-      const latencyEl = document.getElementById('latency-val');
-      const devicesEl = document.getElementById('devices-val');
-      const colorsEl = document.getElementById('colors-val');
+    // --- APP VERSION (Single Point of Truth) ---
+    const APP_VERSION = "v0.0.3";
+    document.getElementById('version-text').textContent = APP_VERSION;
 
-      btn.disabled = true;
-      statusEl.className = 'status-badge';
-      statusEl.textContent = 'Fetching...';
+    // --- GATEKEEPER & SESSION ---
+    const LEGACY_PIN = atob('MTAyMDMw'); // "102030"
+    const DYNAMIC_SUFFIX = atob('MTAyMA=='); // "1020"
 
+    const pinInput = document.getElementById('pin-input');
+    const pinError = document.getElementById('pin-error');
+    const btnEnter = document.getElementById('btn-enter');
+    const btnLogout = document.getElementById('btn-logout');
+    const loginView = document.getElementById('login-view');
+    const dashboardView = document.getElementById('dashboard-view');
+
+    const isValidPin = (val) => {
+      return val === LEGACY_PIN || (val.length === 8 && val.endsWith(DYNAMIC_SUFFIX));
+    };
+
+    function unlockApp() {
+      loginView.style.display = 'none';
+      dashboardView.style.display = 'flex';
+      btnLogout.style.display = 'inline-flex';
+      fetchPing();
+    }
+
+    function lockApp() {
+      dashboardView.style.display = 'none';
+      btnLogout.style.display = 'none';
+      loginView.style.display = 'flex';
+      pinInput.value = '';
+      pinError.style.display = 'none';
+      pinInput.focus();
+    }
+
+    function handlePinSubmit() {
+      if (isValidPin(pinInput.value.trim())) {
+        unlockApp();
+      } else {
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+
+    btnEnter.addEventListener('click', handlePinSubmit);
+    btnLogout.addEventListener('click', lockApp);
+
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handlePinSubmit();
+    });
+
+    pinInput.addEventListener('input', (e) => {
+      if (isValidPin(e.target.value.trim())) {
+        e.target.blur();
+        unlockApp();
+      }
+    });
+
+    // --- TERMS MODAL LOGIC ---
+    const btnTerms = document.getElementById('btn-terms');
+    const termsModal = document.getElementById('terms-modal');
+    const btnTermsClose = document.getElementById('btn-terms-close');
+
+    btnTerms.addEventListener('click', () => { termsModal.style.display = 'flex'; });
+    btnTermsClose.addEventListener('click', () => { termsModal.style.display = 'none'; });
+    termsModal.addEventListener('click', (e) => {
+      if (e.target === termsModal) termsModal.style.display = 'none';
+    });
+
+    // --- LIVE PING FETCH ENGINE ---
+    const btnRefresh = document.getElementById('btn-refresh-ping');
+    const refreshSvg = document.getElementById('refresh-svg');
+    const pingValueEl = document.getElementById('ping-value');
+    const pingStatusEl = document.getElementById('ping-status');
+
+    async function fetchPing() {
+      refreshSvg.classList.add('spinning');
+      pingStatusEl.textContent = 'Connecting...';
       const startTime = performance.now();
 
       try {
         let data;
         let transport = 'GitHub REST API';
 
-        // 1. Try instant GitHub REST API first (0-delay updates)
         try {
           const apiRes = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
             headers: { 'Accept': 'application/vnd.github.v3+json' },
             cache: 'no-store'
           });
           if (!apiRes.ok) throw new Error('API ' + apiRes.status);
-          const rawApiData = await apiRes.json();
-          // Decode Base64 content from GitHub API
-          const decodedJsonString = decodeURIComponent(escape(atob(rawApiData.content.replace(/\s/g, ''))));
-          data = JSON.parse(decodedJsonString);
+          const rawApi = await apiRes.json();
+          const decodedStr = decodeURIComponent(escape(atob(rawApi.content.replace(/\s/g, ''))));
+          data = JSON.parse(decodedStr);
         } catch (apiErr) {
-          // 2. Fallback to local ./stats.json if API is restricted or rate-limited
           transport = 'Local Fallback';
           const localRes = await fetch('./stats.json?t=' + Date.now());
           if (!localRes.ok) throw new Error('Local ' + localRes.status);
           data = await localRes.json();
         }
 
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(1);
-
-        statusEl.className = 'status-badge status-success';
-        statusEl.textContent = `Connected via ${transport} (HTTP 200 OK)`;
-
-        pingEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
-        latencyEl.textContent = duration + ' ms';
-        devicesEl.textContent = data.devices ? Object.keys(data.devices).length : 0;
-        colorsEl.textContent = data.colors ? Object.keys(data.colors).length : 0;
+        const duration = (performance.now() - startTime).toFixed(1);
+        pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
+        pingStatusEl.textContent = `Live via ${transport} (${duration} ms)`;
 
       } catch (err) {
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(1);
-
-        statusEl.className = 'status-badge status-error';
-        statusEl.textContent = 'Failed: ' + err.message;
-
-        pingEl.textContent = 'Error';
-        latencyEl.textContent = duration + ' ms';
-        devicesEl.textContent = '0';
-        colorsEl.textContent = '0';
+        pingValueEl.textContent = 'Error';
+        pingStatusEl.textContent = 'Fetch failed: ' + err.message;
       } finally {
-        btn.disabled = false;
+        setTimeout(() => {
+          refreshSvg.classList.remove('spinning');
+        }, 300);
       }
     }
 
-    // Run automatically on initial load
-    testConnection();
+    btnRefresh.addEventListener('click', fetchPing);
   </script>
 </body>
 </html>
