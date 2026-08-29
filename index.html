@@ -1,539 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Workflow Optimizer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WFO - Test Probe</title>
   <style>
-    /* --- CSS RESET & BASE VARIABLES --- */
     :root {
-      --wm-blue: #0071dc;
-      --wm-blue-hover: #005bb5;
-      --wm-blue-active: #00468c;
-      --bg-color: #f2f4f8;
-      --card-bg: #ffffff;
-      --text-main: #1a1a1a;
-      --text-sub: #4a4a4a;
-      --border-color: #d1d5db;
-      --radius: 12px;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: #334155;
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      -webkit-tap-highlight-color: transparent;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 24px 32px;
-      touch-action: manipulation;
+      padding: 1rem;
     }
-
-    /* --- HEADER --- */
-    .app-header {
-      margin-bottom: 32px;
-      user-select: none;
-    }
-
-    .app-title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: var(--text-main);
-      line-height: 1.1;
-      letter-spacing: -0.5px;
-    }
-
-    .app-subtitle {
-      font-size: 1.1rem;
-      font-weight: 400;
-      color: var(--text-sub);
-      margin-top: 6px;
-    }
-
-    /* --- VIEWPORT CONTAINER --- */
-    #app-viewport {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* --- CARDS & COMMON UI --- */
     .card {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow);
-      padding: 28px;
-    }
-
-    .card-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: var(--text-main);
-    }
-
-    /* --- BUTTONS & TACTILE FEEDBACK --- */
-    .btn-primary {
-      background-color: var(--wm-blue);
-      color: #ffffff;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 28px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: background-color 0.15s ease, transform 0.08s ease;
-      user-select: none;
-    }
-
-    .btn-primary:hover {
-      background-color: var(--wm-blue-hover);
-    }
-
-    .btn-primary:active {
-      background-color: var(--wm-blue-active);
-      transform: scale(0.97);
-    }
-
-    .link-btn {
-      background: none;
-      border: none;
-      color: var(--wm-blue);
-      font-size: 0.95rem;
-      text-decoration: underline;
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    .link-btn:hover {
-      color: var(--wm-blue-hover);
-    }
-
-    /* --- SPINNER --- */
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-top-color: #ffffff;
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* --- VIEW 1: LOGIN --- */
-    #login-view {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      flex: 1;
-      padding-top: 8vh;
-      padding-bottom: 40px;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      20%, 60% { transform: translateX(-6px); }
-      40%, 80% { transform: translateX(6px); }
-    }
-
-    .shake {
-      animation: shake 0.3s ease-in-out;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 440px;
-    }
-
-    .login-card .card-title {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .form-group {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
-      gap: 16px;
-    }
-
-    .form-group label {
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: var(--text-main);
-      white-space: nowrap;
-    }
-
-    .form-group input {
-      width: 160px;
-      padding: 10px 12px;
-      font-size: 1.05rem;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .form-group input:focus {
-      border-color: var(--wm-blue);
-      box-shadow: 0 0 0 3px rgba(0, 113, 220, 0.15);
-    }
-
-    .login-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 28px;
-    }
-
-    /* --- VIEW 2: DASHBOARD --- */
-    #dashboard-view {
-      display: none;
-      animation: fadeIn 0.2s ease-out forwards;
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 440px));
-      gap: 28px;
-      align-items: start;
-    }
-
-    .dashboard-card {
-      min-height: 240px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .dashboard-card-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .card-footer-right {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
-
-    .empty-state {
-      font-size: 1.25rem;
-      color: var(--text-main);
-    }
-
-    /* --- SKELETON LOADERS --- */
-    .skeleton-box {
-      background: linear-gradient(90deg, #e8ecf1 25%, #f4f6f9 50%, #e8ecf1 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.2s infinite ease-in-out;
-      border-radius: 4px;
-      height: 18px;
-      margin-bottom: 10px;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    /* --- MODAL --- */
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease;
-      padding: 16px;
-    }
-
-    .modal-backdrop.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-box {
-      background: var(--card-bg);
-      border-radius: var(--radius);
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
       max-width: 480px;
       width: 100%;
-      padding: 24px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
-
-    .modal-box h3 {
-      font-size: 1.3rem;
-      margin-bottom: 12px;
-    }
-
-    .modal-box p {
-      color: var(--text-sub);
-      line-height: 1.5;
-      font-size: 0.95rem;
-      margin-bottom: 20px;
-    }
-
-    .modal-footer {
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      gap: 0.5rem;
     }
-
-    /* --- UTILITIES --- */
-    .hidden {
-      display: none !important;
+    p.sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
-
-    /* --- MOBILE BREAKPOINT --- */
-    @media (max-width: 600px) {
-      body {
-        padding: 16px;
-      }
-      .app-title {
-        font-size: 1.85rem;
-      }
-      .app-subtitle {
-        font-size: 0.95rem;
-      }
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
-      .form-group {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-      }
-      .form-group input {
-        width: 100%;
-      }
+    .metric {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .metric-value.highlight {
+      color: var(--primary);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .status-success {
+      background-color: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .status-error {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    button {
+      width: 100%;
+      background-color: var(--primary);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
+  <div class="card">
+    <h1>WFO Network Probe</h1>
+    <p class="sub">Testing live connection to <code>stats.json</code></p>
 
-  <!-- HEADER -->
-  <header class="app-header">
-    <h1 class="app-title">Workflow optimizer</h1>
-    <p class="app-subtitle">An unofficial resource for WSP employees.</p>
-  </header>
+    <div id="status" class="status-badge status-success">Connecting...</div>
 
-  <!-- MAIN APP VIEWPORT -->
-  <main id="app-viewport">
-
-    <!-- VIEW 1: LOGIN CARD -->
-    <section id="login-view">
-      <div class="card login-card">
-        <h2 class="card-title">Login</h2>
-        <form id="login-form">
-          <div class="form-group">
-            <label for="store-number">Store Number:</label>
-            <input type="text" id="store-number" inputmode="numeric" maxlength="4" required autocomplete="off" />
-          </div>
-          <div class="form-group">
-            <label for="store-passcode">Store Passcode:</label>
-            <input type="password" id="store-passcode" inputmode="numeric" maxlength="6" required autocomplete="off" />
-          </div>
-          <div class="login-footer">
-            <button type="button" id="terms-open-btn" class="link-btn">Terms of use</button>
-            <button type="submit" id="login-btn" class="btn-primary">
-              <span id="login-btn-text">Log in</span>
-              <span id="login-spinner" class="spinner hidden"></span>
-            </button>
-          </div>
-        </form>
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="metric-label">Ping Response</div>
+        <div id="ping-val" class="metric-value highlight">--</div>
       </div>
-    </section>
-
-    <!-- VIEW 2: DASHBOARD -->
-    <section id="dashboard-view">
-      <div class="dashboard-grid">
-        
-        <!-- CARD 1: PRINT INVENTORY -->
-        <div class="card dashboard-card">
-          <h2 class="card-title">Print inventory</h2>
-          <div class="dashboard-card-body">
-            <div id="inv-skeleton" class="hidden">
-              <div class="skeleton-box" style="width: 70%;"></div>
-              <div class="skeleton-box" style="width: 45%;"></div>
-            </div>
-            <div id="inv-content"></div>
-          </div>
-          <div class="card-footer-right">
-            <button id="print-now-btn" class="btn-primary">
-              <span id="print-btn-text">Print now</span>
-              <span id="print-spinner" class="spinner hidden"></span>
-            </button>
-          </div>
-        </div>
-
-        <!-- CARD 2: PRINT A DOCUMENT -->
-        <div class="card dashboard-card">
-          <h2 class="card-title">Print a document</h2>
-          <div class="dashboard-card-body">
-            <p class="empty-state">None available.</p>
-          </div>
-        </div>
-
+      <div class="metric">
+        <div class="metric-label">Round-Trip Latency</div>
+        <div id="latency-val" class="metric-value">-- ms</div>
       </div>
-    </section>
-
-  </main>
-
-  <!-- TERMS OF USE MODAL -->
-  <div id="terms-modal" class="modal-backdrop">
-    <div class="modal-box">
-      <h3>Terms of Use</h3>
-      <p>Terms of use hasn't been made yet.</p>
-      <div class="modal-footer">
-        <button id="terms-close-btn" class="btn-primary">Close</button>
+      <div class="metric">
+        <div class="metric-label">Devices Loaded</div>
+        <div id="devices-val" class="metric-value">--</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Colors Loaded</div>
+        <div id="colors-val" class="metric-value">--</div>
       </div>
     </div>
+
+    <button id="test-btn" onclick="testConnection()">Re-test Latency</button>
   </div>
 
-  <!-- VANILLA JS ENGINE -->
   <script>
-    /* Workflow Optimizer v0.0.2 */
-    const TEST_PIN = '102030';
+    async function testConnection() {
+      const btn = document.getElementById('test-btn');
+      const statusEl = document.getElementById('status');
+      const pingEl = document.getElementById('ping-val');
+      const latencyEl = document.getElementById('latency-val');
+      const devicesEl = document.getElementById('devices-val');
+      const colorsEl = document.getElementById('colors-val');
 
-    const State = {
-      storeNumber: '',
-      storePasscode: '',
-      isLoggedIn: false
-    };
+      btn.disabled = true;
+      statusEl.className = 'status-badge';
+      statusEl.textContent = 'Fetching...';
 
-    // DOM Elements
-    const loginCard = document.querySelector('.login-card');
-    const loginView = document.getElementById('login-view');
-    const dashboardView = document.getElementById('dashboard-view');
-    const loginForm = document.getElementById('login-form');
-    const storeNumberInput = document.getElementById('store-number');
-    const storePasscodeInput = document.getElementById('store-passcode');
-    const loginBtnText = document.getElementById('login-btn-text');
-    const loginSpinner = document.getElementById('login-spinner');
-    
-    const printNowBtn = document.getElementById('print-now-btn');
-    const printBtnText = document.getElementById('print-btn-text');
-    const printSpinner = document.getElementById('print-spinner');
+      const startTime = performance.now();
 
-    const termsModal = document.getElementById('terms-modal');
-    const termsOpenBtn = document.getElementById('terms-open-btn');
-    const termsCloseBtn = document.getElementById('terms-close-btn');
+      try {
+        // Cache-busting parameter (?t=...) ensures fresh data when testing edits on GitHub
+        const response = await fetch('./stats.json?t=' + Date.now());
 
-    // Strict Numeric Input Filter & Auto-Advance
-    storeNumberInput.addEventListener('input', () => {
-      storeNumberInput.value = storeNumberInput.value.replace(/\D/g, '').slice(0, 4);
-      if (storeNumberInput.value.length === 4) {
-        storePasscodeInput.focus();
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(1);
+
+        statusEl.className = 'status-badge status-success';
+        statusEl.textContent = 'Connected (HTTP 200 OK)';
+
+        pingEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
+        latencyEl.textContent = duration + ' ms';
+        devicesEl.textContent = data.devices ? Object.keys(data.devices).length : 0;
+        colorsEl.textContent = data.colors ? Object.keys(data.colors).length : 0;
+
+      } catch (err) {
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(1);
+
+        statusEl.className = 'status-badge status-error';
+        statusEl.textContent = 'Failed: ' + err.message;
+
+        pingEl.textContent = 'Error';
+        latencyEl.textContent = duration + ' ms';
+        devicesEl.textContent = '0';
+        colorsEl.textContent = '0';
+      } finally {
+        btn.disabled = false;
       }
-    });
-
-    storePasscodeInput.addEventListener('input', () => {
-      storePasscodeInput.value = storePasscodeInput.value.replace(/\D/g, '').slice(0, 6);
-      if (storePasscodeInput.value.length === 6) {
-        attemptLogin();
-      }
-    });
-
-    // Login Execution
-    function attemptLogin() {
-      const num = storeNumberInput.value.trim();
-      const pass = storePasscodeInput.value.trim();
-
-      if (num.length < 4 || pass.length < 6) return;
-
-      if (pass !== TEST_PIN) {
-        // Invalid PIN Feedback
-        loginCard.classList.remove('shake');
-        void loginCard.offsetWidth; // Force reflow
-        loginCard.classList.add('shake');
-        storePasscodeInput.value = '';
-        storePasscodeInput.focus();
-        return;
-      }
-
-      // Valid PIN
-      loginBtnText.textContent = 'Verifying...';
-      loginSpinner.classList.remove('hidden');
-
-      setTimeout(() => {
-        State.storeNumber = num;
-        State.storePasscode = pass;
-        State.isLoggedIn = true;
-
-        loginSpinner.classList.add('hidden');
-        loginBtnText.textContent = 'Log in';
-
-        loginView.style.display = 'none';
-        dashboardView.style.display = 'block';
-      }, 200);
     }
 
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      attemptLogin();
-    });
-
-    // Print Button Handler
-    printNowBtn.addEventListener('click', () => {
-      printBtnText.textContent = 'Preparing...';
-      printSpinner.classList.remove('hidden');
-
-      setTimeout(() => {
-        printSpinner.classList.add('hidden');
-        printBtnText.textContent = 'Print now';
-      }, 500);
-    });
-
-    // Universal Modal Dismiss Handlers
-    function closeAllModals() {
-      document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
-    }
-
-    termsOpenBtn.addEventListener('click', () => termsModal.classList.add('open'));
-    termsCloseBtn.addEventListener('click', closeAllModals);
-
-    // Click outside backdrop
-    document.querySelectorAll('.modal-backdrop').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeAllModals();
-      });
-    });
-
-    // Escape Key Listener
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAllModals();
-    });
+    // Run automatically on initial load
+    testConnection();
   </script>
 </body>
 </html>
