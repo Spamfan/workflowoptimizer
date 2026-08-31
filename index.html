@@ -51,15 +51,7 @@
       font-weight: 500;
       color: var(--text-sub);
       user-select: none;
-      margin-bottom: 2px;
-    }
-
-    #store-badge {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text-main);
       margin-top: 2px;
-      user-select: none;
     }
 
     #top-right-hub {
@@ -320,6 +312,52 @@
       gap: 12px;
     }
 
+    .card-actions-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-action-upload {
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .btn-action-upload:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-action-print {
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+    }
+
+    .btn-action-print:hover {
+      background-color: var(--primary-hover);
+    }
+
+    @media (max-width: 768px) {
+      .btn-action-upload {
+        display: inline-flex;
+      }
+
+      .btn-action-print {
+        background-color: #e4e6eb;
+        color: var(--text-main);
+        border-color: var(--border);
+      }
+
+      .btn-action-print:hover {
+        background-color: #dadddf;
+      }
+    }
+
     .ping-display-box {
       background-color: #f8fafc;
       border: 1px solid var(--border);
@@ -396,9 +434,8 @@
 
   <!-- Top-Left Version & Logout -->
   <div id="top-left-controls">
-    <div id="version-text"></div>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="store-badge" style="display: none;"></div>
+    <div id="version-text"></div>
   </div>
 
   <!-- Persistent Top-Right Hub Link -->
@@ -440,7 +477,7 @@
       <!-- Card 1: Print inventory -->
       <div class="dash-card">
         <div class="card-header">
-          <h2 class="card-title">Print inventory</h2>
+          <h2 id="card-print-title" class="card-title">Print inventory</h2>
           <div class="card-header-actions">
             <span id="ping-status" class="ping-status"></span>
             <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
@@ -451,6 +488,10 @@
           </div>
         </div>
         <div class="card-body">
+          <div class="card-actions-row">
+            <button id="btn-upload-inv" class="pill-btn btn-action-upload">Upload inventory</button>
+            <button id="btn-print-inv" class="pill-btn btn-action-print">Print inventory</button>
+          </div>
           <div class="ping-display-box">
             <span class="ping-label">Live Ping Value:</span>
             <span id="ping-value" class="ping-value">--</span>
@@ -482,7 +523,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.6";
+    const APP_VERSION = "v0.0.7";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -494,7 +535,7 @@
     const pinError = document.getElementById('pin-error');
     const btnEnter = document.getElementById('btn-enter');
     const btnLogout = document.getElementById('btn-logout');
-    const storeBadge = document.getElementById('store-badge');
+    const cardPrintTitle = document.getElementById('card-print-title');
     const loginView = document.getElementById('login-view');
     const dashboardView = document.getElementById('dashboard-view');
 
@@ -511,8 +552,7 @@
 
     function unlockApp(storeVal) {
       localStorage.setItem('wfo_store', storeVal);
-      storeBadge.textContent = 'Store ' + storeVal;
-      storeBadge.style.display = 'block';
+      cardPrintTitle.textContent = 'Print inventory (' + storeVal + ')';
       loginView.style.display = 'none';
       dashboardView.style.display = 'flex';
       btnLogout.style.display = 'inline-flex';
