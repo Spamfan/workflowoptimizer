@@ -242,6 +242,12 @@
       }
     }
 
+    @media (min-width: 769px) {
+      .btn-mobile-only {
+        display: none !important;
+      }
+    }
+
     /* --- DASHBOARD CARDS --- */
     .dash-card {
       background-color: var(--card-bg);
@@ -429,6 +435,7 @@
             <span id="ping-value" class="ping-value">--</span>
           </div>
           <div id="ping-status" class="ping-status">Ready</div>
+          <button id="btn-add-inventory" class="pill-btn btn-primary btn-mobile-only">Add Inventory</button>
         </div>
       </div>
 
@@ -456,7 +463,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.3";
+    const APP_VERSION = "v0.0.4";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -530,15 +537,34 @@
     const refreshSvg = document.getElementById('refresh-svg');
     const pingValueEl = document.getElementById('ping-value');
     const pingStatusEl = document.getElementById('ping-status');
+    let lastPingTime = null;
+
+    function formatRelativeTime(timestamp) {
+      if (!timestamp) return 'Ready';
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      if (seconds < 60) return 'Checked just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes === 1) return 'Checked 1 min ago';
+      if (minutes < 60) return `Checked ${minutes} mins ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours === 1) return 'Checked 1 hr ago';
+      if (hours < 24) return `Checked ${hours} hrs ago`;
+      const days = Math.floor(hours / 24);
+      return days === 1 ? 'Checked 1 day ago' : `Checked ${days} days ago`;
+    }
+
+    function updatePingStatus() {
+      if (lastPingTime) {
+        pingStatusEl.textContent = formatRelativeTime(lastPingTime);
+      }
+    }
 
     async function fetchPing() {
       refreshSvg.classList.add('spinning');
       pingStatusEl.textContent = 'Connecting...';
-      const startTime = performance.now();
 
       try {
         let data;
-        let transport = 'GitHub REST API';
 
         try {
           const apiRes = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
@@ -550,17 +576,17 @@
           const decodedStr = decodeURIComponent(escape(atob(rawApi.content.replace(/\s/g, ''))));
           data = JSON.parse(decodedStr);
         } catch (apiErr) {
-          transport = 'Local Fallback';
           const localRes = await fetch('./stats.json?t=' + Date.now());
           if (!localRes.ok) throw new Error('Local ' + localRes.status);
           data = await localRes.json();
         }
 
-        const duration = (performance.now() - startTime).toFixed(1);
         pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
-        pingStatusEl.textContent = `Live via ${transport} (${duration} ms)`;
+        lastPingTime = Date.now();
+        updatePingStatus();
 
       } catch (err) {
+        lastPingTime = null;
         pingValueEl.textContent = 'Error';
         pingStatusEl.textContent = 'Fetch failed: ' + err.message;
       } finally {
@@ -571,6 +597,7 @@
     }
 
     btnRefresh.addEventListener('click', fetchPing);
+    setInterval(updatePingStatus, 15000);
   </script>
 </body>
 </html>
