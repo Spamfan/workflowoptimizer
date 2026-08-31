@@ -196,6 +196,10 @@
       letter-spacing: 4px;
     }
 
+    #pin-input::placeholder {
+      letter-spacing: normal;
+    }
+
     #pin-error {
       color: var(--danger);
       font-size: 0.9rem;
@@ -271,6 +275,12 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
+    }
+
+    .card-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .card-title {
@@ -407,10 +417,10 @@
     <div class="login-card">
       <h2 class="login-title">PROPRIETARY CONTENT</h2>
       <p class="login-desc">
-        Unauthorized access and/or sharing is forbidden. Enter your Store # and PIN to proceed.
+        Unauthorized access and/or sharing is forbidden. By entering your store number and passcode, you agree to the terms of use shown below.
       </p>
-      <input type="tel" id="store-input" class="login-input" placeholder="Store #" maxlength="6" autofocus>
-      <input type="tel" id="pin-input" class="login-input" placeholder="App PIN" style="-webkit-text-security: disc;">
+      <input type="tel" id="store-input" class="login-input" placeholder="Store number" maxlength="6" autofocus>
+      <input type="tel" id="pin-input" class="login-input" placeholder="Store passcode" style="-webkit-text-security: disc;">
       <div id="pin-error">Incorrect Store # or PIN</div>
       <div class="btn-group">
         <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
@@ -431,18 +441,20 @@
       <div class="dash-card">
         <div class="card-header">
           <h2 class="card-title">Print inventory</h2>
-          <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
-            <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-            </svg>
-          </button>
+          <div class="card-header-actions">
+            <span id="ping-status" class="ping-status"></span>
+            <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
+              <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="card-body">
           <div class="ping-display-box">
             <span class="ping-label">Live Ping Value:</span>
             <span id="ping-value" class="ping-value">--</span>
           </div>
-          <div id="ping-status" class="ping-status">Ready</div>
         </div>
       </div>
 
@@ -470,7 +482,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.5";
+    const APP_VERSION = "v0.0.6";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -560,6 +572,11 @@
     termsModal.addEventListener('click', (e) => {
       if (e.target === termsModal) termsModal.style.display = 'none';
     });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && termsModal.style.display === 'flex') {
+        termsModal.style.display = 'none';
+      }
+    });
 
     // --- LIVE PING FETCH ENGINE ---
     const btnRefresh = document.getElementById('btn-refresh-ping');
@@ -592,14 +609,14 @@
         }
 
         pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
-        pingStatusEl.textContent = 'Refreshed!';
+        pingStatusEl.textContent = 'Refresh complete';
         statusTimer = setTimeout(() => {
-          pingStatusEl.textContent = 'Ready';
+          pingStatusEl.textContent = '';
         }, 2000);
 
       } catch (err) {
         pingValueEl.textContent = 'Error';
-        pingStatusEl.textContent = 'Fetch failed: ' + err.message;
+        pingStatusEl.textContent = 'Error';
       } finally {
         setTimeout(() => {
           refreshSvg.classList.remove('spinning');
