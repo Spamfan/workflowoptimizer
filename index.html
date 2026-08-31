@@ -37,25 +37,34 @@
     /* --- TOP BAR CONTROLS --- */
     #top-left-controls {
       position: fixed;
-      top: 14px;
+      top: 12px;
       left: 16px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 8px;
+      gap: 4px;
       z-index: 100;
     }
 
     #version-text {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      user-select: none;
+      margin-bottom: 2px;
+    }
+
+    #store-badge {
       font-size: 0.85rem;
       font-weight: 700;
-      color: var(--text-sub);
+      color: var(--text-main);
+      margin-top: 2px;
       user-select: none;
     }
 
     #top-right-hub {
       position: fixed;
-      top: 14px;
+      top: 12px;
       right: 16px;
       z-index: 100;
     }
@@ -171,17 +180,20 @@
       margin-bottom: 24px;
     }
 
-    #pin-input {
+    .login-input {
       width: 100%;
       padding: 12px 16px;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       text-align: center;
       border: 2px solid var(--primary);
       border-radius: 9999px;
-      margin-bottom: 16px;
-      letter-spacing: 4px;
+      margin-bottom: 14px;
       outline: none;
       background-color: #ffffff;
+    }
+
+    #pin-input {
+      letter-spacing: 4px;
     }
 
     #pin-error {
@@ -239,12 +251,6 @@
       }
       .main-title {
         font-size: 2rem;
-      }
-    }
-
-    @media (min-width: 769px) {
-      .btn-mobile-only {
-        display: none !important;
       }
     }
 
@@ -382,6 +388,7 @@
   <div id="top-left-controls">
     <div id="version-text"></div>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
+    <div id="store-badge" style="display: none;"></div>
   </div>
 
   <!-- Persistent Top-Right Hub Link -->
@@ -400,10 +407,11 @@
     <div class="login-card">
       <h2 class="login-title">PROPRIETARY CONTENT</h2>
       <p class="login-desc">
-        Unauthorized access and/or sharing is forbidden. To gain access, agree to these terms by inputting the passcode or pin given to you by the device administrator.
+        Unauthorized access and/or sharing is forbidden. Enter your Store # and PIN to proceed.
       </p>
-      <input type="tel" id="pin-input" placeholder="Enter PIN" style="-webkit-text-security: disc;" autofocus>
-      <div id="pin-error">Incorrect PIN</div>
+      <input type="tel" id="store-input" class="login-input" placeholder="Store #" maxlength="6" autofocus>
+      <input type="tel" id="pin-input" class="login-input" placeholder="App PIN" style="-webkit-text-security: disc;">
+      <div id="pin-error">Incorrect Store # or PIN</div>
       <div class="btn-group">
         <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
         <button id="btn-terms" class="pill-btn btn-secondary">Terms of Use</button>
@@ -435,7 +443,6 @@
             <span id="ping-value" class="ping-value">--</span>
           </div>
           <div id="ping-status" class="ping-status">Ready</div>
-          <button id="btn-add-inventory" class="pill-btn btn-primary btn-mobile-only">Add Inventory</button>
         </div>
       </div>
 
@@ -463,43 +470,50 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.4";
+    const APP_VERSION = "v0.0.5";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
-    const LEGACY_PIN = atob('MTAyMDMw'); // "102030"
-    const DYNAMIC_SUFFIX = atob('MTAyMA=='); // "1020"
+    const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
+    const MASTER_PIN = atob('MTAyMDMw'); // "102030"
 
+    const storeInput = document.getElementById('store-input');
     const pinInput = document.getElementById('pin-input');
     const pinError = document.getElementById('pin-error');
     const btnEnter = document.getElementById('btn-enter');
     const btnLogout = document.getElementById('btn-logout');
+    const storeBadge = document.getElementById('store-badge');
     const loginView = document.getElementById('login-view');
     const dashboardView = document.getElementById('dashboard-view');
 
-    const isValidPin = (val) => {
-      return val === LEGACY_PIN || (val.length === 8 && val.endsWith(DYNAMIC_SUFFIX));
+    const savedStore = localStorage.getItem('wfo_store');
+    if (savedStore) {
+      storeInput.value = savedStore;
+      pinInput.focus();
+    }
+
+    const isValidAuth = (store, pin) => {
+      if (!store) return false;
+      return pin === (store + SECRET_SUFFIX) || pin === MASTER_PIN;
     };
 
-    function unlockApp() {
+    function unlockApp(storeVal) {
+      localStorage.setItem('wfo_store', storeVal);
+      storeBadge.textContent = 'Store ' + storeVal;
+      storeBadge.style.display = 'block';
       loginView.style.display = 'none';
       dashboardView.style.display = 'flex';
       btnLogout.style.display = 'inline-flex';
       fetchPing();
     }
 
-    function lockApp() {
-      dashboardView.style.display = 'none';
-      btnLogout.style.display = 'none';
-      loginView.style.display = 'flex';
-      pinInput.value = '';
-      pinError.style.display = 'none';
-      pinInput.focus();
-    }
+    function handleAuthSubmit() {
+      const storeVal = storeInput.value.trim();
+      const pinVal = pinInput.value.trim();
 
-    function handlePinSubmit() {
-      if (isValidPin(pinInput.value.trim())) {
-        unlockApp();
+      if (isValidAuth(storeVal, pinVal)) {
+        pinError.style.display = 'none';
+        unlockApp(storeVal);
       } else {
         pinError.style.display = 'block';
         pinInput.value = '';
@@ -507,17 +521,32 @@
       }
     }
 
-    btnEnter.addEventListener('click', handlePinSubmit);
-    btnLogout.addEventListener('click', lockApp);
+    btnEnter.addEventListener('click', handleAuthSubmit);
+    btnLogout.addEventListener('click', () => {
+      window.location.reload();
+    });
+
+    storeInput.addEventListener('input', (e) => {
+      if (e.target.value.trim().length >= 4) {
+        pinInput.focus();
+      }
+    });
+
+    storeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') pinInput.focus();
+    });
 
     pinInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handlePinSubmit();
+      if (e.key === 'Enter') handleAuthSubmit();
     });
 
     pinInput.addEventListener('input', (e) => {
-      if (isValidPin(e.target.value.trim())) {
+      const storeVal = storeInput.value.trim();
+      const pinVal = e.target.value.trim();
+      if (isValidAuth(storeVal, pinVal)) {
         e.target.blur();
-        unlockApp();
+        pinError.style.display = 'none';
+        unlockApp(storeVal);
       }
     });
 
@@ -537,31 +566,12 @@
     const refreshSvg = document.getElementById('refresh-svg');
     const pingValueEl = document.getElementById('ping-value');
     const pingStatusEl = document.getElementById('ping-status');
-    let lastPingTime = null;
-
-    function formatRelativeTime(timestamp) {
-      if (!timestamp) return 'Ready';
-      const seconds = Math.floor((Date.now() - timestamp) / 1000);
-      if (seconds < 60) return 'Checked just now';
-      const minutes = Math.floor(seconds / 60);
-      if (minutes === 1) return 'Checked 1 min ago';
-      if (minutes < 60) return `Checked ${minutes} mins ago`;
-      const hours = Math.floor(minutes / 60);
-      if (hours === 1) return 'Checked 1 hr ago';
-      if (hours < 24) return `Checked ${hours} hrs ago`;
-      const days = Math.floor(hours / 24);
-      return days === 1 ? 'Checked 1 day ago' : `Checked ${days} days ago`;
-    }
-
-    function updatePingStatus() {
-      if (lastPingTime) {
-        pingStatusEl.textContent = formatRelativeTime(lastPingTime);
-      }
-    }
+    let statusTimer = null;
 
     async function fetchPing() {
+      if (statusTimer) clearTimeout(statusTimer);
       refreshSvg.classList.add('spinning');
-      pingStatusEl.textContent = 'Connecting...';
+      pingStatusEl.textContent = 'Checking...';
 
       try {
         let data;
@@ -582,11 +592,12 @@
         }
 
         pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
-        lastPingTime = Date.now();
-        updatePingStatus();
+        pingStatusEl.textContent = 'Refreshed!';
+        statusTimer = setTimeout(() => {
+          pingStatusEl.textContent = 'Ready';
+        }, 2000);
 
       } catch (err) {
-        lastPingTime = null;
         pingValueEl.textContent = 'Error';
         pingStatusEl.textContent = 'Fetch failed: ' + err.message;
       } finally {
@@ -597,7 +608,6 @@
     }
 
     btnRefresh.addEventListener('click', fetchPing);
-    setInterval(updatePingStatus, 15000);
   </script>
 </body>
 </html>
