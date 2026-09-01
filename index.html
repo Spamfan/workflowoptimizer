@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Workflow Optimizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --bg-color: #f0f2f5;
@@ -428,12 +429,389 @@
       display: flex;
       justify-content: flex-end;
     }
+
+    .btn-back {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 6px 14px;
+      font-size: 0.85rem;
+    }
+
+    .btn-back:hover {
+      background-color: #e4e6eb;
+    }
+
+    /* --- SCANNER VIEW (CAPTURE) --- */
+    #scanner-view {
+      width: 100%;
+      max-width: 500px;
+      padding: 68px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .viewfinder-card {
+      background-color: #000000;
+      border-radius: 20px;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      max-height: 58vh;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #camera-feed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .viewfinder-guide {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .scan-status-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 1rem;
+      z-index: 10;
+    }
+
+    .scanner-controls-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      gap: 8px;
+    }
+
+    .btn-carrier-pill {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      padding: 10px 16px;
+      font-weight: 700;
+    }
+
+    .btn-carrier-pill:hover {
+      background-color: #e4e6eb;
+    }
+
+    .shutter-btn {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      border: 4px solid var(--primary);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, background-color 0.15s;
+      outline: none;
+      user-select: none;
+    }
+
+    .shutter-btn:active {
+      transform: scale(0.92);
+      background-color: #e4e6eb;
+    }
+
+    .shutter-inner {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background-color: var(--primary);
+    }
+
+    .btn-review-pill {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-size: 0.9rem;
+      padding: 10px 16px;
+    }
+
+    .btn-review-pill:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .test-upload-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .btn-test-file {
+      background: transparent;
+      color: var(--text-sub);
+      border: 1px dashed var(--border);
+      font-size: 0.82rem;
+      padding: 6px 14px;
+    }
+
+    .btn-test-file:hover {
+      background: #e4e6eb;
+      color: var(--text-main);
+    }
+
+    /* --- REVIEW & EDIT VIEW --- */
+    #review-view {
+      width: 100%;
+      max-width: 600px;
+      padding: 68px 16px 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .review-meta-card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .meta-thumb {
+      width: 58px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .meta-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .carrier-tag {
+      background-color: #e7f3ff;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .meta-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .meta-sub {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+    }
+
+    .staged-carrier-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .carrier-group-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      padding-left: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+
+    .item-row-card {
+      background-color: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .item-model {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .item-subtext {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .color-chip {
+      background: #f0f2f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--text-main);
+    }
+
+    .item-qty-badge {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-edit-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .icon-edit-btn:hover {
+      background-color: #e4e6eb;
+      color: var(--text-main);
+    }
+
+    .icon-edit-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-icon-save {
+      color: #198754;
+    }
+
+    .btn-icon-save:hover {
+      background-color: #d1e7dd;
+      color: #0f5132;
+    }
+
+    .btn-icon-del {
+      color: var(--danger);
+    }
+
+    .btn-icon-del:hover {
+      background-color: #f8d7da;
+      color: var(--danger-hover);
+    }
+
+    .edit-inputs-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .inline-input {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      background: #ffffff;
+    }
+
+    .inline-input:focus {
+      border-color: var(--primary);
+    }
+
+    .input-model { flex: 2; min-width: 130px; }
+    .input-cap { width: 75px; }
+    .input-color { width: 75px; }
+    .input-qty { width: 55px; text-align: center; }
+
+    .bottom-floating-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 150;
+    }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 12px;
+      object-fit: contain;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
   </style>
 </head>
 <body>
 
-  <!-- Top-Left Version & Logout -->
+  <!-- Top-Left Dynamic Controls -->
   <div id="top-left-controls">
+    <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
     <div id="version-text"></div>
   </div>
@@ -511,6 +889,73 @@
     </div>
   </div>
 
+  <!-- SCANNER / CAPTURE VIEW -->
+  <div id="scanner-view" style="display: none;">
+    <div class="viewfinder-card">
+      <video id="camera-feed" autoplay playsinline muted></video>
+      <div class="viewfinder-guide"></div>
+      <div id="scan-status" class="scan-status-overlay" style="display: none;">
+        <div class="spinning" style="width: 32px; height: 32px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%;"></div>
+        <span id="scan-status-text">Scanning Sheet...</span>
+      </div>
+    </div>
+
+    <div class="scanner-controls-row">
+      <button id="btn-carrier-toggle" class="pill-btn btn-carrier-pill">
+        <span id="carrier-toggle-label">TMO</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+      
+      <button id="btn-shutter" class="shutter-btn" title="Capture & Scan">
+        <div class="shutter-inner"></div>
+      </button>
+
+      <button id="btn-view-review" class="pill-btn btn-review-pill">Review (0)</button>
+    </div>
+
+    <div class="test-upload-row">
+      <input type="file" id="file-upload-input" accept="image/*" style="display: none;">
+      <button id="btn-test-upload" class="pill-btn btn-test-file">📁 Test with Image</button>
+    </div>
+  </div>
+
+  <!-- REVIEW & EDIT VIEW -->
+  <div id="review-view" style="display: none;">
+    <div id="review-meta-card" class="review-meta-card">
+      <img id="review-thumb" class="meta-thumb" src="" alt="Thumbnail" title="Tap to expand">
+      <div id="review-meta-info" class="meta-info">
+        <div class="meta-badge-row">
+          <span id="review-carrier-tag" class="carrier-tag">T-Mobile</span>
+          <button id="btn-edit-meta" class="icon-edit-btn" title="Edit Metadata">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </button>
+        </div>
+        <div id="review-store-text" class="meta-title">Store: --</div>
+        <div id="review-date-text" class="meta-sub">Scanned: --</div>
+      </div>
+    </div>
+
+    <div id="staged-groups-container" class="staged-carrier-group">
+      <!-- Dynamically populated carrier item rows -->
+    </div>
+
+    <div class="bottom-floating-bar">
+      <button id="btn-scan-next" class="pill-btn btn-secondary" style="width: auto; padding: 10px 18px;">+ Scan Next Sheet</button>
+      <button id="btn-publish-all" class="pill-btn btn-primary" style="width: auto; padding: 10px 22px;">⬆ Publish all</button>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightbox-modal" class="modal-overlay" style="display: none;">
+    <img id="lightbox-img" class="lightbox-img" src="" alt="Captured Sheet">
+  </div>
+
   <!-- TERMS MODAL -->
   <div id="terms-modal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
@@ -523,7 +968,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.7";
+    const APP_VERSION = "v0.0.8";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -535,13 +980,45 @@
     const pinError = document.getElementById('pin-error');
     const btnEnter = document.getElementById('btn-enter');
     const btnLogout = document.getElementById('btn-logout');
+    const btnBack = document.getElementById('btn-back');
     const cardPrintTitle = document.getElementById('card-print-title');
+    
+    // Views
     const loginView = document.getElementById('login-view');
     const dashboardView = document.getElementById('dashboard-view');
+    const scannerView = document.getElementById('scanner-view');
+    const reviewView = document.getElementById('review-view');
+    let currentView = 'login-view';
+
+    // Staging Data Model
+    let stagedData = {
+      store: localStorage.getItem('wfo_store') || '',
+      activeCarrier: 'tmo',
+      sheets: {
+        tmo: { carrier: 'T-Mobile', timestamp: '', thumb: '', items: [] },
+        vzw: { carrier: 'Verizon Wireless', timestamp: '', thumb: '', items: [] },
+        att: { carrier: 'AT&T', timestamp: '', thumb: '', items: [] }
+      }
+    };
+
+    // Load persisted staging if available
+    const savedStaging = localStorage.getItem('wfo_staged_inventory');
+    if (savedStaging) {
+      try {
+        const parsed = JSON.parse(savedStaging);
+        if (parsed && parsed.sheets) stagedData = parsed;
+      } catch (e) {}
+    }
+
+    function persistStagedData() {
+      localStorage.setItem('wfo_staged_inventory', JSON.stringify(stagedData));
+      updateReviewCountBadge();
+    }
 
     const savedStore = localStorage.getItem('wfo_store');
     if (savedStore) {
       storeInput.value = savedStore;
+      stagedData.store = savedStore;
       pinInput.focus();
     }
 
@@ -552,10 +1029,10 @@
 
     function unlockApp(storeVal) {
       localStorage.setItem('wfo_store', storeVal);
+      stagedData.store = storeVal;
+      persistStagedData();
       cardPrintTitle.textContent = 'Print inventory (' + storeVal + ')';
-      loginView.style.display = 'none';
-      dashboardView.style.display = 'flex';
-      btnLogout.style.display = 'inline-flex';
+      switchView('dashboard-view');
       fetchPing();
     }
 
@@ -574,24 +1051,17 @@
     }
 
     btnEnter.addEventListener('click', handleAuthSubmit);
-    btnLogout.addEventListener('click', () => {
-      window.location.reload();
-    });
+    btnLogout.addEventListener('click', () => { window.location.reload(); });
 
     storeInput.addEventListener('input', (e) => {
-      if (e.target.value.trim().length >= 4) {
-        pinInput.focus();
-      }
+      if (e.target.value.trim().length >= 4) pinInput.focus();
     });
-
     storeInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') pinInput.focus();
     });
-
     pinInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAuthSubmit();
     });
-
     pinInput.addEventListener('input', (e) => {
       const storeVal = storeInput.value.trim();
       const pinVal = e.target.value.trim();
@@ -600,6 +1070,547 @@
         pinError.style.display = 'none';
         unlockApp(storeVal);
       }
+    });
+
+    // --- NAVIGATION & HISTORY CONTROLLER ---
+    function switchView(targetViewId, pushState = true) {
+      if (currentView === 'scanner-view' && targetViewId !== 'scanner-view') {
+        stopCamera();
+      }
+
+      loginView.style.display = 'none';
+      dashboardView.style.display = 'none';
+      scannerView.style.display = 'none';
+      reviewView.style.display = 'none';
+
+      const targetEl = document.getElementById(targetViewId);
+      if (targetEl) {
+        targetEl.style.display = (targetViewId === 'login-view' || targetViewId === 'dashboard-view' || targetViewId === 'scanner-view' || targetViewId === 'review-view') ? 'flex' : 'block';
+      }
+
+      currentView = targetViewId;
+
+      // Header Button State
+      if (currentView === 'dashboard-view') {
+        btnLogout.style.display = 'inline-flex';
+        btnBack.style.display = 'none';
+      } else if (currentView === 'scanner-view') {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'inline-flex';
+        btnBack.textContent = '← BACK';
+      } else if (currentView === 'review-view') {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'inline-flex';
+        btnBack.textContent = '← CAMERA';
+      } else {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'none';
+      }
+
+      if (currentView === 'scanner-view') {
+        startCamera();
+        updateCarrierPill();
+        updateReviewCountBadge();
+      } else if (currentView === 'review-view') {
+        renderReviewView();
+      }
+
+      if (pushState) {
+        history.pushState({ view: targetViewId }, '', '');
+      }
+    }
+
+    btnBack.addEventListener('click', () => {
+      if (currentView === 'review-view') {
+        switchView('scanner-view');
+      } else if (currentView === 'scanner-view') {
+        switchView('dashboard-view');
+      }
+    });
+
+    window.addEventListener('popstate', (e) => {
+      if (termsModal.style.display === 'flex') {
+        termsModal.style.display = 'none';
+        return;
+      }
+      if (lightboxModal.style.display === 'flex') {
+        lightboxModal.style.display = 'none';
+        return;
+      }
+      const dest = (e.state && e.state.view) ? e.state.view : (localStorage.getItem('wfo_store') ? 'dashboard-view' : 'login-view');
+      switchView(dest, false);
+    });
+
+    // Dashboard Upload Button Entry
+    const btnUploadInv = document.getElementById('btn-upload-inv');
+    btnUploadInv.addEventListener('click', () => {
+      switchView('scanner-view');
+    });
+
+    // --- CAMERA STREAM LIFECYCLE ---
+    const cameraFeed = document.getElementById('camera-feed');
+    let activeMediaStream = null;
+
+    async function startCamera() {
+      if (activeMediaStream) stopCamera();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        activeMediaStream = stream;
+        cameraFeed.srcObject = stream;
+      } catch (err) {
+        console.warn('Camera access unavailable:', err);
+      }
+    }
+
+    function stopCamera() {
+      if (activeMediaStream) {
+        activeMediaStream.getTracks().forEach(track => track.stop());
+        activeMediaStream = null;
+      }
+      if (cameraFeed) cameraFeed.srcObject = null;
+    }
+
+    // --- CARRIER TOGGLE ---
+    const carrierCycle = ['tmo', 'vzw', 'att'];
+    const carrierNames = { tmo: 'T-Mobile', vzw: 'Verizon Wireless', att: 'AT&T' };
+    const carrierPillLabel = document.getElementById('carrier-toggle-label');
+    const btnCarrierToggle = document.getElementById('btn-carrier-toggle');
+
+    function updateCarrierPill() {
+      carrierPillLabel.textContent = stagedData.activeCarrier.toUpperCase();
+    }
+
+    btnCarrierToggle.addEventListener('click', () => {
+      const idx = carrierCycle.indexOf(stagedData.activeCarrier);
+      stagedData.activeCarrier = carrierCycle[(idx + 1) % carrierCycle.length];
+      updateCarrierPill();
+      persistStagedData();
+    });
+
+    // --- IMAGE PRE-PROCESSING & OCR PIPELINE ---
+    const scanStatus = document.getElementById('scan-status');
+    const scanStatusText = document.getElementById('scan-status-text');
+    const btnShutter = document.getElementById('btn-shutter');
+    const btnTestUpload = document.getElementById('btn-test-upload');
+    const fileUploadInput = document.getElementById('file-upload-input');
+    const btnViewReview = document.getElementById('btn-view-review');
+
+    btnViewReview.addEventListener('click', () => {
+      switchView('review-view');
+    });
+
+    btnTestUpload.addEventListener('click', () => {
+      fileUploadInput.value = '';
+      fileUploadInput.click();
+    });
+
+    fileUploadInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onload = () => processAndParseImage(img);
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    btnShutter.addEventListener('click', () => {
+      if (!cameraFeed || !cameraFeed.videoWidth) {
+        alert('Camera stream not ready. You can also use "Test with Image" below.');
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraFeed.videoWidth;
+      canvas.height = cameraFeed.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+
+      stopCamera();
+      processAndParseImage(canvas);
+    });
+
+    // Grayscale & Contrast boost for crisp OCR
+    function preprocessCanvas(sourceCanvas) {
+      const canvas = document.createElement('canvas');
+      canvas.width = sourceCanvas.width;
+      canvas.height = sourceCanvas.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(sourceCanvas, 0, 0);
+
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const avg = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+          const val = avg > 140 ? 255 : (avg < 90 ? 0 : avg);
+          d[i] = val;
+          d[i+1] = val;
+          d[i+2] = val;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      } catch (e) {}
+
+      return canvas;
+    }
+
+    // Levenshtein distance for typo correction
+    function getLevenshtein(a, b) {
+      const matrix = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1).toLowerCase() === a.charAt(j - 1).toLowerCase()) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    let globalStats = null;
+    async function loadStatsDict() {
+      if (globalStats) return globalStats;
+      try {
+        const res = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
+          headers: { 'Accept': 'application/vnd.github.v3+json' },
+          cache: 'no-store'
+        });
+        const raw = await res.json();
+        globalStats = JSON.parse(decodeURIComponent(escape(atob(raw.content.replace(/\s/g, '')))));
+      } catch (e) {
+        try {
+          const lRes = await fetch('./stats.json?t=' + Date.now());
+          globalStats = await lRes.json();
+        } catch (err) {
+          globalStats = { devices: {}, colors: {} };
+        }
+      }
+      return globalStats;
+    }
+
+    async function processAndParseImage(source) {
+      scanStatus.style.display = 'flex';
+      scanStatusText.textContent = 'Preprocessing image...';
+
+      let offscreenCanvas = document.createElement('canvas');
+      if (source instanceof HTMLVideoElement || source instanceof HTMLCanvasElement) {
+        offscreenCanvas.width = source.width || source.videoWidth;
+        offscreenCanvas.height = source.height || source.videoHeight;
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+      } else if (source instanceof HTMLImageElement) {
+        offscreenCanvas.width = source.naturalWidth;
+        offscreenCanvas.height = source.naturalHeight;
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+      }
+
+      const thumbnailDataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.6);
+      const enhancedCanvas = preprocessCanvas(offscreenCanvas);
+
+      scanStatusText.textContent = 'Reading text (OCR)...';
+
+      try {
+        const worker = await Tesseract.createWorker('eng');
+        const ret = await worker.recognize(enhancedCanvas);
+        await worker.terminate();
+
+        const rawText = ret.data.text || '';
+        const stats = await loadStatsDict();
+
+        parseOcrText(rawText, thumbnailDataUrl, stats);
+
+        scanStatus.style.display = 'none';
+        switchView('review-view');
+      } catch (err) {
+        console.error('OCR Error:', err);
+        alert('OCR processing encountered an issue. Please try again.');
+        scanStatus.style.display = 'none';
+        startCamera();
+      }
+    }
+
+    function parseOcrText(text, thumbUrl, stats) {
+      let detectedCarrierKey = stagedData.activeCarrier;
+      let detectedStore = stagedData.store;
+      let detectedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      // Header matching
+      if (/Verizon/i.test(text)) detectedCarrierKey = 'vzw';
+      else if (/T-Mobile/i.test(text)) detectedCarrierKey = 'tmo';
+      else if (/AT&T|ATT/i.test(text)) detectedCarrierKey = 'att';
+
+      const storeMatch = text.match(/Store[:\s]+(\d{3,6})/i);
+      if (storeMatch) detectedStore = storeMatch[1];
+
+      const dateMatch = text.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM))/i);
+      if (dateMatch) detectedDate = dateMatch[1];
+
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const parsedItems = [];
+
+      const colorMap = (stats && stats.colors) ? stats.colors : {
+        'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK',
+        'Deep Blue': 'BLU', 'Sky Blue': 'BLU', 'Tapestry': 'BLU', 'Navy': 'BLU',
+        'Cosmic Orange': 'ORG', 'Slipstream': 'SLP', 'Beige': 'BGE', 'Gray': 'GRY', 'Coal Smoke': 'BLK'
+      };
+
+      lines.forEach(line => {
+        // Match lines containing capacity (e.g. 128GB, 256GB, 64GB) or "Available"
+        if (/(16|32|64|128|256|512)GB|\bAvailable\b/i.test(line)) {
+          // Extract Quantity
+          let qty = 1;
+          const qtyMatch = line.match(/(\d+)\s*Available/i) || line.match(/\b(\d+)$/);
+          if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+
+          // Extract Capacity
+          let capacity = '128GB';
+          const capMatch = line.match(/(16|32|64|128|256|512)\s*GB/i);
+          if (capMatch) capacity = capMatch[1] + 'GB';
+
+          // Extract Color
+          let foundColor = 'BLK';
+          let rawColorName = 'Black';
+          for (const [cName, cAbbr] of Object.entries(colorMap)) {
+            if (new RegExp(cName, 'i').test(line)) {
+              foundColor = cAbbr;
+              rawColorName = cName;
+              break;
+            }
+          }
+
+          // Extract Model Name
+          let cleanModel = line
+            .replace(new RegExp(capacity, 'i'), '')
+            .replace(new RegExp(rawColorName, 'i'), '')
+            .replace(/\d+\s*Available/i, '')
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .trim();
+
+          // Fuzzy match model name against stats device dictionary
+          if (stats && stats.devices) {
+            let bestMatch = cleanModel;
+            let lowestDist = 999;
+            for (const dev of Object.values(stats.devices)) {
+              const dName = dev.name || dev;
+              const dist = getLevenshtein(cleanModel, dName);
+              if (dist < lowestDist && dist < 6) {
+                lowestDist = dist;
+                bestMatch = dName;
+              }
+            }
+            if (lowestDist < 6) cleanModel = bestMatch;
+          }
+
+          if (cleanModel.length > 2 && !/^(Model|Capacity|Color|Quantity)/i.test(cleanModel)) {
+            parsedItems.push({
+              id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              model: cleanModel,
+              capacity: capacity,
+              color: foundColor,
+              qty: qty
+            });
+          }
+        }
+      });
+
+      // Save to staging sheet
+      stagedData.store = detectedStore;
+      stagedData.sheets[detectedCarrierKey] = {
+        carrier: carrierNames[detectedCarrierKey],
+        timestamp: detectedDate,
+        thumb: thumbUrl,
+        items: parsedItems
+      };
+
+      stagedData.activeCarrier = detectedCarrierKey;
+      persistStagedData();
+    }
+
+    // --- REVIEW & EDIT CONTROLLER ---
+    const reviewThumb = document.getElementById('review-thumb');
+    const reviewCarrierTag = document.getElementById('review-carrier-tag');
+    const reviewStoreText = document.getElementById('review-store-text');
+    const reviewDateText = document.getElementById('review-date-text');
+    const stagedGroupsContainer = document.getElementById('staged-groups-container');
+    const btnScanNext = document.getElementById('btn-scan-next');
+    const btnPublishAll = document.getElementById('btn-publish-all');
+    const lightboxModal = document.getElementById('lightbox-modal');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const btnEditMeta = document.getElementById('btn-edit-meta');
+
+    function updateReviewCountBadge() {
+      let count = 0;
+      carrierCycle.forEach(c => {
+        if (stagedData.sheets[c] && stagedData.sheets[c].items) {
+          count += stagedData.sheets[c].items.length;
+        }
+      });
+      btnViewReview.textContent = 'Review (' + count + ')';
+    }
+
+    function renderReviewView() {
+      stagedGroupsContainer.innerHTML = '';
+      const activeSheet = stagedData.sheets[stagedData.activeCarrier];
+
+      if (activeSheet && activeSheet.thumb) {
+        reviewThumb.src = activeSheet.thumb;
+        reviewThumb.style.display = 'block';
+      } else {
+        reviewThumb.style.display = 'none';
+      }
+
+      reviewCarrierTag.textContent = carrierNames[stagedData.activeCarrier];
+      reviewStoreText.textContent = 'Store: ' + (stagedData.store || '--');
+      reviewDateText.textContent = 'Report: ' + (activeSheet ? activeSheet.timestamp : 'Not scanned yet');
+
+      // Render items per carrier
+      carrierCycle.forEach(cKey => {
+        const sheet = stagedData.sheets[cKey];
+        if (!sheet || !sheet.items || sheet.items.length === 0) return;
+
+        const groupTitle = document.createElement('div');
+        groupTitle.className = 'carrier-group-title';
+        groupTitle.textContent = sheet.carrier + ' (' + sheet.items.length + ' items)';
+        stagedGroupsContainer.appendChild(groupTitle);
+
+        sheet.items.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'item-row-card';
+          card.id = 'card-' + item.id;
+
+          card.innerHTML = `
+            <div class="item-details" id="details-${item.id}">
+              <div class="item-model">${item.model}</div>
+              <div class="item-subtext">
+                <span>${item.capacity}</span>
+                <span class="color-chip">${item.color}</span>
+                <span class="item-qty-badge">• Qty: ${item.qty}</span>
+              </div>
+            </div>
+            <div class="item-actions" id="actions-${item.id}">
+              <button class="icon-edit-btn" onclick="handleEditRow('${cKey}', '${item.id}')" title="Edit Item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </button>
+            </div>
+          `;
+          stagedGroupsContainer.appendChild(card);
+        });
+      });
+
+      if (stagedGroupsContainer.innerHTML === '') {
+        stagedGroupsContainer.innerHTML = '<p class="placeholder-text" style="text-align: center; padding: 20px;">No inventory items scanned yet.</p>';
+      }
+    }
+
+    window.handleEditRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      const item = sheet.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const card = document.getElementById('card-' + itemId);
+      card.innerHTML = `
+        <div class="edit-inputs-row">
+          <input type="text" id="edit-model-${itemId}" class="inline-input input-model" value="${item.model}">
+          <input type="text" id="edit-cap-${itemId}" class="inline-input input-cap" value="${item.capacity}">
+          <input type="text" id="edit-color-${itemId}" class="inline-input input-color" value="${item.color}">
+          <input type="number" id="edit-qty-${itemId}" class="inline-input input-qty" value="${item.qty}">
+        </div>
+        <div class="item-actions">
+          <button class="icon-edit-btn btn-icon-save" onclick="handleSaveRow('${carrierKey}', '${itemId}')" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+          <button class="icon-edit-btn btn-icon-del" onclick="handleDeleteRow('${carrierKey}', '${itemId}')" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      `;
+    };
+
+    window.handleSaveRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      const item = sheet.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      item.model = document.getElementById('edit-model-' + itemId).value.trim();
+      item.capacity = document.getElementById('edit-cap-' + itemId).value.trim();
+      item.color = document.getElementById('edit-color-' + itemId).value.trim();
+      item.qty = parseInt(document.getElementById('edit-qty-' + itemId).value, 10) || 1;
+
+      persistStagedData();
+      renderReviewView();
+    };
+
+    window.handleDeleteRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      sheet.items = sheet.items.filter(i => i.id !== itemId);
+      persistStagedData();
+      renderReviewView();
+    };
+
+    // Edit Header Metadata
+    btnEditMeta.addEventListener('click', () => {
+      const currentStore = stagedData.store || '';
+      const sheet = stagedData.sheets[stagedData.activeCarrier];
+      const currentStamp = sheet ? sheet.timestamp : '';
+
+      const newStore = prompt('Edit Store #:', currentStore);
+      if (newStore !== null) stagedData.store = newStore.trim();
+
+      const newStamp = prompt('Edit Scanned Timestamp:', currentStamp);
+      if (newStamp !== null && sheet) sheet.timestamp = newStamp.trim();
+
+      persistStagedData();
+      renderReviewView();
+    });
+
+    // Lightbox Modal
+    reviewThumb.addEventListener('click', () => {
+      if (reviewThumb.src) {
+        lightboxImg.src = reviewThumb.src;
+        lightboxModal.style.display = 'flex';
+      }
+    });
+
+    lightboxModal.addEventListener('click', () => {
+      lightboxModal.style.display = 'none';
+    });
+
+    btnScanNext.addEventListener('click', () => {
+      const idx = carrierCycle.indexOf(stagedData.activeCarrier);
+      stagedData.activeCarrier = carrierCycle[(idx + 1) % carrierCycle.length];
+      persistStagedData();
+      switchView('scanner-view');
+    });
+
+    btnPublishAll.addEventListener('click', () => {
+      alert('Staged inventory saved locally! Ready for direct GitHub stocks.json push.');
+      switchView('dashboard-view');
     });
 
     // --- TERMS MODAL LOGIC ---
@@ -613,8 +1624,9 @@
       if (e.target === termsModal) termsModal.style.display = 'none';
     });
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && termsModal.style.display === 'flex') {
-        termsModal.style.display = 'none';
+      if (e.key === 'Escape') {
+        if (termsModal.style.display === 'flex') termsModal.style.display = 'none';
+        if (lightboxModal.style.display === 'flex') lightboxModal.style.display = 'none';
       }
     });
 
