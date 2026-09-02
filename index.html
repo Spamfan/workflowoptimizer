@@ -805,6 +805,196 @@
       object-fit: contain;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
+
+    /* --- DEBUG & DIAGNOSTICS UI --- */
+    .btn-floating-debug {
+      position: fixed;
+      bottom: 20px;
+      right: 16px;
+      background-color: #24292e;
+      color: #ffffff;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      z-index: 160;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-floating-debug:hover {
+      background-color: #000000;
+    }
+
+    .debug-modal-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      max-width: 720px;
+      width: 94%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .debug-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .debug-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      overflow-x: auto;
+    }
+
+    .debug-tab-btn {
+      background: #f0f2f5;
+      border: none;
+      border-radius: 9999px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-sub);
+      white-space: nowrap;
+    }
+
+    .debug-tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .debug-tab-panel {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
+      font-size: 0.85rem;
+    }
+
+    .debug-pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    .debug-img-preview {
+      max-width: 100%;
+      max-height: 45vh;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .debug-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .debug-table th, .debug-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    .debug-table th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+
+    .badge-status {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.7rem;
+      display: inline-block;
+    }
+
+    .status-matched { background: #d1e7dd; color: #0f5132; }
+    .status-fallback { background: #fff3cd; color: #664d03; }
+    .status-ignored { background: #e2e3e5; color: #41464b; }
+
+    .carrier-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 0 4px;
+    }
+
+    .carrier-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-carrier-action {
+      background: #f0f2f5;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-carrier-action:hover {
+      background: #e4e6eb;
+    }
+
+    .btn-carrier-action.btn-del-carrier {
+      color: var(--danger);
+      border-color: rgba(217, 48, 37, 0.2);
+    }
+
+    .btn-carrier-action.btn-del-carrier:hover {
+      background: #f8d7da;
+    }
+
+    .btn-clear-staging {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 6px;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -945,9 +1135,51 @@
       <!-- Dynamically populated carrier item rows -->
     </div>
 
+    <div style="display: flex; justify-content: center; width: 100%;">
+      <button id="btn-clear-staging" class="btn-clear-staging">🗑️ Clear All Staged Inventory</button>
+    </div>
+
     <div class="bottom-floating-bar">
       <button id="btn-scan-next" class="pill-btn btn-secondary" style="width: auto; padding: 10px 18px;">+ Scan Next Sheet</button>
       <button id="btn-publish-all" class="pill-btn btn-primary" style="width: auto; padding: 10px 22px;">⬆ Publish all</button>
+    </div>
+  </div>
+
+  <!-- FLOATING DEBUG TRIGGER -->
+  <button id="btn-open-debug" class="btn-floating-debug" style="display: none;">
+    <span>🐞 Logs (0)</span>
+  </button>
+
+  <!-- DEBUG MODAL -->
+  <div id="debug-modal" class="modal-overlay" style="display: none;">
+    <div class="debug-modal-card">
+      <div class="debug-header">
+        <span class="debug-title">OCR Diagnostics & Logs</span>
+        <button id="btn-debug-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="debug-tabs">
+        <button id="tab-btn-matrix" class="debug-tab-btn active">Parse Matrix</button>
+        <button id="tab-btn-raw" class="debug-tab-btn">Raw OCR Text</button>
+        <button id="tab-btn-canvas" class="debug-tab-btn">Preprocessed Canvas</button>
+      </div>
+      <div id="tab-panel-matrix" class="debug-tab-panel">
+        <div id="debug-matrix-container">
+          <p class="placeholder-text" style="text-align: center; padding: 20px;">No scan logs captured yet in this session.</p>
+        </div>
+      </div>
+      <div id="tab-panel-raw" class="debug-tab-panel" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+          <button id="btn-copy-raw-debug" class="pill-btn btn-secondary" style="padding: 4px 12px; font-size: 0.78rem; width: auto;">📋 Copy Raw Text</button>
+        </div>
+        <pre id="debug-raw-text" class="debug-pre">No raw text available.</pre>
+      </div>
+      <div id="tab-panel-canvas" class="debug-tab-panel" style="display: none;">
+        <img id="debug-canvas-img" class="debug-img-preview" src="" alt="Preprocessed OCR Canvas">
+      </div>
+      <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+        <button id="btn-download-debug-report" class="pill-btn btn-secondary" style="width: auto; padding: 6px 14px; font-size: 0.8rem;">📥 Download Full HTML Report</button>
+        <button id="btn-debug-modal-ok" class="pill-btn btn-primary" style="width: auto; padding: 6px 18px; font-size: 0.8rem;">Close</button>
+      </div>
     </div>
   </div>
 
@@ -968,7 +1200,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.8";
+    const APP_VERSION = "v0.0.9";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1239,7 +1471,10 @@
       processAndParseImage(canvas);
     });
 
-    // Grayscale & Contrast boost for crisp OCR
+    // --- ALWAYS-ON TELEMETRY LOGS ---
+    const sessionOcrLogs = [];
+
+    // Grayscale & Balanced Linear Contrast Stretch (preserves font edges)
     function preprocessCanvas(sourceCanvas) {
       const canvas = document.createElement('canvas');
       canvas.width = sourceCanvas.width;
@@ -1250,12 +1485,23 @@
       try {
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const d = imgData.data;
+        let min = 255, max = 0;
+        
+        // Find luminance range
         for (let i = 0; i < d.length; i += 4) {
-          const avg = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
-          const val = avg > 140 ? 255 : (avg < 90 ? 0 : avg);
-          d[i] = val;
-          d[i+1] = val;
-          d[i+2] = val;
+          const lum = Math.round(d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+          if (lum < min) min = lum;
+          if (lum > max) max = lum;
+        }
+
+        const range = (max - min) || 1;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+          // Linear contrast stretch with clipping
+          const stretched = Math.min(255, Math.max(0, ((lum - min) / range) * 255));
+          d[i] = stretched;
+          d[i+1] = stretched;
+          d[i+2] = stretched;
         }
         ctx.putImageData(imgData, 0, 0);
       } catch (e) {}
@@ -1306,6 +1552,7 @@
     }
 
     async function processAndParseImage(source) {
+      const startTime = performance.now();
       scanStatus.style.display = 'flex';
       scanStatusText.textContent = 'Preprocessing image...';
 
@@ -1324,6 +1571,7 @@
 
       const thumbnailDataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.6);
       const enhancedCanvas = preprocessCanvas(offscreenCanvas);
+      const preprocessedDataUrl = enhancedCanvas.toDataURL('image/jpeg', 0.6);
 
       scanStatusText.textContent = 'Reading text (OCR)...';
 
@@ -1334,20 +1582,21 @@
 
         const rawText = ret.data.text || '';
         const stats = await loadStatsDict();
+        const elapsedMs = Math.round(performance.now() - startTime);
 
-        parseOcrText(rawText, thumbnailDataUrl, stats);
+        parseOcrText(rawText, thumbnailDataUrl, preprocessedDataUrl, stats, elapsedMs);
 
         scanStatus.style.display = 'none';
         switchView('review-view');
       } catch (err) {
         console.error('OCR Error:', err);
-        alert('OCR processing encountered an issue. Please try again.');
+        alert('OCR processing encountered an issue. Please check the debug log.');
         scanStatus.style.display = 'none';
         startCamera();
       }
     }
 
-    function parseOcrText(text, thumbUrl, stats) {
+    function parseOcrText(text, thumbUrl, preprocessedUrl, stats, elapsedMs = 0) {
       let detectedCarrierKey = stagedData.activeCarrier;
       let detectedStore = stagedData.store;
       let detectedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -1365,6 +1614,7 @@
 
       const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       const parsedItems = [];
+      const linesLog = [];
 
       const colorMap = (stats && stats.colors) ? stats.colors : {
         'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK',
@@ -1373,8 +1623,12 @@
       };
 
       lines.forEach(line => {
-        // Match lines containing capacity (e.g. 128GB, 256GB, 64GB) or "Available"
-        if (/(16|32|64|128|256|512)GB|\bAvailable\b/i.test(line)) {
+        const isHeaderOrFooter = /^(Carrier|Store|Report|Page|Inventory|Generated|Model|Capacity|Color|Quantity|Total)/i.test(line);
+        const hasCapacity = /(16|32|64|128|256|512)GB/i.test(line);
+        const hasAvailable = /\bAvailable\b/i.test(line);
+        const hasDigits = /\d+/.test(line);
+
+        if ((hasCapacity || hasAvailable || hasDigits) && !isHeaderOrFooter) {
           // Extract Quantity
           let qty = 1;
           const qtyMatch = line.match(/(\d+)\s*Available/i) || line.match(/\b(\d+)$/);
@@ -1396,7 +1650,7 @@
             }
           }
 
-          // Extract Model Name
+          // Residual Model Text
           let cleanModel = line
             .replace(new RegExp(capacity, 'i'), '')
             .replace(new RegExp(rawColorName, 'i'), '')
@@ -1404,30 +1658,63 @@
             .replace(/[^a-zA-Z0-9\s]/g, '')
             .trim();
 
-          // Fuzzy match model name against stats device dictionary
+          let bestMatch = cleanModel;
+          let lowestDist = 999;
           if (stats && stats.devices) {
-            let bestMatch = cleanModel;
-            let lowestDist = 999;
             for (const dev of Object.values(stats.devices)) {
               const dName = dev.name || dev;
               const dist = getLevenshtein(cleanModel, dName);
-              if (dist < lowestDist && dist < 6) {
+              if (dist < lowestDist) {
                 lowestDist = dist;
                 bestMatch = dName;
               }
             }
-            if (lowestDist < 6) cleanModel = bestMatch;
           }
 
-          if (cleanModel.length > 2 && !/^(Model|Capacity|Color|Quantity)/i.test(cleanModel)) {
+          let itemStatus = 'matched';
+          let finalModel = cleanModel;
+
+          if (lowestDist < 6) {
+            finalModel = bestMatch;
+            itemStatus = 'matched';
+          } else if (cleanModel.length > 2) {
+            finalModel = '[Unmatched] ' + cleanModel;
+            itemStatus = 'unmatched_fallback';
+          } else {
+            itemStatus = 'ignored';
+          }
+
+          linesLog.push({
+            rawLine: line,
+            capacity: capacity,
+            color: foundColor,
+            qty: qty,
+            residualModel: cleanModel,
+            bestMatch: bestMatch,
+            distance: lowestDist,
+            status: itemStatus
+          });
+
+          if (itemStatus !== 'ignored') {
             parsedItems.push({
               id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-              model: cleanModel,
+              model: finalModel,
               capacity: capacity,
               color: foundColor,
               qty: qty
             });
           }
+        } else {
+          linesLog.push({
+            rawLine: line,
+            capacity: '-',
+            color: '-',
+            qty: '-',
+            residualModel: '-',
+            bestMatch: '-',
+            distance: '-',
+            status: 'ignored'
+          });
         }
       });
 
@@ -1439,9 +1726,27 @@
         thumb: thumbUrl,
         items: parsedItems
       };
-
       stagedData.activeCarrier = detectedCarrierKey;
       persistStagedData();
+
+      // Record in session telemetry
+      const logEntry = {
+        id: 'log_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        displayTime: detectedDate,
+        carrierKey: detectedCarrierKey,
+        carrierName: carrierNames[detectedCarrierKey],
+        store: detectedStore,
+        elapsedMs: elapsedMs,
+        userAgent: navigator.userAgent,
+        thumbDataUrl: thumbUrl,
+        preprocessedUrl: preprocessedUrl,
+        rawText: text,
+        linesLog: linesLog
+      };
+
+      sessionOcrLogs.push(logEntry);
+      updateDebugBadge();
     }
 
     // --- REVIEW & EDIT CONTROLLER ---
@@ -1486,10 +1791,16 @@
         const sheet = stagedData.sheets[cKey];
         if (!sheet || !sheet.items || sheet.items.length === 0) return;
 
-        const groupTitle = document.createElement('div');
-        groupTitle.className = 'carrier-group-title';
-        groupTitle.textContent = sheet.carrier + ' (' + sheet.items.length + ' items)';
-        stagedGroupsContainer.appendChild(groupTitle);
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'carrier-group-header';
+        headerDiv.innerHTML = `
+          <div class="carrier-group-title">${sheet.carrier} (${sheet.items.length} items)</div>
+          <div class="carrier-header-actions">
+            <button class="btn-carrier-action" onclick="downloadCarrierDebugHtml('${cKey}')" title="Download Debug Report">📥 Report</button>
+            <button class="btn-carrier-action btn-del-carrier" onclick="deleteCarrierSheet('${cKey}')" title="Delete this Carrier Scan">🗑️</button>
+          </div>
+        `;
+        stagedGroupsContainer.appendChild(headerDiv);
 
         sheet.items.forEach(item => {
           const card = document.createElement('div');
@@ -1522,6 +1833,240 @@
         stagedGroupsContainer.innerHTML = '<p class="placeholder-text" style="text-align: center; padding: 20px;">No inventory items scanned yet.</p>';
       }
     }
+
+    // --- DELETION & RESET CONTROLLERS ---
+    window.deleteCarrierSheet = function(carrierKey) {
+      if (!confirm(`Delete all scanned items and image for ${carrierNames[carrierKey]}?`)) return;
+      stagedData.sheets[carrierKey] = { carrier: carrierNames[carrierKey], timestamp: '', thumb: '', items: [] };
+      persistStagedData();
+      renderReviewView();
+    };
+
+    const btnClearStaging = document.getElementById('btn-clear-staging');
+    btnClearStaging.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to delete ALL staged inventory across all carriers?')) return;
+      stagedData = {
+        store: localStorage.getItem('wfo_store') || '',
+        activeCarrier: 'tmo',
+        sheets: {
+          tmo: { carrier: 'T-Mobile', timestamp: '', thumb: '', items: [] },
+          vzw: { carrier: 'Verizon Wireless', timestamp: '', thumb: '', items: [] },
+          att: { carrier: 'AT&T', timestamp: '', thumb: '', items: [] }
+        }
+      };
+      persistStagedData();
+      renderReviewView();
+    });
+
+    // --- DEBUG MODAL & REPORT DOWNLOAD ENGINE ---
+    const btnOpenDebug = document.getElementById('btn-open-debug');
+    const debugModal = document.getElementById('debug-modal');
+    const btnDebugClose = document.getElementById('btn-debug-close');
+    const btnDebugModalOk = document.getElementById('btn-debug-modal-ok');
+    const tabBtnMatrix = document.getElementById('tab-btn-matrix');
+    const tabBtnRaw = document.getElementById('tab-btn-raw');
+    const tabBtnCanvas = document.getElementById('tab-btn-canvas');
+    const tabPanelMatrix = document.getElementById('tab-panel-matrix');
+    const tabPanelRaw = document.getElementById('tab-panel-raw');
+    const tabPanelCanvas = document.getElementById('tab-panel-canvas');
+    const debugMatrixContainer = document.getElementById('debug-matrix-container');
+    const debugRawText = document.getElementById('debug-raw-text');
+    const debugCanvasImg = document.getElementById('debug-canvas-img');
+    const btnCopyRawDebug = document.getElementById('btn-copy-raw-debug');
+    const btnDownloadDebugReport = document.getElementById('btn-download-debug-report');
+
+    function updateDebugBadge() {
+      btnOpenDebug.style.display = (currentView === 'scanner-view' || currentView === 'review-view') ? 'inline-flex' : 'none';
+      btnOpenDebug.querySelector('span').textContent = `🐞 Logs (${sessionOcrLogs.length})`;
+    }
+
+    function switchDebugTab(tabName) {
+      tabBtnMatrix.classList.toggle('active', tabName === 'matrix');
+      tabBtnRaw.classList.toggle('active', tabName === 'raw');
+      tabBtnCanvas.classList.toggle('active', tabName === 'canvas');
+
+      tabPanelMatrix.style.display = tabName === 'matrix' ? 'block' : 'none';
+      tabPanelRaw.style.display = tabName === 'raw' ? 'block' : 'none';
+      tabPanelCanvas.style.display = tabName === 'canvas' ? 'block' : 'none';
+    }
+
+    tabBtnMatrix.addEventListener('click', () => switchDebugTab('matrix'));
+    tabBtnRaw.addEventListener('click', () => switchDebugTab('raw'));
+    tabBtnCanvas.addEventListener('click', () => switchDebugTab('canvas'));
+
+    function renderDebugModal() {
+      if (sessionOcrLogs.length === 0) {
+        debugMatrixContainer.innerHTML = '<p class="placeholder-text" style="text-align: center; padding: 20px;">No scan logs captured yet in this session.</p>';
+        debugRawText.textContent = 'No raw OCR text available.';
+        debugCanvasImg.src = '';
+        return;
+      }
+
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      debugRawText.textContent = latestLog.rawText || '(Empty Text)';
+      debugCanvasImg.src = latestLog.preprocessedUrl || latestLog.thumbDataUrl || '';
+
+      let html = `<div style="margin-bottom: 8px; font-weight: 600; color: var(--text-sub);">Latest Scan: ${latestLog.carrierName} | Store: ${latestLog.store} | ${latestLog.elapsedMs}ms</div>`;
+      html += `
+        <table class="debug-table">
+          <thead>
+            <tr>
+              <th>Raw Line</th>
+              <th>Extracted</th>
+              <th>Matched Model</th>
+              <th>Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      latestLog.linesLog.forEach(l => {
+        let badgeClass = 'status-ignored';
+        if (l.status === 'matched') badgeClass = 'status-matched';
+        if (l.status === 'unmatched_fallback') badgeClass = 'status-fallback';
+
+        html += `
+          <tr>
+            <td><code>${l.rawLine}</code></td>
+            <td>${l.capacity !== '-' ? `${l.capacity}, ${l.color}, Q:${l.qty}` : '-'}</td>
+            <td><strong>${l.bestMatch || '-'}</strong></td>
+            <td>${l.distance !== '-' ? `d=${l.distance}` : '-'}</td>
+            <td><span class="badge-status ${badgeClass}">${l.status.toUpperCase()}</span></td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      debugMatrixContainer.innerHTML = html;
+    }
+
+    btnOpenDebug.addEventListener('click', () => {
+      renderDebugModal();
+      debugModal.style.display = 'flex';
+    });
+
+    const closeDebugModal = () => { debugModal.style.display = 'none'; };
+    btnDebugClose.addEventListener('click', closeDebugModal);
+    btnDebugModalOk.addEventListener('click', closeDebugModal);
+    debugModal.addEventListener('click', (e) => {
+      if (e.target === debugModal) closeDebugModal();
+    });
+
+    btnCopyRawDebug.addEventListener('click', () => {
+      if (sessionOcrLogs.length === 0) return;
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      navigator.clipboard.writeText(latestLog.rawText || '').then(() => {
+        btnCopyRawDebug.textContent = '✅ Copied!';
+        setTimeout(() => { btnCopyRawDebug.textContent = '📋 Copy Raw Text'; }, 2000);
+      });
+    });
+
+    function generateHtmlReport(log) {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OCR Diagnostic Report - ${log.carrierName} (${log.displayTime})</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+    h1, h2 { margin-top: 0; color: #38bdf8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: left; }
+    th { background: #0f172a; color: #94a3b8; }
+    pre { background: #000; padding: 12px; border-radius: 8px; overflow-x: auto; color: #4ade80; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+    .status-matched { background: #166534; color: #bbf7d0; }
+    .status-unmatched_fallback { background: #854d0e; color: #fef08a; }
+    .status-ignored { background: #334155; color: #94a3b8; }
+    .img-preview { max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #475569; }
+  </style>
+</head>
+<body>
+  <h1>WFO OCR Diagnostics Report</h1>
+  <div class="card">
+    <h2>Scan Metadata</h2>
+    <p><strong>Carrier:</strong> ${log.carrierName} | <strong>Store:</strong> ${log.store}</p>
+    <p><strong>Timestamp:</strong> ${log.displayTime} (${log.timestamp})</p>
+    <p><strong>Processing Duration:</strong> ${log.elapsedMs} ms</p>
+    <p><strong>User Agent:</strong> <code>${log.userAgent}</code></p>
+  </div>
+  <div class="card">
+    <h2>Preprocessed Image</h2>
+    <img src="${log.preprocessedUrl || log.thumbDataUrl}" class="img-preview" alt="Preprocessed Canvas">
+  </div>
+  <div class="card">
+    <h2>Line-by-Line Token & Matching Matrix</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Raw Line</th>
+          <th>Capacity</th>
+          <th>Color</th>
+          <th>Qty</th>
+          <th>Residual Text</th>
+          <th>Best Match</th>
+          <th>Distance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${log.linesLog.map(l => `
+          <tr>
+            <td><code>${l.rawLine}</code></td>
+            <td>${l.capacity}</td>
+            <td>${l.color}</td>
+            <td>${l.qty}</td>
+            <td>${l.residualModel}</td>
+            <td><strong>${l.bestMatch}</strong></td>
+            <td>${l.distance}</td>
+            <td><span class="badge status-${l.status}">${l.status.toUpperCase()}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Raw OCR Text Dump</h2>
+    <pre>${log.rawText}</pre>
+  </div>
+</body>
+</html>`;
+    }
+
+    function triggerDownload(content, filename) {
+      const blob = new Blob([content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    btnDownloadDebugReport.addEventListener('click', () => {
+      if (sessionOcrLogs.length === 0) {
+        alert('No scan logs available to export.');
+        return;
+      }
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      const html = generateHtmlReport(latestLog);
+      triggerDownload(html, `wfo_ocr_report_${latestLog.carrierKey}_${Date.now()}.html`);
+    });
+
+    window.downloadCarrierDebugHtml = function(carrierKey) {
+      const logsForCarrier = sessionOcrLogs.filter(l => l.carrierKey === carrierKey);
+      if (logsForCarrier.length === 0) {
+        alert(`No telemetry logs found for ${carrierNames[carrierKey]} in this session.`);
+        return;
+      }
+      const latest = logsForCarrier[logsForCarrier.length - 1];
+      const html = generateHtmlReport(latest);
+      triggerDownload(html, `wfo_ocr_report_${carrierKey}_${Date.now()}.html`);
+    };
 
     window.handleEditRow = function(carrierKey, itemId) {
       const sheet = stagedData.sheets[carrierKey];
