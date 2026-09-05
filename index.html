@@ -1107,7 +1107,7 @@
     </div>
 
     <div class="test-upload-row">
-      <input type="file" id="file-upload-input" accept="image/*" style="display: none;">
+      <input type="file" id="file-upload-input" style="display: none;">
       <button id="btn-test-upload" class="pill-btn btn-test-file">📁 Test with Image</button>
     </div>
   </div>
@@ -1200,7 +1200,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.9";
+    const APP_VERSION = "v0.0.10";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1446,10 +1446,18 @@
     fileUploadInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
+        if (file.type && !file.type.startsWith('image/')) {
+          alert('Please select a valid image file (.jpg, .png, etc.).');
+          e.target.value = '';
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (evt) => {
           const img = new Image();
           img.onload = () => processAndParseImage(img);
+          img.onerror = () => {
+            alert('Could not load image file.');
+          };
           img.src = evt.target.result;
         };
         reader.readAsDataURL(file);
