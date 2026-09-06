@@ -1,1158 +1,2284 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patcher</title>
-    <style>
-        /* Material 3 & Architectural CSS Variables */
-        :root {
-            --bg-main: #f8f9fc;
-            --bg-panel: #ffffff;
-            --text-main: #191c20;
-            --text-muted: #5e616c;
-            --border-color: #dcdee6;
-            --border-hover: #bfc2cd;
-            --accent-color: #3b5998;
-            --accent-hover: #2d467c;
-            --accent-container: #dce2f9;
-            --accent-container-text: #051944;
-            --success-color: #1b6c37;
-            --warning-color: #ba1a1a;
-            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            --radius-pill: 9999px;
-            --radius-card: 20px;
-            --radius-inner: 12px;
-            --shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.07), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow Optimizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-main: #1c1e21;
+      --text-sub: #606770;
+      --primary: #1877f2;
+      --primary-hover: #166fe5;
+      --danger: #d93025;
+      --danger-hover: #b3241c;
+      --border: #dadddf;
+    }
 
-        [data-theme="dark"] {
-            --bg-main: #111318;
-            --bg-panel: #1b1c22;
-            --text-main: #e2e2e9;
-            --text-muted: #8e909a;
-            --border-color: #373a43;
-            --border-hover: #50535d;
-            --accent-color: #afc6ff;
-            --accent-hover: #96b4fa;
-            --accent-container: #264177;
-            --accent-container-text: #dbe4ff;
-            --success-color: #72d98d;
-            --warning-color: #ffb4ab;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        [data-theme="dark"] button:not(.btn-secondary):not(.btn-icon):not(#copy-output-btn) {
-            color: #0b1d3a;
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
 
-        * {
-            box-sizing: border-box;
-        }
+    /* --- TOP BAR CONTROLS --- */
+    #top-left-controls {
+      position: fixed;
+      top: 12px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      z-index: 100;
+    }
 
-        body {
-            font-family: var(--font-family);
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            margin: 0;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
+    #version-text {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      user-select: none;
+      margin-top: 2px;
+    }
 
-        header {
-            width: 100%;
-            max-width: 1200px;
-            margin-bottom: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+    #top-right-hub {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 100;
+    }
 
-        .header-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
+    /* --- MATERIAL 3 PILL BUTTONS --- */
+    .pill-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 9999px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+      border: 1px solid transparent;
+      user-select: none;
+    }
 
-        .header-buttons {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
+    .pill-btn:active {
+      transform: scale(0.98);
+    }
 
-        .btn-icon {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            width: 42px;
-            height: 42px;
-            border-radius: var(--radius-pill);
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            padding: 0;
-        }
+    .btn-hub {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
 
-        .btn-icon:hover {
-            background: var(--border-color);
-        }
+    .btn-hub:hover {
+      background-color: #e4e6eb;
+    }
 
-        h1 {
-            margin: 0;
-            font-size: 1.85rem;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+    .btn-hub svg {
+      width: 16px;
+      height: 16px;
+    }
 
-        .version-badge {
-            font-size: 0.45em;
-            color: var(--text-muted);
-            font-weight: 600;
-            background: var(--border-color);
-            padding: 0.25rem 0.6rem;
-            border-radius: var(--radius-pill);
-        }
+    .btn-logout {
+      background-color: var(--danger);
+      color: #ffffff;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
 
-        .top-actions {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+    .btn-logout:hover {
+      background-color: var(--danger-hover);
+    }
 
-        .btn-secondary {
-            background-color: var(--bg-panel);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 0.55rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border-radius: var(--radius-pill);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: none;
-            width: auto;
-        }
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+    }
 
-        .btn-secondary:hover {
-            background-color: var(--border-color);
-            color: var(--text-main);
-            transform: none;
-        }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
 
-        .drag-over {
-            border: 2px dashed var(--accent-color) !important;
-            background-color: rgba(59, 89, 152, 0.05) !important;
-        }
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--text-sub);
+      border-color: var(--border);
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+    }
 
-        .output-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 0.65rem;
-            width: 100%;
-        }
+    .btn-secondary:hover {
+      background-color: #e4e6eb;
+      color: var(--text-main);
+    }
 
-        .filename-input {
-            background: var(--bg-main);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-pill);
-            padding: 0.55rem 1rem;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            width: 100%;
-            text-align: center;
-            outline: none;
-            transition: border-color 0.2s ease;
-        }
+    /* --- GATEKEEPER / LOGIN VIEW --- */
+    #login-view {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 20px;
+    }
 
-        .filename-input:focus {
-            border-color: var(--accent-color);
-        }
+    .login-card {
+      background-color: var(--card-bg);
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
 
-        #instructions-input {
-            width: 100%;
-            height: 100%;
-            resize: none;
-            border: none;
-            background: transparent;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            color: var(--text-main);
-            padding: 1rem;
-            outline: none;
-        }
+    .login-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      color: var(--text-main);
+    }
 
-        .container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.5rem;
-            width: 100%;
-            max-width: 1400px;
-            flex-grow: 1;
-            align-items: start;
-        }
+    .login-desc {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-sub);
+      margin-bottom: 24px;
+    }
 
-        .module {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-            background-color: var(--bg-panel);
-            padding: 1.25rem;
-            border-radius: var(--radius-card);
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-        }
+    .login-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      text-align: center;
+      border: 2px solid var(--primary);
+      border-radius: 9999px;
+      margin-bottom: 14px;
+      outline: none;
+      background-color: #ffffff;
+    }
 
-        .action-area {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            text-align: center;
-        }
+    #pin-input {
+      letter-spacing: 4px;
+    }
 
-        .file-info, .status-text {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            min-height: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
-        }
+    #pin-input::placeholder {
+      letter-spacing: normal;
+    }
 
-        button, .download-btn {
-            padding: 0.75rem 1.5rem;
-            border: 1px solid transparent;
-            border-radius: var(--radius-pill);
-            background-color: var(--accent-color);
-            color: #ffffff;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            width: 100%;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: none;
-        }
+    #pin-error {
+      color: var(--danger);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: none;
+    }
 
-        button:hover:not(:disabled), .download-btn:hover {
-            background-color: var(--accent-hover);
-            transform: none;
-        }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
-        button:disabled {
-            background-color: var(--border-color);
-            cursor: not-allowed;
-            color: var(--text-muted);
-            box-shadow: none;
-            transform: none;
-        }
+    /* --- DASHBOARD VIEW --- */
+    #dashboard-view {
+      width: 100%;
+      max-width: 1100px;
+      padding: 80px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-        .btn-mini-clear {
-            width: 22px;
-            height: 22px;
-            min-width: 22px;
-            padding: 0;
-            border-radius: var(--radius-pill);
-            background: var(--border-color);
-            color: var(--text-muted);
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
+    .header-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
 
-        .btn-mini-clear:hover {
-            background: var(--warning-color);
-            color: #ffffff;
-        }
+    .main-title {
+      font-size: 2.75rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
 
-        .hidden {
-            display: none !important;
-        }
+    .main-subtitle {
+      font-size: 1rem;
+      color: var(--text-sub);
+    }
 
-        .preview-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-inner);
-            overflow: hidden;
-            cursor: pointer;
-        }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
 
-        .preview-container iframe {
-            width: 200%;
-            height: 200%;
-            border: none;
-            background-color: #ffffff;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 2;
-            pointer-events: none;
-            transform: scale(0.5);
-            transform-origin: top left;
-        }
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .main-title {
+        font-size: 2rem;
+      }
+    }
 
-        .status-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            font-weight: 500;
-            font-size: 0.875rem;
-            text-align: left;
-            margin-top: 0.25rem;
-        }
+    /* --- DASHBOARD CARDS --- */
+    .dash-card {
+      background-color: var(--card-bg);
+      border-radius: 18px;
+      padding: 24px;
+      min-height: 240px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
 
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
 
-        .text-green { color: var(--success-color); }
-        .text-red { color: var(--warning-color); }
-        .text-gray { color: var(--text-muted); text-align: center; justify-content: center; }
+    .card-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
 
-        .skeleton {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--border-color);
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            z-index: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
+    .icon-btn {
+      background: #f0f2f5;
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: background-color 0.2s, transform 0.2s;
+    }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+    .icon-btn:hover {
+      background-color: #e4e6eb;
+    }
 
-        .spinner {
-            width: 1.25rem;
-            height: 1.25rem;
-            border: 2px solid var(--border-color);
-            border-top-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-        }
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+    }
 
-        /* SVG Icons */
-        .icon {
-            width: 1.15rem;
-            height: 1.15rem;
-            fill: currentColor;
-            display: inline-block;
-            flex-shrink: 0;
-        }
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+    }
 
-        .icon-sm {
-            width: 0.85rem;
-            height: 0.85rem;
-        }
+    .card-actions-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-        /* Modal Dialog */
-        dialog {
-            width: 90vw;
-            max-width: 680px;
-            max-height: 85vh;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-card);
-            box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.15);
-            padding: 1.75rem;
-            background: var(--bg-panel);
-            color: var(--text-main);
-            flex-direction: column;
-            gap: 1.25rem;
-            z-index: 9999;
-        }
+    .btn-action-upload {
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      display: none;
+    }
 
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.45);
-            backdrop-filter: blur(3px);
-        }
+    .btn-action-upload:hover {
+      background-color: var(--primary-hover);
+    }
 
-        dialog[open] {
-            display: flex;
-        }
+    .btn-action-print {
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+    }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .btn-action-print:hover {
+      background-color: var(--primary-hover);
+    }
 
-        .modal-header h2 {
-            margin: 0;
-            font-size: 1.35rem;
-        }
+    @media (max-width: 768px) {
+      .btn-action-upload {
+        display: inline-flex;
+      }
 
-        .modal-content {
-            overflow-y: auto;
-            padding-right: 0.5rem;
-            line-height: 1.6;
-            font-size: 0.92rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-        }
+      .btn-action-print {
+        background-color: #e4e6eb;
+        color: var(--text-main);
+        border-color: var(--border);
+      }
 
-        .modal-section {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
+      .btn-action-print:hover {
+        background-color: #dadddf;
+      }
+    }
 
-        .modal-section h3 {
-            margin: 0;
-            font-size: 1rem;
-            color: var(--text-main);
-        }
+    .ping-display-box {
+      background-color: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        .modal-chip-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: var(--accent-container);
-            color: var(--accent-container-text);
-            padding: 0.45rem 0.9rem;
-            border-radius: var(--radius-pill);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.85rem;
-            border: 1px solid transparent;
-            cursor: pointer;
-            width: fit-content;
-        }
+    .ping-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
 
-        .modal-chip-link:hover {
-            filter: brightness(0.95);
-        }
+    .ping-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
 
-        pre.code-preview {
-            background: var(--bg-main);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-inner);
-            padding: 0.75rem 1rem;
-            overflow-x: auto;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            line-height: 1.4;
-            margin: 0.25rem 0;
-        }
+    .ping-status {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
 
-        /* Responsive Layout - Mobile */
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-            .container {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            .preview-container {
-                aspect-ratio: auto;
-                height: 200px;
-            }
-        }
-    </style>
+    .placeholder-text {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+      font-style: italic;
+    }
+
+    /* --- ANIMATIONS --- */
+    .spinning {
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* --- MODAL --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-back {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 6px 14px;
+      font-size: 0.85rem;
+    }
+
+    .btn-back:hover {
+      background-color: #e4e6eb;
+    }
+
+    /* --- SCANNER VIEW (CAPTURE) --- */
+    #scanner-view {
+      width: 100%;
+      max-width: 500px;
+      padding: 68px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .viewfinder-card {
+      background-color: #000000;
+      border-radius: 20px;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      max-height: 58vh;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #camera-feed {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .viewfinder-guide {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .scan-status-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 1rem;
+      z-index: 10;
+    }
+
+    .scanner-controls-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      gap: 8px;
+    }
+
+    .btn-carrier-pill {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      padding: 10px 16px;
+      font-weight: 700;
+    }
+
+    .btn-carrier-pill:hover {
+      background-color: #e4e6eb;
+    }
+
+    .shutter-btn {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      border: 4px solid var(--primary);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, background-color 0.15s;
+      outline: none;
+      user-select: none;
+    }
+
+    .shutter-btn:active {
+      transform: scale(0.92);
+      background-color: #e4e6eb;
+    }
+
+    .shutter-inner {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background-color: var(--primary);
+    }
+
+    .btn-review-pill {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-size: 0.9rem;
+      padding: 10px 16px;
+    }
+
+    .btn-review-pill:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .test-upload-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .btn-test-file {
+      background: transparent;
+      color: var(--text-sub);
+      border: 1px dashed var(--border);
+      font-size: 0.82rem;
+      padding: 6px 14px;
+    }
+
+    .btn-test-file:hover {
+      background: #e4e6eb;
+      color: var(--text-main);
+    }
+
+    /* --- REVIEW & EDIT VIEW --- */
+    #review-view {
+      width: 100%;
+      max-width: 600px;
+      padding: 68px 16px 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .review-meta-card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .meta-thumb {
+      width: 58px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .meta-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .carrier-tag {
+      background-color: #e7f3ff;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .meta-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .meta-sub {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+    }
+
+    .staged-carrier-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .carrier-group-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      padding-left: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+
+    .item-row-card {
+      background-color: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .item-model {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .item-subtext {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .color-chip {
+      background: #f0f2f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--text-main);
+    }
+
+    .item-qty-badge {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-edit-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .icon-edit-btn:hover {
+      background-color: #e4e6eb;
+      color: var(--text-main);
+    }
+
+    .icon-edit-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn-icon-save {
+      color: #198754;
+    }
+
+    .btn-icon-save:hover {
+      background-color: #d1e7dd;
+      color: #0f5132;
+    }
+
+    .btn-icon-del {
+      color: var(--danger);
+    }
+
+    .btn-icon-del:hover {
+      background-color: #f8d7da;
+      color: var(--danger-hover);
+    }
+
+    .edit-inputs-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .inline-input {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      background: #ffffff;
+    }
+
+    .inline-input:focus {
+      border-color: var(--primary);
+    }
+
+    .input-model { flex: 2; min-width: 130px; }
+    .input-cap { width: 75px; }
+    .input-color { width: 75px; }
+    .input-qty { width: 55px; text-align: center; }
+
+    .bottom-floating-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 150;
+    }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 12px;
+      object-fit: contain;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    /* --- DEBUG & DIAGNOSTICS UI --- */
+    .btn-floating-debug {
+      position: fixed;
+      bottom: 20px;
+      right: 16px;
+      background-color: #24292e;
+      color: #ffffff;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      z-index: 160;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-floating-debug:hover {
+      background-color: #000000;
+    }
+
+    .debug-modal-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      max-width: 720px;
+      width: 94%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .debug-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .debug-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      overflow-x: auto;
+    }
+
+    .debug-tab-btn {
+      background: #f0f2f5;
+      border: none;
+      border-radius: 9999px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-sub);
+      white-space: nowrap;
+    }
+
+    .debug-tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .debug-tab-panel {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
+      font-size: 0.85rem;
+    }
+
+    .debug-pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+
+    .debug-img-preview {
+      max-width: 100%;
+      max-height: 45vh;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .debug-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .debug-table th, .debug-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    .debug-table th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+
+    .badge-status {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.7rem;
+      display: inline-block;
+    }
+
+    .status-matched { background: #d1e7dd; color: #0f5132; }
+    .status-fallback { background: #fff3cd; color: #664d03; }
+    .status-ignored { background: #e2e3e5; color: #41464b; }
+
+    .carrier-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 0 4px;
+    }
+
+    .carrier-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-carrier-action {
+      background: #f0f2f5;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-carrier-action:hover {
+      background: #e4e6eb;
+    }
+
+    .btn-carrier-action.btn-del-carrier {
+      color: var(--danger);
+      border-color: rgba(217, 48, 37, 0.2);
+    }
+
+    .btn-carrier-action.btn-del-carrier:hover {
+      background: #f8d7da;
+    }
+
+    .btn-clear-staging {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 6px;
+      margin-top: 8px;
+    }
+  </style>
 </head>
 <body>
 
-    <header>
-        <div class="header-controls">
-            <h1>Patcher <span class="version-badge">v0.1.11</span></h1>
-            <div class="header-buttons">
-                <button id="theme-toggle" class="btn-icon" title="Toggle Theme" aria-label="Toggle Theme">
-                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
-                </button>
-            </div>
-        </div>
-        <div class="top-actions">
-            <button id="btn-how-to" class="btn-secondary">
-                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.93 2.99z"/></svg>
-                How to use
+  <!-- Top-Left Dynamic Controls -->
+  <div id="top-left-controls">
+    <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
+    <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
+    <div id="version-text"></div>
+  </div>
+
+  <!-- Persistent Top-Right Hub Link -->
+  <div id="top-right-hub">
+    <a href="https://spamfan.github.io" target="_self" class="pill-btn btn-hub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>spamfan.github.io</span>
+    </a>
+  </div>
+
+  <!-- GATEKEEPER / LOGIN VIEW -->
+  <div id="login-view">
+    <div class="login-card">
+      <h2 class="login-title">PROPRIETARY CONTENT</h2>
+      <p class="login-desc">
+        Unauthorized access and/or sharing is forbidden. By entering your store number and passcode, you agree to the terms of use shown below.
+      </p>
+      <input type="tel" id="store-input" class="login-input" placeholder="Store number" maxlength="6" autofocus>
+      <input type="tel" id="pin-input" class="login-input" placeholder="Store passcode" style="-webkit-text-security: disc;">
+      <div id="pin-error">Incorrect Store # or PIN</div>
+      <div class="btn-group">
+        <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
+        <button id="btn-terms" class="pill-btn btn-secondary">Terms of Use</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboard-view" style="display: none;">
+    <div class="header-section">
+      <h1 class="main-title">workflow optimizer</h1>
+      <p class="main-subtitle">an unofficial resource for WSP employees</p>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Card 1: Print inventory -->
+      <div class="dash-card">
+        <div class="card-header">
+          <h2 id="card-print-title" class="card-title">Print inventory</h2>
+          <div class="card-header-actions">
+            <span id="ping-status" class="ping-status"></span>
+            <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
+              <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
             </button>
-            <a href="https://spamfan.github.io/mdviewer" target="_blank" rel="noopener noreferrer" class="btn-secondary" title="View Markdown & LDD files">
-                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-                View LDDs on MDViewer ↗
-            </a>
+          </div>
         </div>
-    </header>
-
-    <main class="container">
-        <!-- Module 1: Input Zone -->
-        <div class="module" id="module-input">
-            <div class="action-area">
-                <button id="upload-btn">Upload file</button>
-                <input type="file" id="file-input" hidden>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <div class="file-info" id="file-info">No file selected</div>
-                    <button id="clear-file-btn" class="btn-mini-clear hidden" title="Clear File" aria-label="Clear File">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="preview-container">
-                <div class="skeleton" id="input-skeleton">Awaiting File...</div>
-                <iframe id="input-preview" class="hidden" sandbox=""></iframe>
-            </div>
+        <div class="card-body">
+          <div class="card-actions-row">
+            <button id="btn-upload-inv" class="pill-btn btn-action-upload">Upload inventory</button>
+            <button id="btn-print-inv" class="pill-btn btn-action-print">Print inventory</button>
+          </div>
+          <div class="ping-display-box">
+            <span class="ping-label">Live Ping Value:</span>
+            <span id="ping-value" class="ping-value">--</span>
+          </div>
         </div>
+      </div>
 
-        <!-- Module 2: Engine Zone -->
-        <div class="module">
-            <div class="action-area">
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button id="clipboard-btn" style="flex-grow: 1;">Paste from clipboard</button>
-                    <button id="clear-instructions-btn" class="btn-mini-clear hidden" title="Clear Instructions" aria-label="Clear Instructions">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                    </button>
-                </div>
-                <div class="status-list" id="status-list">
-                    <div class="status-item text-gray">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                        <span>no input</span>
-                    </div>
-                </div>
-            </div>
-            <div class="preview-container" id="raw-preview-container">
-                <div class="skeleton hidden" id="engine-skeleton"></div>
-                <textarea id="instructions-input" placeholder="Paste LLM markdown instructions here..." spellcheck="false"></textarea>
-            </div>
+      <!-- Card 2: Other -->
+      <div class="dash-card">
+        <div class="card-header">
+          <h2 class="card-title">Other</h2>
         </div>
-
-        <!-- Module 3: Output Zone -->
-        <div class="module">
-            <div class="action-area">
-                <div class="output-actions hidden" id="output-actions-container">
-                    <input type="text" id="output-filename-input" class="filename-input" placeholder="filename.ext" spellcheck="false" title="Download filename">
-                    <div style="display: flex; gap: 0.75rem; width: 100%;">
-                        <button id="download-btn" class="download-btn">Download</button>
-                        <button id="copy-output-btn" class="btn-secondary" style="width: auto;">Copy</button>
-                    </div>
-                </div>
-            </div>
-            <div class="preview-container">
-                <div class="skeleton" id="output-skeleton">Awaiting Patch...</div>
-                <iframe id="output-preview" class="hidden" sandbox=""></iframe>
-            </div>
+        <div class="card-body">
+          <p class="placeholder-text">Future tools and document printing placeholder...</p>
         </div>
-    </main>
+      </div>
+    </div>
+  </div>
 
-    <!-- Consolidated How To Use Modal -->
-    <dialog id="modal-how-to">
-        <div class="modal-header">
-            <h2>How to use Patcher</h2>
-            <button class="btn-mini-clear close-modal-btn" title="Close modal" aria-label="Close modal">
-                <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
+  <!-- SCANNER / CAPTURE VIEW -->
+  <div id="scanner-view" style="display: none;">
+    <div class="viewfinder-card">
+      <video id="camera-feed" autoplay playsinline muted></video>
+      <img id="viewfinder-frozen" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;" alt="Capture Freeze">
+      <div class="viewfinder-guide"></div>
+      <div id="scan-status" class="scan-status-overlay" style="display: none;">
+        <div class="spinning" style="width: 32px; height: 32px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%;"></div>
+        <span id="scan-status-text">Scanning Sheet...</span>
+      </div>
+    </div>
+
+    <div class="scanner-controls-row">
+      <button id="btn-carrier-toggle" class="pill-btn btn-carrier-pill">
+        <span id="carrier-toggle-label">TMO</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+      
+      <button id="btn-shutter" class="shutter-btn" title="Capture & Scan">
+        <div class="shutter-inner"></div>
+      </button>
+
+      <button id="btn-view-review" class="pill-btn btn-review-pill">Review (0)</button>
+    </div>
+
+    <div class="test-upload-row">
+      <input type="file" id="file-upload-input" style="display: none;">
+      <button id="btn-test-upload" class="pill-btn btn-test-file">📁 Test with Image</button>
+    </div>
+  </div>
+
+  <!-- REVIEW & EDIT VIEW -->
+  <div id="review-view" style="display: none;">
+    <div id="review-meta-card" class="review-meta-card">
+      <img id="review-thumb" class="meta-thumb" src="" alt="Thumbnail" title="Tap to expand">
+      <div id="review-meta-info" class="meta-info">
+        <div class="meta-badge-row">
+          <span id="review-carrier-tag" class="carrier-tag">T-Mobile</span>
+          <button id="btn-edit-meta" class="icon-edit-btn" title="Edit Metadata">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </button>
         </div>
-        <div class="modal-content">
-            <div class="modal-section">
-                <h3>1. Overview</h3>
-                <p style="margin: 0;">Patcher applies exact character find-and-replace blocks from LLM markdown into your project file. Paste the AI's entire markdown response into the center box—conversational filler before and after patches is automatically ignored.</p>
-            </div>
+        <div id="review-store-text" class="meta-title">Store: --</div>
+        <div id="review-date-text" class="meta-sub">Scanned: --</div>
+      </div>
+    </div>
 
-            <div class="modal-section">
-                <h3>2. Markdown Patch Syntax</h3>
-                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Your LLM should follow either format without abbreviations or truncation:</p>
-                
-                <strong>Standard Patch (Local edits):</strong>
-                <pre class="code-preview">Patch 1/2
-Find
-&#96;&#96;&#96;html
-&lt;div class="header"&gt;Old Code&lt;/div&gt;
-&#96;&#96;&#96;
-Replace with
-&#96;&#96;&#96;html
-&lt;div class="header"&gt;New Code&lt;/div&gt;
-&#96;&#96;&#96;</pre>
+    <div id="staged-groups-container" class="staged-carrier-group">
+      <!-- Dynamically populated carrier item rows -->
+    </div>
 
-                <strong>Range Patch (Multi-line / Large refactors):</strong>
-                <pre class="code-preview">Patch 2/2
-Find start
-&#96;&#96;&#96;javascript
-function init() {
-&#96;&#96;&#96;
-Find end
-&#96;&#96;&#96;javascript
-    ready = true;
-}
-&#96;&#96;&#96;
-Replace with
-&#96;&#96;&#96;javascript
-function init() {
-    setupEngine();
-    ready = true;
-}
-&#96;&#96;&#96;</pre>
-            </div>
+    <div style="display: flex; justify-content: center; width: 100%;">
+      <button id="btn-clear-staging" class="btn-clear-staging">🗑️ Clear All Staged Inventory</button>
+    </div>
 
-            <div class="modal-section">
-                <h3>3. LDD Template</h3>
-                <p style="margin: 0;">Provide your AI with an LDD rulebook to ensure strict adherence to formatting:</p>
-                <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.25rem;">
-                    <button id="btn-download-ldd" class="modal-chip-link">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-                        Download latest LDD template
-                    </button>
-                    <a href="https://spamfan.github.io/mdviewer" target="_blank" rel="noopener noreferrer" class="modal-chip-link" style="background: var(--border-color); color: var(--text-main);">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-                        Open MDViewer
-                    </a>
-                </div>
-            </div>
+    <div class="bottom-floating-bar">
+      <button id="btn-scan-next" class="pill-btn btn-secondary" style="width: auto; padding: 10px 18px;">+ Scan Next Sheet</button>
+      <button id="btn-publish-all" class="pill-btn btn-primary" style="width: auto; padding: 10px 22px;">⬆ Publish all</button>
+    </div>
+  </div>
 
-            <div class="modal-section">
-                <h3>4. Recommended AI Setup (AI Studio)</h3>
-                <ul style="margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                    <li><strong>Model:</strong> Gemini 3.8 Flash</li>
-                    <li><strong>Thinking Level:</strong> High</li>
-                    <li><strong>Grounding:</strong> Google Search (On), URL context (On), Google Maps (Off unless needed)</li>
-                    <li><strong>Defaults:</strong> Temperature, top-p, and output limits default.</li>
-                    <li><strong>Context Management:</strong> Branch off and delete irrelevant conversation chunks when context reaches ~100k tokens.</li>
-                </ul>
-            </div>
+  <!-- FLOATING DEBUG TRIGGER -->
+  <button id="btn-open-debug" class="btn-floating-debug" style="display: none;">
+    <span>🐞 Logs (0)</span>
+  </button>
+
+  <!-- DEBUG MODAL -->
+  <div id="debug-modal" class="modal-overlay" style="display: none;">
+    <div class="debug-modal-card">
+      <div class="debug-header">
+        <span class="debug-title">OCR Diagnostics & Logs</span>
+        <button id="btn-debug-close" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="debug-tabs">
+        <button id="tab-btn-matrix" class="debug-tab-btn active">Parse Matrix</button>
+        <button id="tab-btn-raw" class="debug-tab-btn">Raw OCR Text</button>
+        <button id="tab-btn-canvas" class="debug-tab-btn">Preprocessed Canvas</button>
+      </div>
+      <div id="tab-panel-matrix" class="debug-tab-panel">
+        <div id="debug-matrix-container">
+          <p class="placeholder-text" style="text-align: center; padding: 20px;">No scan logs captured yet in this session.</p>
         </div>
-    </dialog>
+      </div>
+      <div id="tab-panel-raw" class="debug-tab-panel" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+          <button id="btn-copy-raw-debug" class="pill-btn btn-secondary" style="padding: 4px 12px; font-size: 0.78rem; width: auto;">📋 Copy Raw Text</button>
+        </div>
+        <pre id="debug-raw-text" class="debug-pre">No raw text available.</pre>
+      </div>
+      <div id="tab-panel-canvas" class="debug-tab-panel" style="display: none;">
+        <img id="debug-canvas-img" class="debug-img-preview" src="" alt="Preprocessed OCR Canvas">
+      </div>
+      <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+        <button id="btn-download-debug-report" class="pill-btn btn-secondary" style="width: auto; padding: 6px 14px; font-size: 0.8rem;">📥 Download Full HTML Report</button>
+        <button id="btn-debug-modal-ok" class="pill-btn btn-primary" style="width: auto; padding: 6px 18px; font-size: 0.8rem;">Close</button>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        // --- SVG Icon Assets ---
-        const ICONS = {
-            sun: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>',
-            moon: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>',
-            check: '<svg class="icon icon-sm text-green" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
-            alert: '<svg class="icon icon-sm text-red" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
-            info: '<svg class="icon icon-sm text-gray" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightbox-modal" class="modal-overlay" style="display: none;">
+    <img id="lightbox-img" class="lightbox-img" src="" alt="Captured Sheet">
+  </div>
+
+  <!-- TERMS MODAL -->
+  <div id="terms-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <p>Terms of use haven't been made yet.</p>
+      <div class="modal-actions">
+        <button id="btn-terms-close" class="pill-btn btn-primary" style="width: auto;">Okay</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- APP VERSION (Single Point of Truth) ---
+    const APP_VERSION = "v0.0.12";
+    document.getElementById('version-text').textContent = APP_VERSION;
+
+    // --- GATEKEEPER & SESSION ---
+    const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
+    const MASTER_PIN = atob('MTAyMDMw'); // "102030"
+
+    const storeInput = document.getElementById('store-input');
+    const pinInput = document.getElementById('pin-input');
+    const pinError = document.getElementById('pin-error');
+    const btnEnter = document.getElementById('btn-enter');
+    const btnLogout = document.getElementById('btn-logout');
+    const btnBack = document.getElementById('btn-back');
+    const cardPrintTitle = document.getElementById('card-print-title');
+    
+    // Views
+    const loginView = document.getElementById('login-view');
+    const dashboardView = document.getElementById('dashboard-view');
+    const scannerView = document.getElementById('scanner-view');
+    const reviewView = document.getElementById('review-view');
+    let currentView = 'login-view';
+
+    // Staging Data Model
+    let stagedData = {
+      store: localStorage.getItem('wfo_store') || '',
+      activeCarrier: 'tmo',
+      sheets: {
+        tmo: { carrier: 'T-Mobile', timestamp: '', thumb: '', items: [] },
+        vzw: { carrier: 'Verizon Wireless', timestamp: '', thumb: '', items: [] },
+        att: { carrier: 'AT&T', timestamp: '', thumb: '', items: [] }
+      }
+    };
+
+    // Load persisted staging if available
+    const savedStaging = localStorage.getItem('wfo_staged_inventory');
+    if (savedStaging) {
+      try {
+        const parsed = JSON.parse(savedStaging);
+        if (parsed && parsed.sheets) stagedData = parsed;
+      } catch (e) {}
+    }
+
+    function persistStagedData() {
+      localStorage.setItem('wfo_staged_inventory', JSON.stringify(stagedData));
+      updateReviewCountBadge();
+    }
+
+    const savedStore = localStorage.getItem('wfo_store');
+    if (savedStore) {
+      storeInput.value = savedStore;
+      stagedData.store = savedStore;
+      pinInput.focus();
+    }
+
+    const isValidAuth = (store, pin) => {
+      if (!store) return false;
+      return pin === (store + SECRET_SUFFIX) || pin === MASTER_PIN;
+    };
+
+    function unlockApp(storeVal) {
+      localStorage.setItem('wfo_store', storeVal);
+      stagedData.store = storeVal;
+      persistStagedData();
+      cardPrintTitle.textContent = 'Print inventory (' + storeVal + ')';
+      switchView('dashboard-view');
+      fetchPing();
+    }
+
+    function handleAuthSubmit() {
+      const storeVal = storeInput.value.trim();
+      const pinVal = pinInput.value.trim();
+
+      if (isValidAuth(storeVal, pinVal)) {
+        pinError.style.display = 'none';
+        unlockApp(storeVal);
+      } else {
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+
+    btnEnter.addEventListener('click', handleAuthSubmit);
+    btnLogout.addEventListener('click', () => { window.location.reload(); });
+
+    storeInput.addEventListener('input', (e) => {
+      if (e.target.value.trim().length >= 4) pinInput.focus();
+    });
+    storeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') pinInput.focus();
+    });
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAuthSubmit();
+    });
+    pinInput.addEventListener('input', (e) => {
+      const storeVal = storeInput.value.trim();
+      const pinVal = e.target.value.trim();
+      if (isValidAuth(storeVal, pinVal)) {
+        e.target.blur();
+        pinError.style.display = 'none';
+        unlockApp(storeVal);
+      }
+    });
+
+    // --- NAVIGATION & HISTORY CONTROLLER ---
+    function switchView(targetViewId, pushState = true) {
+      if (currentView === 'scanner-view' && targetViewId !== 'scanner-view') {
+        stopCamera();
+      }
+
+      loginView.style.display = 'none';
+      dashboardView.style.display = 'none';
+      scannerView.style.display = 'none';
+      reviewView.style.display = 'none';
+
+      const targetEl = document.getElementById(targetViewId);
+      if (targetEl) {
+        targetEl.style.display = (targetViewId === 'login-view' || targetViewId === 'dashboard-view' || targetViewId === 'scanner-view' || targetViewId === 'review-view') ? 'flex' : 'block';
+      }
+
+      currentView = targetViewId;
+
+      // Header Button State
+      if (currentView === 'dashboard-view') {
+        btnLogout.style.display = 'inline-flex';
+        btnBack.style.display = 'none';
+      } else if (currentView === 'scanner-view') {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'inline-flex';
+        btnBack.textContent = '← BACK';
+      } else if (currentView === 'review-view') {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'inline-flex';
+        btnBack.textContent = '← CAMERA';
+      } else {
+        btnLogout.style.display = 'none';
+        btnBack.style.display = 'none';
+      }
+
+      if (currentView === 'scanner-view') {
+        startCamera();
+        updateCarrierPill();
+        updateReviewCountBadge();
+      } else if (currentView === 'review-view') {
+        renderReviewView();
+      }
+
+      if (pushState) {
+        history.pushState({ view: targetViewId }, '', '');
+      }
+    }
+
+    btnBack.addEventListener('click', () => {
+      if (currentView === 'review-view') {
+        switchView('scanner-view');
+      } else if (currentView === 'scanner-view') {
+        switchView('dashboard-view');
+      }
+    });
+
+    window.addEventListener('popstate', (e) => {
+      if (termsModal.style.display === 'flex') {
+        termsModal.style.display = 'none';
+        return;
+      }
+      if (lightboxModal.style.display === 'flex') {
+        lightboxModal.style.display = 'none';
+        return;
+      }
+      const dest = (e.state && e.state.view) ? e.state.view : (localStorage.getItem('wfo_store') ? 'dashboard-view' : 'login-view');
+      switchView(dest, false);
+    });
+
+    // Dashboard Upload Button Entry
+    const btnUploadInv = document.getElementById('btn-upload-inv');
+    btnUploadInv.addEventListener('click', () => {
+      switchView('scanner-view');
+    });
+
+    // --- CAMERA STREAM LIFECYCLE ---
+    const cameraFeed = document.getElementById('camera-feed');
+    const viewfinderFrozen = document.getElementById('viewfinder-frozen');
+    let activeMediaStream = null;
+
+    async function startCamera() {
+      if (viewfinderFrozen) {
+        viewfinderFrozen.style.display = 'none';
+        viewfinderFrozen.src = '';
+      }
+      if (activeMediaStream) stopCamera();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        activeMediaStream = stream;
+        cameraFeed.srcObject = stream;
+      } catch (err) {
+        console.warn('Camera access unavailable:', err);
+      }
+    }
+
+    function stopCamera() {
+      if (activeMediaStream) {
+        activeMediaStream.getTracks().forEach(track => track.stop());
+        activeMediaStream = null;
+      }
+      if (cameraFeed) cameraFeed.srcObject = null;
+    }
+
+    // --- CARRIER TOGGLE ---
+    const carrierCycle = ['tmo', 'vzw', 'att'];
+    const carrierNames = { tmo: 'T-Mobile', vzw: 'Verizon Wireless', att: 'AT&T' };
+    const carrierPillLabel = document.getElementById('carrier-toggle-label');
+    const btnCarrierToggle = document.getElementById('btn-carrier-toggle');
+
+    function updateCarrierPill() {
+      carrierPillLabel.textContent = stagedData.activeCarrier.toUpperCase();
+    }
+
+    btnCarrierToggle.addEventListener('click', () => {
+      const idx = carrierCycle.indexOf(stagedData.activeCarrier);
+      stagedData.activeCarrier = carrierCycle[(idx + 1) % carrierCycle.length];
+      updateCarrierPill();
+      persistStagedData();
+    });
+
+    // --- IMAGE PRE-PROCESSING & OCR PIPELINE ---
+    const scanStatus = document.getElementById('scan-status');
+    const scanStatusText = document.getElementById('scan-status-text');
+    const btnShutter = document.getElementById('btn-shutter');
+    const btnTestUpload = document.getElementById('btn-test-upload');
+    const fileUploadInput = document.getElementById('file-upload-input');
+    const btnViewReview = document.getElementById('btn-view-review');
+
+    btnViewReview.addEventListener('click', () => {
+      switchView('review-view');
+    });
+
+    btnTestUpload.addEventListener('click', () => {
+      fileUploadInput.value = '';
+      fileUploadInput.click();
+    });
+
+    fileUploadInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        if (file.type && !file.type.startsWith('image/')) {
+          alert('Please select a valid image file (.jpg, .png, etc.).');
+          e.target.value = '';
+          return;
+        }
+        stopCamera();
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          if (viewfinderFrozen) {
+            viewfinderFrozen.src = evt.target.result;
+            viewfinderFrozen.style.display = 'block';
+          }
+          const img = new Image();
+          img.onload = () => processAndParseImage(img);
+          img.onerror = () => {
+            alert('Could not load image file.');
+          };
+          img.src = evt.target.result;
         };
+        reader.readAsDataURL(file);
+      }
+    });
 
-        // --- DOM Elements ---
-        const uploadBtn = document.getElementById('upload-btn');
-        const fileInput = document.getElementById('file-input');
-        const fileInfo = document.getElementById('file-info');
-        const clearFileBtn = document.getElementById('clear-file-btn');
+    btnShutter.addEventListener('click', () => {
+      if (!cameraFeed || !cameraFeed.videoWidth) {
+        alert('Camera stream not ready. You can also use "Test with Image" below.');
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraFeed.videoWidth;
+      canvas.height = cameraFeed.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+
+      if (viewfinderFrozen) {
+        viewfinderFrozen.src = canvas.toDataURL('image/jpeg', 0.8);
+        viewfinderFrozen.style.display = 'block';
+      }
+      stopCamera();
+      processAndParseImage(canvas);
+    });
+
+    // --- ALWAYS-ON TELEMETRY LOGS ---
+    const sessionOcrLogs = [];
+
+    // Grayscale & Balanced Linear Contrast Stretch (preserves font edges)
+    function preprocessCanvas(sourceCanvas) {
+      const canvas = document.createElement('canvas');
+      canvas.width = sourceCanvas.width;
+      canvas.height = sourceCanvas.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(sourceCanvas, 0, 0);
+
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imgData.data;
+        let min = 255, max = 0;
         
-        const inputSkeleton = document.getElementById('input-skeleton');
-        const inputPreview = document.getElementById('input-preview');
-        const moduleInput = document.getElementById('module-input');
-        
-        const clipboardBtn = document.getElementById('clipboard-btn');
-        const clearInstructionsBtn = document.getElementById('clear-instructions-btn');
-        const statusList = document.getElementById('status-list');
-        const instructionsInput = document.getElementById('instructions-input');
-        const engineSkeleton = document.getElementById('engine-skeleton');
-        
-        const outputSkeleton = document.getElementById('output-skeleton');
-        const outputPreview = document.getElementById('output-preview');
-        const downloadBtn = document.getElementById('download-btn');
-        const copyOutputBtn = document.getElementById('copy-output-btn');
-        const outputActionsContainer = document.getElementById('output-actions-container');
-        const outputFilenameInput = document.getElementById('output-filename-input');
-
-        const btnHowTo = document.getElementById('btn-how-to');
-        const btnDownloadLdd = document.getElementById('btn-download-ldd');
-        const themeToggle = document.getElementById('theme-toggle');
-        const modalHowTo = document.getElementById('modal-how-to');
-        const allDialogs = document.querySelectorAll('dialog');
-        const allCloseBtns = document.querySelectorAll('.close-modal-btn');
-
-        // --- Stateless Runtime Variables ---
-        let sourceFileContent = "";
-        let originalFileName = "";
-        let originalFileExtension = "";
-        let isProcessing = false;
-        let currentInstructions = "";
-        let failedPatchesMap = {};
-        let debounceTimer;
-        let lastPatchedContent = "";
-
-        // --- System Theme Initialization & Persistence ---
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-
-        function applyTheme(isDark) {
-            if (isDark) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                themeToggle.innerHTML = ICONS.sun;
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-                themeToggle.innerHTML = ICONS.moon;
-            }
+        // Find luminance range
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = Math.round(d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+          if (lum < min) min = lum;
+          if (lum > max) max = lum;
         }
 
-        function initTheme() {
-            const savedTheme = localStorage.getItem('patcher_theme');
-            if (savedTheme === 'dark') {
-                applyTheme(true);
-            } else if (savedTheme === 'light') {
-                applyTheme(false);
-            } else {
-                applyTheme(systemPrefersDark.matches);
-            }
+        const range = (max - min) || 1;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+          // Linear contrast stretch with clipping
+          const stretched = Math.min(255, Math.max(0, ((lum - min) / range) * 255));
+          d[i] = stretched;
+          d[i+1] = stretched;
+          d[i+2] = stretched;
         }
-        initTheme();
+        ctx.putImageData(imgData, 0, 0);
+      } catch (e) {}
 
-        systemPrefersDark.addEventListener('change', (e) => {
-            if (!localStorage.getItem('patcher_theme')) {
-                applyTheme(e.matches);
-            }
-        });
+      return canvas;
+    }
 
-        themeToggle.addEventListener('click', () => {
-            const isCurrentlyDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const newTheme = isCurrentlyDark ? 'light' : 'dark';
-            applyTheme(!isCurrentlyDark);
-            localStorage.setItem('patcher_theme', newTheme);
-        });
-
-        // --- File Ingestion & Auto-Paste ---
-        uploadBtn.addEventListener('click', async () => {
-            if (!instructionsInput.value.trim() && navigator.clipboard && navigator.clipboard.readText) {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    if (text.trim()) {
-                        instructionsInput.value = text;
-                        currentInstructions = text;
-                        clearInstructionsBtn.classList.remove('hidden');
-                        statusList.innerHTML = `<div class="status-item text-green">${ICONS.check}<span>Auto-pasted from clipboard</span></div>`;
-                    }
-                } catch (_) {
-                    // Clipboard access denied or blocked - proceed silently
-                }
-            }
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            originalFileName = file.name;
-            const parts = originalFileName.split('.');
-            originalFileExtension = parts.length > 1 ? parts.pop() : '';
-            
-            uploadBtn.textContent = "Upload different file";
-            fileInfo.textContent = originalFileName;
-            
-            inputPreview.classList.add('hidden');
-            inputSkeleton.textContent = "Loading...";
-            inputSkeleton.classList.remove('hidden');
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                sourceFileContent = e.target.result.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                clearFileBtn.classList.remove('hidden');
-                renderInputPreview();
-
-                outputActionsContainer.classList.add('hidden');
-                outputPreview.classList.add('hidden');
-                outputSkeleton.textContent = "Awaiting Patch...";
-                outputSkeleton.classList.remove('hidden');
-                
-                if (instructionsInput.value.trim()) {
-                    processInstructions(instructionsInput.value);
-                } else {
-                    statusList.innerHTML = `<div class="status-item text-gray">${ICONS.info}<span>ready for markdown</span></div>`;
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        function renderInputPreview() {
-            inputPreview.classList.add('hidden');
-            inputSkeleton.textContent = "Loading...";
-            inputSkeleton.classList.remove('hidden');
-
-            setTimeout(() => {
-                if (originalFileExtension.toLowerCase() === 'html') {
-                    inputPreview.srcdoc = sourceFileContent;
-                } else {
-                    const escapedContent = sourceFileContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    inputPreview.srcdoc = `<pre style="white-space: pre-wrap; word-wrap: break-word; padding: 1rem; font-family: monospace; color: var(--text-main);">${escapedContent}</pre>`;
-                }
-                inputPreview.classList.remove('hidden');
-                inputSkeleton.classList.add('hidden');
-            }, 300);
+    // Levenshtein distance for typo correction
+    function getLevenshtein(a, b) {
+      const matrix = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1).toLowerCase() === a.charAt(j - 1).toLowerCase()) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
         }
+      }
+      return matrix[b.length][a.length];
+    }
 
-        // --- Drag and Drop ---
-        moduleInput.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            moduleInput.classList.add('drag-over');
+    let globalStats = null;
+    async function loadStatsDict() {
+      if (globalStats) return globalStats;
+      try {
+        const res = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
+          headers: { 'Accept': 'application/vnd.github.v3+json' },
+          cache: 'no-store'
         });
-        
-        moduleInput.addEventListener('dragleave', () => {
-            moduleInput.classList.remove('drag-over');
-        });
-        
-        moduleInput.addEventListener('drop', (e) => {
-            e.preventDefault();
-            moduleInput.classList.remove('drag-over');
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                fileInput.files = e.dataTransfer.files;
-                fileInput.dispatchEvent(new Event('change'));
+        const raw = await res.json();
+        globalStats = JSON.parse(decodeURIComponent(escape(atob(raw.content.replace(/\s/g, '')))));
+      } catch (e) {
+        try {
+          const lRes = await fetch('./stats.json?t=' + Date.now());
+          globalStats = await lRes.json();
+        } catch (err) {
+          globalStats = { devices: {}, colors: {} };
+        }
+      }
+      return globalStats;
+    }
+
+    async function processAndParseImage(source) {
+      const startTime = performance.now();
+      scanStatus.style.display = 'flex';
+      scanStatusText.textContent = 'Preprocessing image...';
+
+      let offscreenCanvas = document.createElement('canvas');
+      if (source instanceof HTMLVideoElement || source instanceof HTMLCanvasElement) {
+        offscreenCanvas.width = source.width || source.videoWidth;
+        offscreenCanvas.height = source.height || source.videoHeight;
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+      } else if (source instanceof HTMLImageElement) {
+        offscreenCanvas.width = source.naturalWidth;
+        offscreenCanvas.height = source.naturalHeight;
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+      }
+
+      const thumbnailDataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.6);
+      const enhancedCanvas = preprocessCanvas(offscreenCanvas);
+      const preprocessedDataUrl = enhancedCanvas.toDataURL('image/jpeg', 0.6);
+
+      scanStatusText.textContent = 'Reading text (OCR)...';
+
+      try {
+        const worker = await Tesseract.createWorker('eng');
+        const ret = await worker.recognize(enhancedCanvas);
+        await worker.terminate();
+
+        const rawText = ret.data.text || '';
+        const stats = await loadStatsDict();
+        const elapsedMs = Math.round(performance.now() - startTime);
+
+        parseOcrText(rawText, thumbnailDataUrl, preprocessedDataUrl, stats, elapsedMs);
+
+        scanStatus.style.display = 'none';
+        switchView('review-view');
+      } catch (err) {
+        console.error('OCR Error:', err);
+        alert('OCR processing encountered an issue. Please check the debug log.');
+        scanStatus.style.display = 'none';
+        startCamera();
+      }
+    }
+
+    function parseOcrText(text, thumbUrl, preprocessedUrl, stats, elapsedMs = 0) {
+      let detectedCarrierKey = stagedData.activeCarrier;
+      let detectedStore = stagedData.store;
+      let detectedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      // Header matching
+      if (/Verizon/i.test(text)) detectedCarrierKey = 'vzw';
+      else if (/T-Mobile/i.test(text)) detectedCarrierKey = 'tmo';
+      else if (/AT&T|ATT/i.test(text)) detectedCarrierKey = 'att';
+
+      const storeMatch = text.match(/Store[:\s]+(\d{3,6})/i);
+      if (storeMatch) detectedStore = storeMatch[1];
+
+      const dateMatch = text.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM))/i);
+      if (dateMatch) detectedDate = dateMatch[1];
+
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const parsedItems = [];
+      const linesLog = [];
+
+      const colorMap = (stats && stats.colors) ? stats.colors : {
+        'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK',
+        'Deep Blue': 'BLU', 'Sky Blue': 'BLU', 'Tapestry': 'BLU', 'Navy': 'BLU',
+        'Cosmic Orange': 'ORG', 'Slipstream': 'SLP', 'Beige': 'BGE', 'Gray': 'GRY', 'Coal Smoke': 'BLK'
+      };
+
+      lines.forEach(line => {
+        const isHeaderOrFooter = /^(Carrier|Store|Report|Page|Inventory|Generated|Model|Capacity|Color|Quantity|Total)/i.test(line);
+        const hasCapacity = /(16|32|64|128|256|512)GB/i.test(line);
+        const hasAvailable = /\bAvailable\b/i.test(line);
+        const hasDigits = /\d+/.test(line);
+
+        if ((hasCapacity || hasAvailable || hasDigits) && !isHeaderOrFooter) {
+          // Extract Quantity
+          let qty = 1;
+          const qtyMatch = line.match(/(\d+)\s*Available/i) || line.match(/\b(\d+)$/);
+          if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
+
+          // Extract Capacity
+          let capacity = '128GB';
+          const capMatch = line.match(/(16|32|64|128|256|512)\s*GB/i);
+          if (capMatch) capacity = capMatch[1] + 'GB';
+
+          // Extract Color
+          let foundColor = 'BLK';
+          let rawColorName = 'Black';
+          for (const [cName, cAbbr] of Object.entries(colorMap)) {
+            if (new RegExp(cName, 'i').test(line)) {
+              foundColor = cAbbr;
+              rawColorName = cName;
+              break;
             }
-        });
+          }
 
-        // --- Modal Interactions ---
-        btnHowTo.addEventListener('click', () => modalHowTo.showModal());
-        
-        allCloseBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.target.closest('dialog').close();
+          // Residual Model Text
+          let cleanModel = line
+            .replace(new RegExp(capacity, 'i'), '')
+            .replace(new RegExp(rawColorName, 'i'), '')
+            .replace(/\d+\s*Available/i, '')
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .trim();
+
+          let bestMatch = cleanModel;
+          let lowestDist = 999;
+          if (stats && stats.devices) {
+            for (const dev of Object.values(stats.devices)) {
+              const dName = dev.name || dev;
+              const dist = getLevenshtein(cleanModel, dName);
+              if (dist < lowestDist) {
+                lowestDist = dist;
+                bestMatch = dName;
+              }
+            }
+          }
+
+          let itemStatus = 'matched';
+          let finalModel = cleanModel;
+
+          if (lowestDist < 6) {
+            finalModel = bestMatch;
+            itemStatus = 'matched';
+          } else if (cleanModel.length > 2) {
+            finalModel = '[Unmatched] ' + cleanModel;
+            itemStatus = 'unmatched_fallback';
+          } else {
+            itemStatus = 'ignored';
+          }
+
+          linesLog.push({
+            rawLine: line,
+            capacity: capacity,
+            color: foundColor,
+            qty: qty,
+            residualModel: cleanModel,
+            bestMatch: bestMatch,
+            distance: lowestDist,
+            status: itemStatus
+          });
+
+          if (itemStatus !== 'ignored') {
+            parsedItems.push({
+              id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              model: finalModel,
+              capacity: capacity,
+              color: foundColor,
+              qty: qty
             });
+          }
+        } else {
+          linesLog.push({
+            rawLine: line,
+            capacity: '-',
+            color: '-',
+            qty: '-',
+            residualModel: '-',
+            bestMatch: '-',
+            distance: '-',
+            status: 'ignored'
+          });
+        }
+      });
+
+      // Save to staging sheet
+      stagedData.store = detectedStore;
+      stagedData.sheets[detectedCarrierKey] = {
+        carrier: carrierNames[detectedCarrierKey],
+        timestamp: detectedDate,
+        thumb: thumbUrl,
+        items: parsedItems
+      };
+      stagedData.activeCarrier = detectedCarrierKey;
+      persistStagedData();
+
+      // Record in session telemetry
+      const logEntry = {
+        id: 'log_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        displayTime: detectedDate,
+        carrierKey: detectedCarrierKey,
+        carrierName: carrierNames[detectedCarrierKey],
+        store: detectedStore,
+        elapsedMs: elapsedMs,
+        userAgent: navigator.userAgent,
+        thumbDataUrl: thumbUrl,
+        preprocessedUrl: preprocessedUrl,
+        rawText: text,
+        linesLog: linesLog
+      };
+
+      sessionOcrLogs.push(logEntry);
+      updateDebugBadge();
+    }
+
+    // --- REVIEW & EDIT CONTROLLER ---
+    const reviewThumb = document.getElementById('review-thumb');
+    const reviewCarrierTag = document.getElementById('review-carrier-tag');
+    const reviewStoreText = document.getElementById('review-store-text');
+    const reviewDateText = document.getElementById('review-date-text');
+    const stagedGroupsContainer = document.getElementById('staged-groups-container');
+    const btnScanNext = document.getElementById('btn-scan-next');
+    const btnPublishAll = document.getElementById('btn-publish-all');
+    const lightboxModal = document.getElementById('lightbox-modal');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const btnEditMeta = document.getElementById('btn-edit-meta');
+
+    function updateReviewCountBadge() {
+      let count = 0;
+      carrierCycle.forEach(c => {
+        if (stagedData.sheets[c] && stagedData.sheets[c].items) {
+          count += stagedData.sheets[c].items.length;
+        }
+      });
+      btnViewReview.textContent = 'Review (' + count + ')';
+    }
+
+    function renderReviewView() {
+      stagedGroupsContainer.innerHTML = '';
+      const activeSheet = stagedData.sheets[stagedData.activeCarrier];
+
+      if (activeSheet && activeSheet.thumb) {
+        reviewThumb.src = activeSheet.thumb;
+        reviewThumb.style.display = 'block';
+      } else {
+        reviewThumb.style.display = 'none';
+      }
+
+      reviewCarrierTag.textContent = carrierNames[stagedData.activeCarrier];
+      reviewStoreText.textContent = 'Store: ' + (stagedData.store || '--');
+      reviewDateText.textContent = 'Report: ' + (activeSheet ? activeSheet.timestamp : 'Not scanned yet');
+
+      // Render items per carrier
+      carrierCycle.forEach(cKey => {
+        const sheet = stagedData.sheets[cKey];
+        if (!sheet || !sheet.items || sheet.items.length === 0) return;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'carrier-group-header';
+        headerDiv.innerHTML = `
+          <div class="carrier-group-title">${sheet.carrier} (${sheet.items.length} items)</div>
+          <div class="carrier-header-actions">
+            <button class="btn-carrier-action" onclick="downloadCarrierDebugHtml('${cKey}')" title="Download Debug Report">📥 Report</button>
+            <button class="btn-carrier-action btn-del-carrier" onclick="deleteCarrierSheet('${cKey}')" title="Delete this Carrier Scan">🗑️</button>
+          </div>
+        `;
+        stagedGroupsContainer.appendChild(headerDiv);
+
+        sheet.items.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'item-row-card';
+          card.id = 'card-' + item.id;
+
+          card.innerHTML = `
+            <div class="item-details" id="details-${item.id}">
+              <div class="item-model">${item.model}</div>
+              <div class="item-subtext">
+                <span>${item.capacity}</span>
+                <span class="color-chip">${item.color}</span>
+                <span class="item-qty-badge">• Qty: ${item.qty}</span>
+              </div>
+            </div>
+            <div class="item-actions" id="actions-${item.id}">
+              <button class="icon-edit-btn" onclick="handleEditRow('${cKey}', '${item.id}')" title="Edit Item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </button>
+            </div>
+          `;
+          stagedGroupsContainer.appendChild(card);
         });
+      });
 
-        allDialogs.forEach(dialog => {
-            dialog.addEventListener('click', (e) => {
-                const rect = dialog.getBoundingClientRect();
-                const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
-                                    rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
-                if (!isInDialog) {
-                    dialog.close();
-                }
-            });
-        });
+      if (stagedGroupsContainer.innerHTML === '') {
+        stagedGroupsContainer.innerHTML = '<p class="placeholder-text" style="text-align: center; padding: 20px;">No inventory items scanned yet.</p>';
+      }
+    }
 
-        // --- Clear Actions ---
-        clearFileBtn.addEventListener('click', () => {
-            sourceFileContent = "";
-            originalFileName = "";
-            originalFileExtension = "";
-            fileInput.value = "";
-            fileInfo.textContent = "No file selected";
-            clearFileBtn.classList.add('hidden');
-            inputPreview.classList.add('hidden');
-            inputSkeleton.textContent = "Awaiting File...";
-            inputSkeleton.classList.remove('hidden');
-            outputActionsContainer.classList.add('hidden');
-            outputPreview.classList.add('hidden');
-            outputSkeleton.textContent = "Awaiting Patch...";
-            outputSkeleton.classList.remove('hidden');
-            outputFilenameInput.value = "";
-            lastPatchedContent = "";
-        });
+    // --- DELETION & RESET CONTROLLERS ---
+    window.deleteCarrierSheet = function(carrierKey) {
+      if (!confirm(`Delete all scanned items and image for ${carrierNames[carrierKey]}?`)) return;
+      stagedData.sheets[carrierKey] = { carrier: carrierNames[carrierKey], timestamp: '', thumb: '', items: [] };
+      persistStagedData();
+      renderReviewView();
+    };
 
-        clearInstructionsBtn.addEventListener('click', () => {
-            instructionsInput.value = "";
-            clearInstructionsBtn.classList.add('hidden');
-            statusList.innerHTML = `<div class="status-item text-gray">${ICONS.info}<span>no input</span></div>`;
-            outputActionsContainer.classList.add('hidden');
-            outputPreview.classList.add('hidden');
-            outputSkeleton.textContent = "Awaiting Patch...";
-            outputSkeleton.classList.remove('hidden');
-            outputFilenameInput.value = "";
-            lastPatchedContent = "";
-        });
+    const btnClearStaging = document.getElementById('btn-clear-staging');
+    btnClearStaging.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to delete ALL staged inventory across all carriers?')) return;
+      stagedData = {
+        store: localStorage.getItem('wfo_store') || '',
+        activeCarrier: 'tmo',
+        sheets: {
+          tmo: { carrier: 'T-Mobile', timestamp: '', thumb: '', items: [] },
+          vzw: { carrier: 'Verizon Wireless', timestamp: '', thumb: '', items: [] },
+          att: { carrier: 'AT&T', timestamp: '', thumb: '', items: [] }
+        }
+      };
+      persistStagedData();
+      renderReviewView();
+    });
 
-        // --- GitHub LDD Fetcher ---
-        btnDownloadLdd.addEventListener('click', async () => {
-            const originalHTML = btnDownloadLdd.innerHTML;
-            btnDownloadLdd.innerHTML = '<div class="spinner" style="width: 0.9rem; height: 0.9rem; border-width: 2px;"></div> Fetching...';
-            btnDownloadLdd.disabled = true;
-            
-            try {
-                const res = await fetch('https://api.github.com/repos/spamfan/patcher/contents/');
-                if (!res.ok) throw new Error('Failed to fetch repo contents');
-                const data = await res.json();
-                
-                const lddFiles = data.filter(f => f.name.toLowerCase().startsWith('ldd') && f.name.toLowerCase().endsWith('.md'));
-                if (lddFiles.length === 0) throw new Error('No LDD files found');
-                
-                let highestNum = -1;
-                let targetFile = null;
-                
-                lddFiles.forEach(f => {
-                    const match = f.name.match(/ldd(\d*)\.md/i);
-                    if (match) {
-                        const num = match[1] ? parseInt(match[1]) : 0;
-                        if (num > highestNum) {
-                            highestNum = num;
-                            targetFile = f;
-                        }
-                    }
-                });
-                
-                if (!targetFile) throw new Error('Could not parse LDD versions');
-                
-                const fileRes = await fetch(targetFile.download_url);
-                const fileBlob = await fileRes.blob();
-                const url = window.URL.createObjectURL(fileBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = targetFile.name;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-            } catch (err) {
-                alert('Error fetching LDD: ' + err.message);
-            } finally {
-                btnDownloadLdd.innerHTML = originalHTML;
-                btnDownloadLdd.disabled = false;
-            }
-        });
+    // --- DEBUG MODAL & REPORT DOWNLOAD ENGINE ---
+    const btnOpenDebug = document.getElementById('btn-open-debug');
+    const debugModal = document.getElementById('debug-modal');
+    const btnDebugClose = document.getElementById('btn-debug-close');
+    const btnDebugModalOk = document.getElementById('btn-debug-modal-ok');
+    const tabBtnMatrix = document.getElementById('tab-btn-matrix');
+    const tabBtnRaw = document.getElementById('tab-btn-raw');
+    const tabBtnCanvas = document.getElementById('tab-btn-canvas');
+    const tabPanelMatrix = document.getElementById('tab-panel-matrix');
+    const tabPanelRaw = document.getElementById('tab-panel-raw');
+    const tabPanelCanvas = document.getElementById('tab-panel-canvas');
+    const debugMatrixContainer = document.getElementById('debug-matrix-container');
+    const debugRawText = document.getElementById('debug-raw-text');
+    const debugCanvasImg = document.getElementById('debug-canvas-img');
+    const btnCopyRawDebug = document.getElementById('btn-copy-raw-debug');
+    const btnDownloadDebugReport = document.getElementById('btn-download-debug-report');
 
-        // --- Error Link Routing ---
-        statusList.addEventListener('click', (e) => {
-            const errorLink = e.target.closest('.error-link');
-            if (errorLink) {
-                e.preventDefault();
-                const patchId = errorLink.getAttribute('data-patch');
-                const findString = failedPatchesMap[patchId];
-                if (findString && currentInstructions) {
-                    const start = currentInstructions.indexOf(findString);
-                    if (start !== -1) {
-                        const end = start + findString.length;
-                        instructionsInput.focus();
-                        instructionsInput.setSelectionRange(start, end);
-                    }
-                }
-            }
-        });
+    function updateDebugBadge() {
+      btnOpenDebug.style.display = (currentView === 'scanner-view' || currentView === 'review-view') ? 'inline-flex' : 'none';
+      btnOpenDebug.querySelector('span').textContent = `🐞 Logs (${sessionOcrLogs.length})`;
+    }
 
-        // --- Textarea Input & Debounce ---
-        instructionsInput.addEventListener('input', () => {
-            const text = instructionsInput.value;
-            clearInstructionsBtn.classList.toggle('hidden', text.trim() === '');
-            
-            clearTimeout(debounceTimer);
-            if (!text.trim()) {
-                statusList.innerHTML = `<div class="status-item text-gray">${ICONS.info}<span>no input</span></div>`;
-                return;
-            }
-            
-            debounceTimer = setTimeout(() => {
-                if (sourceFileContent) {
-                    processInstructions(text);
-                } else {
-                    statusList.innerHTML = `<div class="status-item text-gray">${ICONS.info}<span>Markdown ready. Awaiting file upload...</span></div>`;
-                }
-            }, 500);
-        });
+    function switchDebugTab(tabName) {
+      tabBtnMatrix.classList.toggle('active', tabName === 'matrix');
+      tabBtnRaw.classList.toggle('active', tabName === 'raw');
+      tabBtnCanvas.classList.toggle('active', tabName === 'canvas');
 
-        // --- Clipboard Flow ---
-        clipboardBtn.addEventListener('click', async () => {
-            if (isProcessing) return;
+      tabPanelMatrix.style.display = tabName === 'matrix' ? 'block' : 'none';
+      tabPanelRaw.style.display = tabName === 'raw' ? 'block' : 'none';
+      tabPanelCanvas.style.display = tabName === 'canvas' ? 'block' : 'none';
+    }
 
-            try {
-                const text = await navigator.clipboard.readText();
-                if (!text.trim()) {
-                    statusList.innerHTML = `<div class="status-item text-red">${ICONS.alert}<span>Clipboard is empty</span></div>`;
-                    return;
-                }
-                
-                instructionsInput.value = text;
-                clearInstructionsBtn.classList.remove('hidden');
+    tabBtnMatrix.addEventListener('click', () => switchDebugTab('matrix'));
+    tabBtnRaw.addEventListener('click', () => switchDebugTab('raw'));
+    tabBtnCanvas.addEventListener('click', () => switchDebugTab('canvas'));
 
-                if (!sourceFileContent) {
-                    currentInstructions = text;
-                    statusList.innerHTML = `<div class="status-item text-gray">${ICONS.info}<span>Markdown ready. Awaiting file upload...</span></div>`;
-                } else {
-                    processInstructions(text);
-                }
-            } catch (err) {
-                statusList.innerHTML = `<div class="status-item text-red">${ICONS.alert}<span>Auto-paste blocked. Paste manually below.</span></div>`;
-                instructionsInput.focus();
-            }
-        });
+    function renderDebugModal() {
+      if (sessionOcrLogs.length === 0) {
+        debugMatrixContainer.innerHTML = '<p class="placeholder-text" style="text-align: center; padding: 20px;">No scan logs captured yet in this session.</p>';
+        debugRawText.textContent = 'No raw OCR text available.';
+        debugCanvasImg.src = '';
+        return;
+      }
 
-        // --- Core Engine Logic ---
-        function processInstructions(instructions) {
-            isProcessing = true;
-            currentInstructions = instructions;
-            failedPatchesMap = {};
-            
-            engineSkeleton.classList.remove('hidden');
-            statusList.innerHTML = `<div class="status-item text-gray"><div class="spinner"></div><span>Reading clipboard...</span></div>`;
-            
-            setTimeout(() => {
-                statusList.innerHTML = `<div class="status-item text-gray"><div class="spinner"></div><span>Parsing AI instructions...</span></div>`;
-                
-                setTimeout(() => {
-                    executePatches(instructions);
-                }, 400);
-            }, 300);
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      debugRawText.textContent = latestLog.rawText || '(Empty Text)';
+      debugCanvasImg.src = latestLog.preprocessedUrl || latestLog.thumbDataUrl || '';
+
+      let html = `<div style="margin-bottom: 8px; font-weight: 600; color: var(--text-sub);">Latest Scan: ${latestLog.carrierName} | Store: ${latestLog.store} | ${latestLog.elapsedMs}ms</div>`;
+      html += `
+        <table class="debug-table">
+          <thead>
+            <tr>
+              <th>Raw Line</th>
+              <th>Extracted</th>
+              <th>Matched Model</th>
+              <th>Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      latestLog.linesLog.forEach(l => {
+        let badgeClass = 'status-ignored';
+        if (l.status === 'matched') badgeClass = 'status-matched';
+        if (l.status === 'unmatched_fallback') badgeClass = 'status-fallback';
+
+        html += `
+          <tr>
+            <td><code>${l.rawLine}</code></td>
+            <td>${l.capacity !== '-' ? `${l.capacity}, ${l.color}, Q:${l.qty}` : '-'}</td>
+            <td><strong>${l.bestMatch || '-'}</strong></td>
+            <td>${l.distance !== '-' ? `d=${l.distance}` : '-'}</td>
+            <td><span class="badge-status ${badgeClass}">${l.status.toUpperCase()}</span></td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      debugMatrixContainer.innerHTML = html;
+    }
+
+    btnOpenDebug.addEventListener('click', () => {
+      renderDebugModal();
+      debugModal.style.display = 'flex';
+    });
+
+    const closeDebugModal = () => { debugModal.style.display = 'none'; };
+    btnDebugClose.addEventListener('click', closeDebugModal);
+    btnDebugModalOk.addEventListener('click', closeDebugModal);
+    debugModal.addEventListener('click', (e) => {
+      if (e.target === debugModal) closeDebugModal();
+    });
+
+    btnCopyRawDebug.addEventListener('click', () => {
+      if (sessionOcrLogs.length === 0) return;
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      navigator.clipboard.writeText(latestLog.rawText || '').then(() => {
+        btnCopyRawDebug.textContent = '✅ Copied!';
+        setTimeout(() => { btnCopyRawDebug.textContent = '📋 Copy Raw Text'; }, 2000);
+      });
+    });
+
+    function generateHtmlReport(log) {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OCR Diagnostic Report - ${log.carrierName} (${log.displayTime})</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    h1, h2 { margin-top: 0; color: #38bdf8; }
+    .btn-copy-ai { background: #38bdf8; color: #0f172a; font-weight: 700; border: none; border-radius: 9999px; padding: 10px 20px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+    .btn-copy-ai:hover { background: #7dd3fc; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: left; }
+    th { background: #0f172a; color: #94a3b8; }
+    pre { background: #000; padding: 12px; border-radius: 8px; overflow-x: auto; color: #4ade80; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+    .status-matched { background: #166534; color: #bbf7d0; }
+    .status-unmatched_fallback { background: #854d0e; color: #fef08a; }
+    .status-ignored { background: #334155; color: #94a3b8; }
+    .img-preview { max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #475569; }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <h1 style="margin: 0;">WFO OCR Diagnostics Report</h1>
+    <button id="btn-copy-ai" class="btn-copy-ai">📋 Copy Telemetry for AI</button>
+  </div>
+  <div class="card">
+    <h2>Scan Metadata</h2>
+    <p><strong>Carrier:</strong> ${log.carrierName} | <strong>Store:</strong> ${log.store}</p>
+    <p><strong>Timestamp:</strong> ${log.displayTime} (${log.timestamp})</p>
+    <p><strong>Processing Duration:</strong> ${log.elapsedMs} ms</p>
+    <p><strong>User Agent:</strong> <code>${log.userAgent}</code></p>
+  </div>
+  <div class="card">
+    <h2>Preprocessed Image</h2>
+    <img src="${log.preprocessedUrl || log.thumbDataUrl}" class="img-preview" alt="Preprocessed Canvas">
+  </div>
+  <div class="card">
+    <h2>Line-by-Line Token & Matching Matrix</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Raw Line</th>
+          <th>Capacity</th>
+          <th>Color</th>
+          <th>Qty</th>
+          <th>Residual Text</th>
+          <th>Best Match</th>
+          <th>Distance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${log.linesLog.map(l => `
+          <tr>
+            <td><code>${l.rawLine}</code></td>
+            <td>${l.capacity}</td>
+            <td>${l.color}</td>
+            <td>${l.qty}</td>
+            <td>${l.residualModel}</td>
+            <td><strong>${l.bestMatch}</strong></td>
+            <td>${l.distance}</td>
+            <td><span class="badge status-${l.status}">${l.status.toUpperCase()}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Raw OCR Text Dump</h2>
+    <pre>${log.rawText}</pre>
+  </div>
+  <textarea id="ai-telemetry-payload" style="display: none;">### WFO OCR Diagnostic Report
+- Carrier: ${log.carrierName}
+- Store: ${log.store}
+- Timestamp: ${log.displayTime} (${log.timestamp})
+- Processing Duration: ${log.elapsedMs} ms
+- User Agent: ${log.userAgent}
+
+#### Line-by-Line Token & Matching Matrix
+| Raw Line | Extracted | Matched Model | Score | Status |
+|---|---|---|---|---|
+${log.linesLog.map(l => `| ${l.rawLine.replace(/\|/g, '/')} | ${l.capacity !== '-' ? `${l.capacity}, ${l.color}, Q:${l.qty}` : '-'} | ${l.bestMatch} | ${l.distance !== '-' ? `d=${l.distance}` : '-'} | ${l.status} |`).join('\n')}
+
+#### Raw OCR Text Dump
+\`\`\`
+${log.rawText.replace(/<\/textarea>/gi, '<\\/textarea>')}
+\`\`\`</textarea>
+  <script>
+    document.getElementById('btn-copy-ai').addEventListener('click', function() {
+      var btn = this;
+      var text = document.getElementById('ai-telemetry-payload').value.trim();
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '✅ Telemetry Copied!';
+        setTimeout(function() { btn.textContent = '📋 Copy Telemetry for AI'; }, 2500);
+      }).catch(function() {
+        alert('Clipboard access denied or unavailable.');
+      });
+    });
+  <\/script>
+</body>
+</html>`;
+    }
+
+    function triggerDownload(content, filename) {
+      const blob = new Blob([content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    btnDownloadDebugReport.addEventListener('click', () => {
+      if (sessionOcrLogs.length === 0) {
+        alert('No scan logs available to export.');
+        return;
+      }
+      const latestLog = sessionOcrLogs[sessionOcrLogs.length - 1];
+      const html = generateHtmlReport(latestLog);
+      triggerDownload(html, `wfo_ocr_report_${latestLog.carrierKey}_${Date.now()}.html`);
+    });
+
+    window.downloadCarrierDebugHtml = function(carrierKey) {
+      const logsForCarrier = sessionOcrLogs.filter(l => l.carrierKey === carrierKey);
+      if (logsForCarrier.length === 0) {
+        alert(`No telemetry logs found for ${carrierNames[carrierKey]} in this session.`);
+        return;
+      }
+      const latest = logsForCarrier[logsForCarrier.length - 1];
+      const html = generateHtmlReport(latest);
+      triggerDownload(html, `wfo_ocr_report_${carrierKey}_${Date.now()}.html`);
+    };
+
+    window.handleEditRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      const item = sheet.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const card = document.getElementById('card-' + itemId);
+      card.innerHTML = `
+        <div class="edit-inputs-row">
+          <input type="text" id="edit-model-${itemId}" class="inline-input input-model" value="${item.model}">
+          <input type="text" id="edit-cap-${itemId}" class="inline-input input-cap" value="${item.capacity}">
+          <input type="text" id="edit-color-${itemId}" class="inline-input input-color" value="${item.color}">
+          <input type="number" id="edit-qty-${itemId}" class="inline-input input-qty" value="${item.qty}">
+        </div>
+        <div class="item-actions">
+          <button class="icon-edit-btn btn-icon-save" onclick="handleSaveRow('${carrierKey}', '${itemId}')" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+          <button class="icon-edit-btn btn-icon-del" onclick="handleDeleteRow('${carrierKey}', '${itemId}')" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      `;
+    };
+
+    window.handleSaveRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      const item = sheet.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      item.model = document.getElementById('edit-model-' + itemId).value.trim();
+      item.capacity = document.getElementById('edit-cap-' + itemId).value.trim();
+      item.color = document.getElementById('edit-color-' + itemId).value.trim();
+      item.qty = parseInt(document.getElementById('edit-qty-' + itemId).value, 10) || 1;
+
+      persistStagedData();
+      renderReviewView();
+    };
+
+    window.handleDeleteRow = function(carrierKey, itemId) {
+      const sheet = stagedData.sheets[carrierKey];
+      sheet.items = sheet.items.filter(i => i.id !== itemId);
+      persistStagedData();
+      renderReviewView();
+    };
+
+    // Edit Header Metadata
+    btnEditMeta.addEventListener('click', () => {
+      const currentStore = stagedData.store || '';
+      const sheet = stagedData.sheets[stagedData.activeCarrier];
+      const currentStamp = sheet ? sheet.timestamp : '';
+
+      const newStore = prompt('Edit Store #:', currentStore);
+      if (newStore !== null) stagedData.store = newStore.trim();
+
+      const newStamp = prompt('Edit Scanned Timestamp:', currentStamp);
+      if (newStamp !== null && sheet) sheet.timestamp = newStamp.trim();
+
+      persistStagedData();
+      renderReviewView();
+    });
+
+    // Lightbox Modal
+    reviewThumb.addEventListener('click', () => {
+      if (reviewThumb.src) {
+        lightboxImg.src = reviewThumb.src;
+        lightboxModal.style.display = 'flex';
+      }
+    });
+
+    lightboxModal.addEventListener('click', () => {
+      lightboxModal.style.display = 'none';
+    });
+
+    btnScanNext.addEventListener('click', () => {
+      const idx = carrierCycle.indexOf(stagedData.activeCarrier);
+      stagedData.activeCarrier = carrierCycle[(idx + 1) % carrierCycle.length];
+      persistStagedData();
+      switchView('scanner-view');
+    });
+
+    btnPublishAll.addEventListener('click', () => {
+      alert('Staged inventory saved locally! Ready for direct GitHub stocks.json push.');
+      switchView('dashboard-view');
+    });
+
+    // --- TERMS MODAL LOGIC ---
+    const btnTerms = document.getElementById('btn-terms');
+    const termsModal = document.getElementById('terms-modal');
+    const btnTermsClose = document.getElementById('btn-terms-close');
+
+    btnTerms.addEventListener('click', () => { termsModal.style.display = 'flex'; });
+    btnTermsClose.addEventListener('click', () => { termsModal.style.display = 'none'; });
+    termsModal.addEventListener('click', (e) => {
+      if (e.target === termsModal) termsModal.style.display = 'none';
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (termsModal.style.display === 'flex') termsModal.style.display = 'none';
+        if (lightboxModal.style.display === 'flex') lightboxModal.style.display = 'none';
+      }
+    });
+
+    // --- LIVE PING FETCH ENGINE ---
+    const btnRefresh = document.getElementById('btn-refresh-ping');
+    const refreshSvg = document.getElementById('refresh-svg');
+    const pingValueEl = document.getElementById('ping-value');
+    const pingStatusEl = document.getElementById('ping-status');
+    let statusTimer = null;
+
+    async function fetchPing() {
+      if (statusTimer) clearTimeout(statusTimer);
+      refreshSvg.classList.add('spinning');
+      pingStatusEl.textContent = 'Checking...';
+
+      try {
+        let data;
+
+        try {
+          const apiRes = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
+            headers: { 'Accept': 'application/vnd.github.v3+json' },
+            cache: 'no-store'
+          });
+          if (!apiRes.ok) throw new Error('API ' + apiRes.status);
+          const rawApi = await apiRes.json();
+          const decodedStr = decodeURIComponent(escape(atob(rawApi.content.replace(/\s/g, ''))));
+          data = JSON.parse(decodedStr);
+        } catch (apiErr) {
+          const localRes = await fetch('./stats.json?t=' + Date.now());
+          if (!localRes.ok) throw new Error('Local ' + localRes.status);
+          data = await localRes.json();
         }
 
-        function executePatches(instructions) {
-            const normalizedInstructions = instructions.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            
-            const b = '\\x60{3,}';
-            const rangePattern = 'Find\\s+start\\s*(' + b + ')[^\\n]*\\n([\\s\\S]*?)\\1\\s*Find\\s+end\\s*(' + b + ')[^\\n]*\\n([\\s\\S]*?)\\3\\s*Replace\\s+with\\s*(' + b + ')[^\\n]*\\n([\\s\\S]*?)\\5';
-            const standardPattern = 'Find(?!\\s+start)\\s*(' + b + ')[^\\n]*\\n([\\s\\S]*?)\\7\\s*Replace\\s+with\\s*(' + b + ')[^\\n]*\\n([\\s\\S]*?)\\9';
-            const combinedRegex = new RegExp('(?:' + rangePattern + ')|(?:' + standardPattern + ')', 'gi');
+        pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
+        pingStatusEl.textContent = 'Refresh complete';
+        statusTimer = setTimeout(() => {
+          pingStatusEl.textContent = '';
+        }, 2000);
 
-            const patches = [];
-            let match;
-            
-            while ((match = combinedRegex.exec(normalizedInstructions)) !== null) {
-                if (match[2] !== undefined) {
-                    let startBlock = match[2];
-                    let endBlock = match[4];
-                    let replaceBlock = match[6];
-                    if (startBlock.endsWith('\n')) startBlock = startBlock.slice(0, -1);
-                    if (endBlock.endsWith('\n')) endBlock = endBlock.slice(0, -1);
-                    if (replaceBlock.endsWith('\n')) replaceBlock = replaceBlock.slice(0, -1);
-                    patches.push({ type: 'range', findStart: startBlock, findEnd: endBlock, replace: replaceBlock });
-                } else {
-                    let findBlock = match[8];
-                    let replaceBlock = match[10];
-                    if (findBlock.endsWith('\n')) findBlock = findBlock.slice(0, -1);
-                    if (replaceBlock.endsWith('\n')) replaceBlock = replaceBlock.slice(0, -1);
-                    patches.push({ type: 'standard', find: findBlock, replace: replaceBlock });
-                }
-            }
+      } catch (err) {
+        pingValueEl.textContent = 'Error';
+        pingStatusEl.textContent = 'Error';
+      } finally {
+        setTimeout(() => {
+          refreshSvg.classList.remove('spinning');
+        }, 300);
+      }
+    }
 
-            statusList.innerHTML = '';
-            engineSkeleton.classList.add('hidden');
-
-            if (patches.length === 0) {
-                statusList.innerHTML = `<div class="status-item text-red">${ICONS.alert}<span>No valid Find/Replace blocks found</span></div>`;
-                isProcessing = false;
-                return;
-            }
-
-            let patchedContent = sourceFileContent;
-            let patchCount = 0;
-            let successCount = 0;
-
-            for (let i = 0; i < patches.length; i++) {
-                const patch = patches[i];
-                patchCount++;
-
-                if (patch.type === 'standard') {
-                    if (patchedContent.includes(patch.find)) {
-                        patchedContent = patchedContent.replace(patch.find, patch.replace);
-                        statusList.innerHTML += `<div class="status-item text-green">${ICONS.check}<span>patch ${patchCount} applied (exact)</span></div>`;
-                        successCount++;
-                    } else {
-                        failedPatchesMap[patchCount] = patch.find;
-                        statusList.innerHTML += `<a href="#" class="error-link status-item text-red" data-patch="${patchCount}" style="text-decoration:none;">${ICONS.alert}<span>patch ${patchCount} not found (click to locate)</span></a>`;
-                    }
-                } else if (patch.type === 'range') {
-                    const startIndex = patchedContent.indexOf(patch.findStart);
-                    if (startIndex === -1) {
-                        failedPatchesMap[patchCount] = patch.findStart;
-                        statusList.innerHTML += `<a href="#" class="error-link status-item text-red" data-patch="${patchCount}" style="text-decoration:none;">${ICONS.alert}<span>patch ${patchCount} start anchor not found (click to locate)</span></a>`;
-                    } else {
-                        const searchAfter = startIndex + patch.findStart.length;
-                        const endIndex = patchedContent.indexOf(patch.findEnd, searchAfter);
-                        if (endIndex === -1) {
-                            failedPatchesMap[patchCount] = patch.findEnd;
-                            statusList.innerHTML += `<a href="#" class="error-link status-item text-red" data-patch="${patchCount}" style="text-decoration:none;">${ICONS.alert}<span>patch ${patchCount} end anchor not found after start (click to locate)</span></a>`;
-                        } else {
-                            const fullEnd = endIndex + patch.findEnd.length;
-                            patchedContent = patchedContent.slice(0, startIndex) + patch.replace + patchedContent.slice(fullEnd);
-                            statusList.innerHTML += `<div class="status-item text-green">${ICONS.check}<span>patch ${patchCount} applied (range)</span></div>`;
-                            successCount++;
-                        }
-                    }
-                }
-            }
-
-            if (successCount > 0) {
-                outputSkeleton.textContent = "Rendering...";
-                lastPatchedContent = patchedContent;
-                
-                setTimeout(() => {
-                    if (originalFileExtension.toLowerCase() === 'html') {
-                        outputPreview.srcdoc = patchedContent;
-                    } else {
-                        const escapedContent = patchedContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        outputPreview.srcdoc = `<pre style="white-space: pre-wrap; word-wrap: break-word; padding: 1rem; font-family: monospace; color: var(--text-main);">${escapedContent}</pre>`;
-                    }
-                    outputPreview.classList.remove('hidden');
-                    outputSkeleton.classList.add('hidden');
-                    
-                    outputFilenameInput.value = originalFileName || 'index.html';
-                    outputActionsContainer.classList.remove('hidden');
-
-                    downloadBtn.onclick = async () => {
-                        const filename = outputFilenameInput.value.trim() || originalFileName || 'index.html';
-                        const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
-                        const mimeType = (ext === 'html' || ext === 'htm') ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8';
-
-                        if ('showSaveFilePicker' in window) {
-                            try {
-                                const handle = await window.showSaveFilePicker({
-                                    suggestedName: filename
-                                });
-                                const writable = await handle.createWritable();
-                                await writable.write(lastPatchedContent);
-                                await writable.close();
-                                return;
-                            } catch (err) {
-                                if (err.name === 'AbortError') return;
-                            }
-                        }
-
-                        const blob = new Blob([lastPatchedContent], { type: mimeType });
-                        const url = URL.createObjectURL(blob);
-                        const tempLink = document.createElement('a');
-                        tempLink.href = url;
-                        tempLink.download = filename;
-                        document.body.appendChild(tempLink);
-                        tempLink.click();
-                        document.body.removeChild(tempLink);
-                        URL.revokeObjectURL(url);
-                    };
-
-                    copyOutputBtn.onclick = async () => {
-                        try {
-                            await navigator.clipboard.writeText(lastPatchedContent);
-                            const origText = copyOutputBtn.textContent;
-                            copyOutputBtn.textContent = "Copied!";
-                            setTimeout(() => copyOutputBtn.textContent = origText, 2000);
-                        } catch (err) {
-                            alert("Failed to copy text.");
-                        }
-                    };
-                }, 300);
-            } else {
-                outputSkeleton.textContent = "No changes applied.";
-            }
-            
-            isProcessing = false;
-        }
-    </script>
+    btnRefresh.addEventListener('click', fetchPing);
+  </script>
 </body>
 </html>
