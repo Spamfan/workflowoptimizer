@@ -1083,6 +1083,7 @@
   <div id="scanner-view" style="display: none;">
     <div class="viewfinder-card">
       <video id="camera-feed" autoplay playsinline muted></video>
+      <img id="viewfinder-frozen" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;" alt="Capture Freeze">
       <div class="viewfinder-guide"></div>
       <div id="scan-status" class="scan-status-overlay" style="display: none;">
         <div class="spinning" style="width: 32px; height: 32px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%;"></div>
@@ -1200,7 +1201,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.10";
+    const APP_VERSION = "v0.0.11";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1381,9 +1382,14 @@
 
     // --- CAMERA STREAM LIFECYCLE ---
     const cameraFeed = document.getElementById('camera-feed');
+    const viewfinderFrozen = document.getElementById('viewfinder-frozen');
     let activeMediaStream = null;
 
     async function startCamera() {
+      if (viewfinderFrozen) {
+        viewfinderFrozen.style.display = 'none';
+        viewfinderFrozen.src = '';
+      }
       if (activeMediaStream) stopCamera();
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -1451,8 +1457,13 @@
           e.target.value = '';
           return;
         }
+        stopCamera();
         const reader = new FileReader();
         reader.onload = (evt) => {
+          if (viewfinderFrozen) {
+            viewfinderFrozen.src = evt.target.result;
+            viewfinderFrozen.style.display = 'block';
+          }
           const img = new Image();
           img.onload = () => processAndParseImage(img);
           img.onerror = () => {
@@ -1475,6 +1486,10 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
 
+      if (viewfinderFrozen) {
+        viewfinderFrozen.src = canvas.toDataURL('image/jpeg', 0.8);
+        viewfinderFrozen.style.display = 'block';
+      }
       stopCamera();
       processAndParseImage(canvas);
     });
@@ -1978,8 +1993,11 @@
   <title>OCR Diagnostic Report - ${log.carrierName} (${log.displayTime})</title>
   <style>
     body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
-    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
     h1, h2 { margin-top: 0; color: #38bdf8; }
+    .btn-copy-ai { background: #38bdf8; color: #0f172a; font-weight: 700; border: none; border-radius: 9999px; padding: 10px 20px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+    .btn-copy-ai:hover { background: #7dd3fc; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
     th, td { border: 1px solid #334155; padding: 8px; text-align: left; }
     th { background: #0f172a; color: #94a3b8; }
@@ -1992,7 +2010,10 @@
   </style>
 </head>
 <body>
-  <h1>WFO OCR Diagnostics Report</h1>
+  <div class="header-bar">
+    <h1 style="margin: 0;">WFO OCR Diagnostics Report</h1>
+    <button id="btn-copy-ai" class="btn-copy-ai">📋 Copy Telemetry for AI</button>
+  </div>
   <div class="card">
     <h2>Scan Metadata</h2>
     <p><strong>Carrier:</strong> ${log.carrierName} | <strong>Store:</strong> ${log.store}</p>
@@ -2039,6 +2060,34 @@
     <h2>Raw OCR Text Dump</h2>
     <pre>${log.rawText}</pre>
   </div>
+  <textarea id="ai-telemetry-payload" style="display: none;">### WFO OCR Diagnostic Report
+- Carrier: ${log.carrierName}
+- Store: ${log.store}
+- Timestamp: ${log.displayTime} (${log.timestamp})
+- Processing Duration: ${log.elapsedMs} ms
+- User Agent: ${log.userAgent}
+
+#### Line-by-Line Token & Matching Matrix
+| Raw Line | Extracted | Matched Model | Score | Status |
+|---|---|---|---|---|
+${log.linesLog.map(l => `| ${l.rawLine.replace(/\|/g, '/')} | ${l.capacity !== '-' ? `${l.capacity}, ${l.color}, Q:${l.qty}` : '-'} | ${l.bestMatch} | ${l.distance !== '-' ? `d=${l.distance}` : '-'} | ${l.status} |`).join('\n')}
+
+#### Raw OCR Text Dump
+\`\`\`
+${log.rawText.replace(/<\/textarea>/gi, '<\\/textarea>')}
+\`\`\`</textarea>
+  <script>
+    document.getElementById('btn-copy-ai').addEventListener('click', function() {
+      var btn = this;
+      var text = document.getElementById('ai-telemetry-payload').value.trim();
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '✅ Telemetry Copied!';
+        setTimeout(function() { btn.textContent = '📋 Copy Telemetry for AI'; }, 2500);
+      }).catch(function() {
+        alert('Clipboard access denied or unavailable.');
+      });
+    });
+  </script>
 </body>
 </html>`;
     }
