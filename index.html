@@ -474,6 +474,25 @@
       object-fit: cover;
     }
 
+    #viewfinder-frozen {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+      display: none;
+      z-index: 5;
+      transform-origin: center center;
+      transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.45s ease, box-shadow 0.45s ease;
+    }
+
+    #viewfinder-frozen.shrunk {
+      transform: scale(0.38);
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+    }
+
     .viewfinder-guide {
       position: absolute;
       top: 14px;
@@ -1083,7 +1102,7 @@
   <div id="scanner-view" style="display: none;">
     <div class="viewfinder-card">
       <video id="camera-feed" autoplay playsinline muted></video>
-      <img id="viewfinder-frozen" style="display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;" alt="Capture Freeze">
+      <img id="viewfinder-frozen" alt="Capture Freeze">
       <div class="viewfinder-guide"></div>
       <div id="scan-status" class="scan-status-overlay" style="display: none;">
         <div class="spinning" style="width: 32px; height: 32px; border: 3px solid #fff; border-top-color: transparent; border-radius: 50%;"></div>
@@ -1201,7 +1220,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.12";
+    const APP_VERSION = "v0.0.13";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1387,6 +1406,7 @@
 
     async function startCamera() {
       if (viewfinderFrozen) {
+        viewfinderFrozen.classList.remove('shrunk');
         viewfinderFrozen.style.display = 'none';
         viewfinderFrozen.src = '';
       }
@@ -1461,8 +1481,12 @@
         const reader = new FileReader();
         reader.onload = (evt) => {
           if (viewfinderFrozen) {
+            viewfinderFrozen.classList.remove('shrunk');
             viewfinderFrozen.src = evt.target.result;
             viewfinderFrozen.style.display = 'block';
+            requestAnimationFrame(() => {
+              viewfinderFrozen.classList.add('shrunk');
+            });
           }
           const img = new Image();
           img.onload = () => processAndParseImage(img);
@@ -1487,8 +1511,12 @@
       ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
 
       if (viewfinderFrozen) {
+        viewfinderFrozen.classList.remove('shrunk');
         viewfinderFrozen.src = canvas.toDataURL('image/jpeg', 0.8);
         viewfinderFrozen.style.display = 'block';
+        requestAnimationFrame(() => {
+          viewfinderFrozen.classList.add('shrunk');
+        });
       }
       stopCamera();
       processAndParseImage(canvas);
@@ -2079,13 +2107,39 @@ ${log.rawText.replace(/<\/textarea>/gi, '<\\/textarea>')}
   <script>
     document.getElementById('btn-copy-ai').addEventListener('click', function() {
       var btn = this;
-      var text = document.getElementById('ai-telemetry-payload').value.trim();
-      navigator.clipboard.writeText(text).then(function() {
+      var area = document.getElementById('ai-telemetry-payload');
+      var text = area.value.trim();
+
+      function showSuccess() {
         btn.textContent = '✅ Telemetry Copied!';
         setTimeout(function() { btn.textContent = '📋 Copy Telemetry for AI'; }, 2500);
-      }).catch(function() {
-        alert('Clipboard access denied or unavailable.');
-      });
+      }
+
+      function fallbackCopy() {
+        try {
+          area.style.display = 'block';
+          area.style.position = 'fixed';
+          area.style.left = '-9999px';
+          area.focus();
+          area.select();
+          var success = document.execCommand('copy');
+          area.style.display = 'none';
+          if (success) {
+            showSuccess();
+          } else {
+            alert('Copy command failed. Please select text manually.');
+          }
+        } catch (e) {
+          area.style.display = 'none';
+          alert('Unable to copy automatically.');
+        }
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(showSuccess).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
     });
   <\/script>
 </body>
