@@ -1234,7 +1234,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.15";
+    const APP_VERSION = "v0.0.16";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1527,18 +1527,40 @@
       }
     });
 
-    btnShutter.addEventListener('click', () => {
-      if (!cameraFeed || !cameraFeed.videoWidth) {
+    btnShutter.addEventListener('click', async () => {
+      if (!cameraFeed || (!cameraFeed.videoWidth && !activeMediaStream)) {
         alert('Camera stream not ready. You can also use "Test with Image" below.');
         return;
       }
+
+      // High-resolution native hardware photo capture via ImageCapture API
+      const videoTrack = activeMediaStream && activeMediaStream.getVideoTracks ? activeMediaStream.getVideoTracks()[0] : null;
+      if (window.ImageCapture && videoTrack) {
+        try {
+          const imageCapture = new ImageCapture(videoTrack);
+          const blob = await imageCapture.takePhoto();
+          const previewUrl = URL.createObjectURL(blob);
+          startInstantScanReview(previewUrl);
+
+          const img = new Image();
+          img.onload = () => {
+            processAndParseImage(img, previewUrl);
+          };
+          img.src = previewUrl;
+          return;
+        } catch (captureErr) {
+          console.warn('ImageCapture failed, falling back to video canvas grab:', captureErr);
+        }
+      }
+
+      // Fallback: Video frame draw
       const canvas = document.createElement('canvas');
-      canvas.width = cameraFeed.videoWidth;
-      canvas.height = cameraFeed.videoHeight;
+      canvas.width = cameraFeed.videoWidth || 1920;
+      canvas.height = cameraFeed.videoHeight || 1080;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
 
-      const previewUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const previewUrl = canvas.toDataURL('image/jpeg', 0.90);
       startInstantScanReview(previewUrl);
       processAndParseImage(canvas, previewUrl);
     });
@@ -1578,7 +1600,7 @@
             const chroma = Math.max(r, g, b) - Math.min(r, g, b);
 
             // Achromatic white paper rule: high luminance and strictly low color saturation
-            if (lum >= 195 && chroma <= 25) {
+            if (lum >= 185 && chroma <= 28) {
               colSums[x]++;
               rowSums[y]++;
               totalWhitePixels++;
@@ -1586,9 +1608,16 @@
           }
         }
 
-        // If insufficient white pixels found, fallback to original frame
+        // If insufficient white pixels found, fallback with a safe 2% perimeter margin trim
         if (totalWhitePixels < (sampleW * sampleH * 0.15)) {
-          return sourceCanvas;
+          const trimX = Math.round(w * 0.02);
+          const trimY = Math.round(h * 0.02);
+          const c = document.createElement('canvas');
+          c.width = w - (trimX * 2);
+          c.height = h - (trimY * 2);
+          const ctx = c.getContext('2d');
+          ctx.drawImage(sourceCanvas, trimX, trimY, c.width, c.height, 0, 0, c.width, c.height);
+          return c;
         }
 
         // Find peak density
@@ -1596,9 +1625,9 @@
         for (let x = 0; x < sampleW; x++) if (colSums[x] > maxCol) maxCol = colSums[x];
         for (let y = 0; y < sampleH; y++) if (rowSums[y] > maxRow) maxRow = rowSums[y];
 
-        // Determine cliff edges at 35% of plateau peak
-        const colThresh = maxCol * 0.35;
-        const rowThresh = maxRow * 0.35;
+        // Cliff edges at 45% of plateau peak to strictly ignore desk noise
+        const colThresh = maxCol * 0.45;
+        const rowThresh = maxRow * 0.45;
 
         let minX = 0, maxX = sampleW - 1;
         while (minX < sampleW && colSums[minX] < colThresh) minX++;
@@ -1613,20 +1642,20 @@
 
         // Sanity check: must span reasonable fraction of frame and match document aspect ratio (~1:1.29)
         const aspect = detectedH / (detectedW || 1);
-        if (detectedW < (sampleW * 0.20) || detectedH < (sampleH * 0.20) || aspect < 0.95 || aspect > 1.70) {
+        if (detectedW < (sampleW * 0.20) || detectedH < (sampleH * 0.20) || aspect < 0.90 || aspect > 1.75) {
           return sourceCanvas;
         }
 
-        // Map back to full-res and apply 1.5% margin padding to avoid desk border bleed
+        // Map back to full-res and apply 3.5% safe inward inset to guarantee zero desk/keyboard bleed
         const scaleX = w / sampleW;
         const scaleY = h / sampleH;
-        const padX = Math.round(detectedW * scaleX * 0.015);
-        const padY = Math.round(detectedH * scaleY * 0.015);
+        const padX = Math.round(detectedW * scaleX * 0.035);
+        const padY = Math.round(detectedH * scaleY * 0.035);
 
         const cropX = Math.max(0, Math.round(minX * scaleX) + padX);
         const cropY = Math.max(0, Math.round(minY * scaleY) + padY);
-        const cropW = Math.min(w - cropX, Math.round(detectedW * scaleX) - (padX * 2));
-        const cropH = Math.min(h - cropY, Math.round(detectedH * scaleY) - (padY * 2));
+        const cropW = Math.max(1, Math.min(w - cropX, Math.round(detectedW * scaleX) - (padX * 2)));
+        const cropH = Math.max(1, Math.min(h - cropY, Math.round(detectedH * scaleY) - (padY * 2)));
 
         const cropped = document.createElement('canvas');
         cropped.width = cropW;
@@ -1772,10 +1801,10 @@
       let detectedStore = stagedData.store;
       let detectedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-      // Header parsing
-      if (/\b(Verizon|VZW)\b/i.test(rawText)) detectedCarrierKey = 'vzw';
-      else if (/\b(T-Mobile|TMO)\b/i.test(rawText)) detectedCarrierKey = 'tmo';
-      else if (/\b(AT&T|ATT)\b/i.test(rawText)) detectedCarrierKey = 'att';
+      // Robust Header Regex for Carriers
+      if (/(?:Carrier\s*[-—:]?\s*)?(AT&T|A\s*T\s*&\s*T|ATT)\b/i.test(rawText)) detectedCarrierKey = 'att';
+      else if (/(?:Carrier\s*[-—:]?\s*)?(Verizon|VZW)\b/i.test(rawText)) detectedCarrierKey = 'vzw';
+      else if (/(?:Carrier\s*[-—:]?\s*)?(T-Mobile|TMO)\b/i.test(rawText)) detectedCarrierKey = 'tmo';
 
       const storeMatch = rawText.match(/Store[:\s]+(\d{3,6})/i);
       if (storeMatch) detectedStore = storeMatch[1];
@@ -1783,51 +1812,87 @@
       const dateMatch = rawText.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}\s+at\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM))/i);
       if (dateMatch) detectedDate = dateMatch[1];
 
-      const colorMap = (stats && stats.colors) ? stats.colors : {
-        'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK',
-        'Deep Blue': 'BLU', 'Sky Blue': 'BLU', 'Tapestry': 'BLU', 'Navy': 'BLU',
+      // Dynamic Color Dictionary with Multi-Word Color Support
+      const colorMap = (stats && stats.colors) ? Object.assign({}, stats.colors) : {};
+      const baselineColors = {
+        'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK', 'Coal Smoke': 'BLK',
+        'Deep Blue': 'BLU', 'Sky Blue': 'BLU', 'Tapestry': 'BLU', 'Navy': 'BLU', 'Evening Blue': 'BLU',
         'Cosmic Orange': 'ORG', 'Slipstream': 'SLP', 'Beige': 'BGE', 'Gray': 'GRY', 'Silver': 'SLV'
       };
+      for (const [k, v] of Object.entries(baselineColors)) {
+        if (!colorMap[k]) colorMap[k] = v;
+      }
+
+      // Dynamic Column Boundary Detection via Header Labels
+      let boundModelCap = 0.44;
+      let boundCapColor = 0.58;
+      let boundColorQty = 0.74;
+
+      const allWords = (ocrData.words || []).filter(w => w.text && w.text.trim().length > 0);
+      const headerWords = allWords.filter(w => ((w.bbox.y0 + w.bbox.y1) / (2 * paperH)) < 0.32);
+
+      let headerModel = null, headerCap = null, headerColor = null, headerQty = null;
+      headerWords.forEach(w => {
+        const t = w.text.toLowerCase();
+        if (/model/i.test(t)) headerModel = (w.bbox.x0 + w.bbox.x1) / (2 * paperW);
+        else if (/cap/i.test(t)) headerCap = (w.bbox.x0 + w.bbox.x1) / (2 * paperW);
+        else if (/color/i.test(t)) headerColor = (w.bbox.x0 + w.bbox.x1) / (2 * paperW);
+        else if (/quant|avail/i.test(t)) headerQty = (w.bbox.x0 + w.bbox.x1) / (2 * paperW);
+      });
+
+      if (headerCap && headerColor) {
+        if (headerModel) boundModelCap = (headerModel + headerCap) / 2;
+        boundCapColor = (headerCap + headerColor) / 2;
+        if (headerQty) boundColorQty = (headerColor + headerQty) / 2;
+      }
+
+      // Line Extraction: Prefer Tesseract native lines to prevent drift & row-merging collisions
+      let textLines = [];
+      if (ocrData.lines && ocrData.lines.length > 0) {
+        textLines = ocrData.lines.filter(l => {
+          const yMid = ((l.bbox.y0 + l.bbox.y1) / 2) / paperH;
+          return yMid >= 0.16 && l.text && l.text.trim().length > 1;
+        });
+      } else {
+        // Fallback: Fixed non-drifting Y-clustering
+        const tableWords = allWords.filter(w => ((w.bbox.y0 + w.bbox.y1) / (2 * paperH)) >= 0.16);
+        tableWords.sort((a, b) => ((a.bbox.y0 + a.bbox.y1) / 2) - ((b.bbox.y0 + b.bbox.y1) / 2));
+        const clusters = [];
+        const yTol = paperH * 0.013;
+
+        tableWords.forEach(w => {
+          const wMidY = (w.bbox.y0 + w.bbox.y1) / 2;
+          let c = clusters.find(cl => Math.abs(cl.baseY - wMidY) <= yTol);
+          if (c) {
+            c.words.push(w);
+          } else {
+            clusters.push({ baseY: wMidY, words: [w] });
+          }
+        });
+
+        textLines = clusters.map(c => {
+          c.words.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+          return {
+            text: c.words.map(w => w.text).join(' '),
+            words: c.words,
+            bbox: {
+              x0: c.words[0].bbox.x0,
+              y0: Math.min(...c.words.map(w => w.bbox.y0)),
+              x1: c.words[c.words.length - 1].bbox.x1,
+              y1: Math.max(...c.words.map(w => w.bbox.y1))
+            }
+          };
+        });
+      }
 
       const parsedItems = [];
       const linesLog = [];
 
-      // Coordinate-aware word clustering
-      const words = (ocrData.words || []).filter(w => w.text && w.text.trim().length > 0);
+      textLines.forEach(line => {
+        const fullRowText = (line.text || '').replace(/\s+/g, ' ').trim();
 
-      // Filter out top header region (Y < 18% of paper height)
-      const tableWords = words.filter(w => {
-        const yMid = (w.bbox.y0 + w.bbox.y1) / (2 * paperH);
-        return yMid >= 0.17;
-      });
-
-      // Group words into rows by vertical Y proximity
-      tableWords.sort((a, b) => {
-        const aMidY = (a.bbox.y0 + a.bbox.y1) / 2;
-        const bMidY = (b.bbox.y0 + b.bbox.y1) / 2;
-        return aMidY - bMidY;
-      });
-
-      const rowClusters = [];
-      const yTolerance = paperH * 0.022;
-
-      tableWords.forEach(w => {
-        const wMidY = (w.bbox.y0 + w.bbox.y1) / 2;
-        let matchedCluster = rowClusters.find(c => Math.abs(c.midY - wMidY) <= yTolerance);
-        if (matchedCluster) {
-          matchedCluster.words.push(w);
-          matchedCluster.midY = (matchedCluster.midY + wMidY) / 2;
-        } else {
-          rowClusters.push({ midY: wMidY, words: [w] });
-        }
-      });
-
-      rowClusters.forEach(cluster => {
-        cluster.words.sort((a, b) => a.bbox.x0 - b.bbox.x0);
-        const fullRowText = cluster.words.map(w => w.text).join(' ');
-
-        // Skip table header label row
-        if (/^(Model|Capacity|Color|Quantity)/i.test(fullRowText) || /Available/i.test(fullRowText) && /Model/i.test(fullRowText)) {
+        // Skip table header row
+        if (/^(Model|Capacity|Color|Quantity)/i.test(fullRowText) || (/Model/i.test(fullRowText) && /Available/i.test(fullRowText))) {
           linesLog.push({
             rawLine: fullRowText,
             capacity: '-',
@@ -1841,17 +1906,18 @@
           return;
         }
 
-        // Partition words into columns based on normalized X bounds
+        // Partition words into columns
+        const lineWords = line.words || [];
         const modelWords = [];
         const capWords = [];
         const colorWords = [];
         const qtyWords = [];
 
-        cluster.words.forEach(w => {
+        lineWords.forEach(w => {
           const xMid = ((w.bbox.x0 + w.bbox.x1) / 2) / paperW;
-          if (xMid < 0.44) modelWords.push(w.text);
-          else if (xMid < 0.58) capWords.push(w.text);
-          else if (xMid < 0.74) colorWords.push(w.text);
+          if (xMid < boundModelCap) modelWords.push(w.text);
+          else if (xMid < boundCapColor) capWords.push(w.text);
+          else if (xMid < boundColorQty) colorWords.push(w.text);
           else qtyWords.push(w.text);
         });
 
@@ -1860,18 +1926,35 @@
         const rawColorText = colorWords.join(' ').trim();
         const rawQtyText = qtyWords.join(' ').trim();
 
-        // 1. Capacity (Strict regex; no blind 128GB default)
+        // 1. Capacity (Strict regex)
         let capacity = '';
         const capMatch = (rawCapText + ' ' + fullRowText).match(/(16|32|64|128|256|512)\s*GB/i);
         if (capMatch) capacity = capMatch[1].toUpperCase() + 'GB';
 
-        // 2. Color (Strict dictionary check; no blind BLK default)
+        // 2. Color (Dictionary matching with fuzzy tolerance)
         let colorAbbr = '';
         const combinedColorCheck = (rawColorText + ' ' + fullRowText);
+
+        // Direct multi-word check
         for (const [cName, cCode] of Object.entries(colorMap)) {
           if (new RegExp('\\b' + cName + '\\b', 'i').test(combinedColorCheck)) {
             colorAbbr = cCode;
             break;
+          }
+        }
+
+        // Fuzzy match if missing
+        if (!colorAbbr) {
+          const candidateTokens = (rawColorText + ' ' + fullRowText).split(/[\s,]+/);
+          for (const token of candidateTokens) {
+            if (token.length < 3) continue;
+            for (const [cName, cCode] of Object.entries(colorMap)) {
+              if (getLevenshtein(token, cName) <= 2) {
+                colorAbbr = cCode;
+                break;
+              }
+            }
+            if (colorAbbr) break;
           }
         }
 
@@ -1880,8 +1963,12 @@
         const qtyMatch = (rawQtyText + ' ' + fullRowText).match(/(\d+)\s*Available/i) || rawQtyText.match(/\b(\d+)\b/);
         if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-        // 4. Model & Levenshtein matching
-        const cleanModel = rawModelText.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        // 4. Model sanitization: strip non-alphanumeric noise & stray margin characters
+        let cleanModel = (rawModelText || fullRowText.split(/(?:16|32|64|128|256|512)\s*GB/i)[0] || '')
+          .replace(/^[^a-zA-Z0-9]+/, '')
+          .replace(/^[a-zA-Z]\s+(?=(Galaxy|iPhone|Moto|Classic))/i, '')
+          .trim();
+
         if (cleanModel.length < 3) {
           linesLog.push({
             rawLine: fullRowText,
@@ -1915,7 +2002,7 @@
         let itemStatus = 'matched';
         let finalModel = cleanModel;
 
-        if (errorRatio <= 0.28) {
+        if (errorRatio <= 0.32 || lowestDist <= 3) {
           finalModel = bestMatch;
           itemStatus = 'matched';
         } else {
