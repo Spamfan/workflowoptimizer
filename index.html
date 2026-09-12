@@ -1234,7 +1234,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.16";
+    const APP_VERSION = "v0.0.17";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1582,8 +1582,8 @@
       sCtx.drawImage(sourceCanvas, 0, 0, sampleW, sampleH);
 
       try {
-        const imgData = sCtx.getImageData(0, 0, sampleW, sampleH);
-        const d = imgData.data;
+        let imgData = sCtx.getImageData(0, 0, sampleW, sampleH);
+        let d = imgData.data;
 
         const colSums = new Uint32Array(sampleW);
         const rowSums = new Uint32Array(sampleH);
@@ -1599,7 +1599,6 @@
             const lum = r * 0.299 + g * 0.587 + b * 0.114;
             const chroma = Math.max(r, g, b) - Math.min(r, g, b);
 
-            // Achromatic white paper rule: high luminance and strictly low color saturation
             if (lum >= 185 && chroma <= 28) {
               colSums[x]++;
               rowSums[y]++;
@@ -1608,26 +1607,16 @@
           }
         }
 
-        // If insufficient white pixels found, fallback with a safe 2% perimeter margin trim
         if (totalWhitePixels < (sampleW * sampleH * 0.15)) {
-          const trimX = Math.round(w * 0.02);
-          const trimY = Math.round(h * 0.02);
-          const c = document.createElement('canvas');
-          c.width = w - (trimX * 2);
-          c.height = h - (trimY * 2);
-          const ctx = c.getContext('2d');
-          ctx.drawImage(sourceCanvas, trimX, trimY, c.width, c.height, 0, 0, c.width, c.height);
-          return c;
+          return sourceCanvas;
         }
 
-        // Find peak density
         let maxCol = 0, maxRow = 0;
         for (let x = 0; x < sampleW; x++) if (colSums[x] > maxCol) maxCol = colSums[x];
         for (let y = 0; y < sampleH; y++) if (rowSums[y] > maxRow) maxRow = rowSums[y];
 
-        // Cliff edges at 45% of plateau peak to strictly ignore desk noise
-        const colThresh = maxCol * 0.45;
-        const rowThresh = maxRow * 0.45;
+        const colThresh = maxCol * 0.40;
+        const rowThresh = maxRow * 0.40;
 
         let minX = 0, maxX = sampleW - 1;
         while (minX < sampleW && colSums[minX] < colThresh) minX++;
@@ -1637,20 +1626,97 @@
         while (minY < sampleH && rowSums[minY] < rowThresh) minY++;
         while (maxY > minY && rowSums[maxY] < rowThresh) maxY--;
 
+        // Detect document tilt angle along top paper boundary
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, nPoints = 0;
+        const step = 4;
+        for (let x = minX + 15; x <= maxX - 15; x += step) {
+          for (let y = Math.max(0, minY - 10); y <= Math.min(sampleH - 1, minY + 40); y++) {
+            const idx = (y * sampleW + x) * 4;
+            const r = d[idx], g = d[idx + 1], b = d[idx + 2];
+            const lum = r * 0.299 + g * 0.587 + b * 0.114;
+            const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+            if (lum >= 185 && chroma <= 28) {
+              sumX += x;
+              sumY += y;
+              sumXY += x * y;
+              sumXX += x * x;
+              nPoints++;
+              break;
+            }
+          }
+        }
+
+        let angle = 0;
+        if (nPoints >= 8) {
+          const denom = (nPoints * sumXX - sumX * sumX);
+          if (denom !== 0) {
+            const slope = (nPoints * sumXY - sumX * sumY) / denom;
+            const rad = Math.atan(slope);
+            if (Math.abs(rad) > 0.008 && Math.abs(rad) < 0.35) {
+              angle = rad;
+            }
+          }
+        }
+
+        // Apply auto-deskew rotation if tilted
+        let activeSource = sourceCanvas;
+        if (Math.abs(angle) > 0.008) {
+          const rotCanvas = document.createElement('canvas');
+          rotCanvas.width = w;
+          rotCanvas.height = h;
+          const rCtx = rotCanvas.getContext('2d');
+          rCtx.fillStyle = '#ffffff';
+          rCtx.fillRect(0, 0, w, h);
+          rCtx.translate(w / 2, h / 2);
+          rCtx.rotate(-angle);
+          rCtx.drawImage(sourceCanvas, -w / 2, -h / 2);
+          activeSource = rotCanvas;
+
+          sCtx.fillStyle = '#ffffff';
+          sCtx.fillRect(0, 0, sampleW, sampleH);
+          sCtx.drawImage(activeSource, 0, 0, sampleW, sampleH);
+          imgData = sCtx.getImageData(0, 0, sampleW, sampleH);
+          d = imgData.data;
+
+          colSums.fill(0);
+          rowSums.fill(0);
+          for (let y = 0; y < sampleH; y++) {
+            for (let x = 0; x < sampleW; x++) {
+              const idx = (y * sampleW + x) * 4;
+              const lum = d[idx] * 0.299 + d[idx + 1] * 0.587 + d[idx + 2] * 0.114;
+              const chroma = Math.max(d[idx], d[idx + 1], d[idx + 2]) - Math.min(d[idx], d[idx + 1], d[idx + 2]);
+              if (lum >= 185 && chroma <= 28) {
+                colSums[x]++;
+                rowSums[y]++;
+              }
+            }
+          }
+          maxCol = 0; maxRow = 0;
+          for (let x = 0; x < sampleW; x++) if (colSums[x] > maxCol) maxCol = colSums[x];
+          for (let y = 0; y < sampleH; y++) if (rowSums[y] > maxRow) maxRow = rowSums[y];
+
+          const cThresh = maxCol * 0.40;
+          const rThresh = maxRow * 0.40;
+          minX = 0; maxX = sampleW - 1;
+          while (minX < sampleW && colSums[minX] < cThresh) minX++;
+          while (maxX > minX && colSums[maxX] < cThresh) maxX--;
+          minY = 0; maxY = sampleH - 1;
+          while (minY < sampleH && rowSums[minY] < rThresh) minY++;
+          while (maxY > minY && rowSums[maxY] < rThresh) maxY--;
+        }
+
         const detectedW = maxX - minX;
         const detectedH = maxY - minY;
 
-        // Sanity check: must span reasonable fraction of frame and match document aspect ratio (~1:1.29)
         const aspect = detectedH / (detectedW || 1);
-        if (detectedW < (sampleW * 0.20) || detectedH < (sampleH * 0.20) || aspect < 0.90 || aspect > 1.75) {
-          return sourceCanvas;
+        if (detectedW < (sampleW * 0.20) || detectedH < (sampleH * 0.20) || aspect < 0.80 || aspect > 1.85) {
+          return activeSource;
         }
 
-        // Map back to full-res and apply 3.5% safe inward inset to guarantee zero desk/keyboard bleed
         const scaleX = w / sampleW;
         const scaleY = h / sampleH;
-        const padX = Math.round(detectedW * scaleX * 0.035);
-        const padY = Math.round(detectedH * scaleY * 0.035);
+        const padX = Math.round(detectedW * scaleX * 0.005);
+        const padY = Math.round(detectedH * scaleY * 0.010);
 
         const cropX = Math.max(0, Math.round(minX * scaleX) + padX);
         const cropY = Math.max(0, Math.round(minY * scaleY) + padY);
@@ -1661,7 +1727,7 @@
         cropped.width = cropW;
         cropped.height = cropH;
         const cCtx = cropped.getContext('2d');
-        cCtx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        cCtx.drawImage(activeSource, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
         return cropped;
       } catch (e) {
         return sourceCanvas;
@@ -1688,19 +1754,19 @@
         }
 
         let count = 0;
-        let p2 = 0, p88 = 255;
+        let p1 = 0, p97 = 255;
         for (let i = 0; i < 256; i++) {
           count += hist[i];
-          if (count >= totalPixels * 0.02 && p2 === 0) p2 = i;
-          if (count >= totalPixels * 0.88) { p88 = i; break; }
+          if (count >= totalPixels * 0.01 && p1 === 0) p1 = i;
+          if (count >= totalPixels * 0.97) { p97 = i; break; }
         }
 
-        const range = Math.max(1, p88 - p2);
-        const gamma = 1.4;
+        const range = Math.max(1, p97 - p1);
+        const gamma = 1.25;
 
         for (let i = 0; i < d.length; i += 4) {
           const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          const normalized = Math.min(1, Math.max(0, (lum - p2) / range));
+          const normalized = Math.min(1, Math.max(0, (lum - p1) / range));
           const enhanced = Math.round(Math.pow(normalized, gamma) * 255);
           d[i] = enhanced;
           d[i + 1] = enhanced;
@@ -1802,7 +1868,7 @@
       let detectedDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
       // Robust Header Regex for Carriers
-      if (/(?:Carrier\s*[-—:]?\s*)?(AT&T|A\s*T\s*&\s*T|ATT)\b/i.test(rawText)) detectedCarrierKey = 'att';
+      if (/(?:Carrier\s*[-—:]?\s*)?(AT&T|A\s*T\s*&\s*T|ATT|AT\s*T)\b/i.test(rawText) || /Carrier\s*[-—:]?\s*AT/i.test(rawText)) detectedCarrierKey = 'att';
       else if (/(?:Carrier\s*[-—:]?\s*)?(Verizon|VZW)\b/i.test(rawText)) detectedCarrierKey = 'vzw';
       else if (/(?:Carrier\s*[-—:]?\s*)?(T-Mobile|TMO)\b/i.test(rawText)) detectedCarrierKey = 'tmo';
 
@@ -1965,9 +2031,15 @@
 
         // 4. Model sanitization: strip non-alphanumeric noise & stray margin characters
         let cleanModel = (rawModelText || fullRowText.split(/(?:16|32|64|128|256|512)\s*GB/i)[0] || '')
+          .replace(/^[=\-><~|"“':;!/\\0-9\s]+(?=[a-zA-Z])/g, '')
           .replace(/^[^a-zA-Z0-9]+/, '')
           .replace(/^[a-zA-Z]\s+(?=(Galaxy|iPhone|Moto|Classic))/i, '')
           .trim();
+
+        cleanModel = cleanModel.replace(/^(?:hone|shon)\b/i, 'iPhone');
+        cleanModel = cleanModel.replace(/^salaxy\b/i, 'Galaxy');
+        cleanModel = cleanModel.replace(/^(?:jaoto|to)\s+g\b/i, 'Moto G');
+        if (/^Air$/i.test(cleanModel)) cleanModel = 'iPhone Air';
 
         if (cleanModel.length < 3) {
           linesLog.push({
@@ -1985,12 +2057,22 @@
 
         let bestMatch = cleanModel;
         let lowestDist = 999;
+        let bestRawDist = 999;
         if (stats && stats.devices) {
           for (const dev of Object.values(stats.devices)) {
             const dName = dev.name || dev;
-            const dist = getLevenshtein(cleanModel, dName);
-            if (dist < lowestDist) {
-              lowestDist = dist;
+            let rawDist = getLevenshtein(cleanModel, dName);
+            let scoredDist = rawDist;
+
+            const lowerClean = cleanModel.toLowerCase();
+            const lowerDev = dName.toLowerCase();
+            if (lowerClean.length >= 3 && (lowerDev.includes(lowerClean) || lowerClean.includes(lowerDev))) {
+              scoredDist = Math.max(0, scoredDist - 4);
+            }
+
+            if (scoredDist < lowestDist) {
+              lowestDist = scoredDist;
+              bestRawDist = rawDist;
               bestMatch = dName;
             }
           }
@@ -2002,7 +2084,7 @@
         let itemStatus = 'matched';
         let finalModel = cleanModel;
 
-        if (errorRatio <= 0.32 || lowestDist <= 3) {
+        if (errorRatio <= 0.35 || lowestDist <= 3 || bestRawDist <= 3) {
           finalModel = bestMatch;
           itemStatus = 'matched';
         } else {
