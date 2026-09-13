@@ -1301,7 +1301,7 @@
 
   <script>
     // --- APP VERSION (Single Point of Truth) ---
-    const APP_VERSION = "v0.0.18";
+    const APP_VERSION = "v0.0.19";
     document.getElementById('version-text').textContent = APP_VERSION;
 
     // --- GATEKEEPER & SESSION ---
@@ -1770,7 +1770,7 @@
     // --- ALWAYS-ON TELEMETRY LOGS ---
     const sessionOcrLogs = [];
 
-    // High-contrast toner enhancement strictly for framed paper
+    // High-contrast toner enhancement with 4-zone exposure compensation
     function enhancePaperContrast(paperCanvas) {
       const canvas = document.createElement('canvas');
       canvas.width = paperCanvas.width;
@@ -1781,32 +1781,78 @@
       try {
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const d = imgData.data;
-        const hist = new Uint32Array(256);
-        const totalPixels = canvas.width * canvas.height;
+        const w = canvas.width;
+        const h = canvas.height;
 
-        for (let i = 0; i < d.length; i += 4) {
-          const lum = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
-          hist[lum]++;
+        // Divide into 4 vertical zones to balance uneven shadows and gradients
+        const numZones = 4;
+        const zoneH = Math.floor(h / numZones);
+        const zoneParams = [];
+
+        for (let z = 0; z < numZones; z++) {
+          const startY = z * zoneH;
+          const endY = (z === numZones - 1) ? h : (z + 1) * zoneH;
+          const hist = new Uint32Array(256);
+          let zonePixels = 0;
+
+          for (let y = startY; y < endY; y++) {
+            const rowOffset = y * w * 4;
+            for (let x = 0; x < w; x++) {
+              const i = rowOffset + x * 4;
+              const lum = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
+              hist[lum]++;
+              zonePixels++;
+            }
+          }
+
+          let count = 0;
+          let p2 = 0, p98 = 255;
+          for (let i = 0; i < 256; i++) {
+            count += hist[i];
+            if (count >= zonePixels * 0.02 && p2 === 0) p2 = i;
+            if (count >= zonePixels * 0.98) { p98 = i; break; }
+          }
+          zoneParams.push({
+            centerY: (startY + endY) / 2,
+            p2: p2,
+            p98: Math.max(p2 + 1, p98)
+          });
         }
 
-        let count = 0;
-        let p2 = 0, p98 = 255;
-        for (let i = 0; i < 256; i++) {
-          count += hist[i];
-          if (count >= totalPixels * 0.02 && p2 === 0) p2 = i;
-          if (count >= totalPixels * 0.98) { p98 = i; break; }
-        }
-
-        const range = Math.max(1, p98 - p2);
         const gamma = 1.35;
 
-        for (let i = 0; i < d.length; i += 4) {
-          const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          const normalized = Math.min(1, Math.max(0, (lum - p2) / range));
-          const enhanced = Math.round(Math.pow(normalized, gamma) * 255);
-          d[i] = enhanced;
-          d[i + 1] = enhanced;
-          d[i + 2] = enhanced;
+        for (let y = 0; y < h; y++) {
+          let p2, p98;
+          if (y <= zoneParams[0].centerY) {
+            p2 = zoneParams[0].p2;
+            p98 = zoneParams[0].p98;
+          } else if (y >= zoneParams[numZones - 1].centerY) {
+            p2 = zoneParams[numZones - 1].p2;
+            p98 = zoneParams[numZones - 1].p98;
+          } else {
+            let zIdx = 0;
+            while (zIdx < numZones - 1 && y > zoneParams[zIdx + 1].centerY) {
+              zIdx++;
+            }
+            const z0 = zoneParams[zIdx];
+            const z1 = zoneParams[zIdx + 1];
+            const t = (y - z0.centerY) / (z1.centerY - z0.centerY);
+            p2 = z0.p2 + t * (z1.p2 - z0.p2);
+            p98 = z0.p98 + t * (z1.p98 - z0.p98);
+          }
+
+          const range = Math.max(1, p98 - p2);
+          const rowOffset = y * w * 4;
+
+          for (let x = 0; x < w; x++) {
+            const i = rowOffset + x * 4;
+            const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+            const normalized = Math.min(1, Math.max(0, (lum - p2) / range));
+            const enhanced = Math.round(Math.pow(normalized, gamma) * 255);
+            d[i] = enhanced;
+            d[i + 1] = enhanced;
+            d[i + 2] = enhanced;
+          }
         }
         ctx.putImageData(imgData, 0, 0);
       } catch (e) {
@@ -1903,7 +1949,8 @@
       const baselineColors = {
         'Black': 'BLK', 'Obsidian': 'BLK', 'Space Black': 'BLK', 'Coal Smoke': 'BLK',
         'Deep Blue': 'BLU', 'Sky Blue': 'BLU', 'Tapestry': 'BLU', 'Navy': 'BLU', 'Evening Blue': 'BLU',
-        'Cosmic Orange': 'ORG', 'Slipstream': 'SLP', 'Beige': 'BGE', 'Gray': 'GRY', 'Silver': 'SLV'
+        'Cosmic Orange': 'ORG', 'Slipstream': 'SLP', 'Beige': 'BGE', 'Gray': 'GRY', 'Silver': 'SLV',
+        'Graphite': 'GRY'
       };
       for (const [k, v] of Object.entries(baselineColors)) {
         if (!colorMap[k]) colorMap[k] = v;
@@ -1932,7 +1979,7 @@
         if (headerQty) boundColorQty = (headerColor + headerQty) / 2;
       }
 
-      // Line Extraction: Prefer Tesseract native lines to prevent drift & row-merging collisions
+      // Line Extraction
       let textLines = [];
       if (ocrData.lines && ocrData.lines.length > 0) {
         textLines = ocrData.lines.filter(l => {
@@ -1940,7 +1987,6 @@
           return yMid >= 0.16 && l.text && l.text.trim().length > 1;
         });
       } else {
-        // Fallback: Fixed non-drifting Y-clustering
         const tableWords = allWords.filter(w => ((w.bbox.y0 + w.bbox.y1) / (2 * paperH)) >= 0.16);
         tableWords.sort((a, b) => ((a.bbox.y0 + a.bbox.y1) / 2) - ((b.bbox.y0 + b.bbox.y1) / 2));
         const clusters = [];
@@ -1976,9 +2022,14 @@
 
       textLines.forEach(line => {
         const fullRowText = (line.text || '').replace(/\s+/g, ' ').trim();
+        const strippedRow = fullRowText.replace(/^[^a-zA-Z0-9]+/, '');
 
         // Skip table header row
-        if (/^(Model|Capacity|Color|Quantity)/i.test(fullRowText) || (/Model/i.test(fullRowText) && /Available/i.test(fullRowText))) {
+        if (
+          /^(Model|Capacity|Color|Quantity)/i.test(strippedRow) ||
+          /(Model\s+Capacity|Capacity\s+Color|Color\s+Quantity)/i.test(fullRowText) ||
+          (/Model/i.test(strippedRow) && /Available/i.test(strippedRow))
+        ) {
           linesLog.push({
             rawLine: fullRowText,
             capacity: '-',
@@ -1991,6 +2042,21 @@
           });
           return;
         }
+
+        // Pre-normalize row text for capacity & color OCR confusions
+        let normRowText = fullRowText
+          .replace(/\b256\s*(?:G8B|68|08)\b/gi, '256GB')
+          .replace(/\b128\s*(?:08|68|G8B)\b/gi, '128GB')
+          .replace(/\b2meB\b/gi, '256GB')
+          .replace(/\b8\s*G[B8]\b/gi, '8GB')
+          .replace(/SpaceBlack/gi, 'Space Black')
+          .replace(/DeepBlue/gi, 'Deep Blue')
+          .replace(/Deep\s+Blu\b/gi, 'Deep Blue')
+          .replace(/SkyBlue/gi, 'Sky Blue')
+          .replace(/s[il]Bue/gi, 'Sky Blue')
+          .replace(/EveningBlue/gi, 'Evening Blue')
+          .replace(/CoalSmoke/gi, 'Coal Smoke')
+          .replace(/CosmicOrange/gi, 'Cosmic Orange');
 
         // Partition words into columns
         const lineWords = line.words || [];
@@ -2012,16 +2078,15 @@
         const rawColorText = colorWords.join(' ').trim();
         const rawQtyText = qtyWords.join(' ').trim();
 
-        // 1. Capacity (Strict regex)
+        // 1. Capacity (Strict regex: 8, 16, 32, 64, 128, 256, 512 GB)
         let capacity = '';
-        const capMatch = (rawCapText + ' ' + fullRowText).match(/(16|32|64|128|256|512)\s*GB/i);
+        const capMatch = (rawCapText + ' ' + normRowText).match(/\b(8|16|32|64|128|256|512)\s*GB\b/i);
         if (capMatch) capacity = capMatch[1].toUpperCase() + 'GB';
 
-        // 2. Color (Dictionary matching with fuzzy tolerance)
+        // 2. Color (Dictionary matching with multi-word & fuzzy tolerance)
         let colorAbbr = '';
-        const combinedColorCheck = (rawColorText + ' ' + fullRowText);
+        const combinedColorCheck = (rawColorText + ' ' + normRowText);
 
-        // Direct multi-word check
         for (const [cName, cCode] of Object.entries(colorMap)) {
           if (new RegExp('\\b' + cName + '\\b', 'i').test(combinedColorCheck)) {
             colorAbbr = cCode;
@@ -2029,13 +2094,12 @@
           }
         }
 
-        // Fuzzy match if missing
         if (!colorAbbr) {
-          const candidateTokens = (rawColorText + ' ' + fullRowText).split(/[\s,]+/);
+          const candidateTokens = combinedColorCheck.split(/[\s,]+/);
           for (const token of candidateTokens) {
             if (token.length < 3) continue;
             for (const [cName, cCode] of Object.entries(colorMap)) {
-              if (getLevenshtein(token, cName) <= 2) {
+              if (getLevenshtein(token, cName) <= 1 || (cName.length >= 6 && getLevenshtein(token, cName) <= 2)) {
                 colorAbbr = cCode;
                 break;
               }
@@ -2046,11 +2110,11 @@
 
         // 3. Quantity
         let qty = 1;
-        const qtyMatch = (rawQtyText + ' ' + fullRowText).match(/(\d+)\s*Available/i) || rawQtyText.match(/\b(\d+)\b/);
+        const qtyMatch = (rawQtyText + ' ' + normRowText).match(/(\d+)\s*Available/i) || rawQtyText.match(/\b(\d+)\b/);
         if (qtyMatch) qty = parseInt(qtyMatch[1], 10);
 
-        // 4. Model sanitization: strip non-alphanumeric noise & stray margin characters
-        let cleanModel = (rawModelText || fullRowText.split(/(?:16|32|64|128|256|512)\s*GB/i)[0] || '')
+        // 4. Model sanitization
+        let cleanModel = (rawModelText || normRowText.split(/\b(?:8|16|32|64|128|256|512)\s*GB\b/i)[0] || '')
           .replace(/^[=\-><~|"“':;!/\\0-9\s]+(?=[a-zA-Z])/g, '')
           .replace(/^[^a-zA-Z0-9]+/, '')
           .replace(/^[a-zA-Z]\s+(?=(Galaxy|iPhone|Moto|Classic))/i, '')
@@ -2058,14 +2122,18 @@
 
         cleanModel = cleanModel.replace(/^(?:hone|shon)\b/i, 'iPhone');
         cleanModel = cleanModel.replace(/^salaxy\b/i, 'Galaxy');
-        cleanModel = cleanModel.replace(/^(?:jaoto|to)\s+g\b/i, 'Moto G');
+        cleanModel = cleanModel.replace(/^(?:jaoto|to|0G)\s+g\b/i, 'Moto G');
+        cleanModel = cleanModel.replace(/^0G\s*2026/i, 'Moto G 2026');
+        cleanModel = cleanModel.replace(/^(?:PhoncizPoMax|Phonci[a-z]*)\b/i, 'iPhone 17 Pro Max');
+        cleanModel = cleanModel.replace(/^Phone\s*Ai\b/i, 'iPhone Air');
         if (/^Air$/i.test(cleanModel)) cleanModel = 'iPhone Air';
 
-        if (cleanModel.length < 3) {
+        // Phantom row shield: reject lines lacking both capacity and recognized color
+        if (!capacity && !colorAbbr) {
           linesLog.push({
             rawLine: fullRowText,
-            capacity: capacity || '-',
-            color: colorAbbr || '-',
+            capacity: '-',
+            color: '-',
             qty: qty,
             residualModel: cleanModel,
             bestMatch: '-',
@@ -2075,24 +2143,54 @@
           return;
         }
 
+        // Shadow fallback: if model was truncated but capacity & color exist, salvage row
+        if (cleanModel.length < 3) {
+          if (capacity && colorAbbr) {
+            cleanModel = '[Unidentified Model]';
+          } else {
+            linesLog.push({
+              rawLine: fullRowText,
+              capacity: capacity || '-',
+              color: colorAbbr || '-',
+              qty: qty,
+              residualModel: cleanModel,
+              bestMatch: '-',
+              distance: '-',
+              status: 'ignored'
+            });
+            return;
+          }
+        }
+
         let bestMatch = cleanModel;
         let lowestDist = 999;
         let bestRawDist = 999;
-        if (stats && stats.devices) {
+        let bestLenDiff = 999;
+
+        if (stats && stats.devices && cleanModel !== '[Unidentified Model]') {
           for (const dev of Object.values(stats.devices)) {
             const dName = dev.name || dev;
-            let rawDist = getLevenshtein(cleanModel, dName);
+            const rawDist = getLevenshtein(cleanModel, dName);
             let scoredDist = rawDist;
 
             const lowerClean = cleanModel.toLowerCase();
             const lowerDev = dName.toLowerCase();
-            if (lowerClean.length >= 3 && (lowerDev.includes(lowerClean) || lowerClean.includes(lowerDev))) {
-              scoredDist = Math.max(0, scoredDist - 4);
+
+            // Modest bonus for substring containment without collapsing to 0
+            if (rawDist > 0 && lowerClean.length >= 5 && (lowerDev.includes(lowerClean) || lowerClean.includes(lowerDev))) {
+              scoredDist = Math.max(1, rawDist - 2);
             }
 
-            if (scoredDist < lowestDist) {
+            const lenDiff = Math.abs(cleanModel.length - dName.length);
+
+            if (
+              scoredDist < lowestDist ||
+              (scoredDist === lowestDist && rawDist < bestRawDist) ||
+              (scoredDist === lowestDist && rawDist === bestRawDist && lenDiff < bestLenDiff)
+            ) {
               lowestDist = scoredDist;
               bestRawDist = rawDist;
+              bestLenDiff = lenDiff;
               bestMatch = dName;
             }
           }
@@ -2104,7 +2202,10 @@
         let itemStatus = 'matched';
         let finalModel = cleanModel;
 
-        if (errorRatio <= 0.35 || lowestDist <= 3 || bestRawDist <= 3) {
+        if (cleanModel === '[Unidentified Model]') {
+          finalModel = '[Unidentified Model]';
+          itemStatus = 'unmatched_fallback';
+        } else if (errorRatio <= 0.35 || lowestDist <= 3 || bestRawDist <= 3) {
           finalModel = bestMatch;
           itemStatus = 'matched';
         } else {
