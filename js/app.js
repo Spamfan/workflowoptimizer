@@ -33,6 +33,7 @@ const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
+if (versionText) versionText.textContent = `BLUE ${APP_VERSION}`;
 
 let currentView = 'login-view';
 let isAuthenticated = false;
