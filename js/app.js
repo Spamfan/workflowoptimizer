@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.1)
+// Prototype Blue - js/app.js (v0.0.2)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.1";
+export const APP_VERSION = "v0.0.2";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -19,6 +19,7 @@ const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
 
 let currentView = 'login-view';
+let isAuthenticated = false;
 
 export function switchView(targetViewId, pushState = true) {
   loginView.style.display = 'none';
@@ -54,7 +55,10 @@ window.addEventListener('popstate', (e) => {
     manifestModal.style.display = 'none';
     return;
   }
-  const dest = (e.state && e.state.view) ? e.state.view : (getSavedStore() ? 'dashboard-view' : 'login-view');
+  let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
+  if (!isAuthenticated && dest === 'dashboard-view') {
+    dest = 'login-view';
+  }
   switchView(dest, false);
 });
 
@@ -143,17 +147,11 @@ window.addEventListener('keydown', (e) => {
 // Bootstrap
 initAuth({
   onSuccess: (storeVal) => {
+    isAuthenticated = true;
     cardPrintTitle.textContent = `Print inventory (${storeVal})`;
     switchView('dashboard-view');
     fetchPing();
   }
 });
 
-const existingStore = getSavedStore();
-if (existingStore) {
-  cardPrintTitle.textContent = `Print inventory (${existingStore})`;
-  switchView('dashboard-view');
-  fetchPing();
-} else {
-  switchView('login-view');
-}
+switchView('login-view');
