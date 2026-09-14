@@ -1,6 +1,6 @@
-// Prototype Blue - js/auth.js (v0.0.1)
+// Prototype Blue - js/auth.js (v0.0.2)
 
-export const AUTH_VERSION = "v0.0.1";
+export const AUTH_VERSION = "v0.0.2";
 
 const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
 const MASTER_PIN = atob('MTAyMDMw');   // "102030"
@@ -19,7 +19,6 @@ export function saveStore(storeVal) {
 }
 
 export function logout() {
-  localStorage.removeItem('wfo_store');
   window.location.reload();
 }
 

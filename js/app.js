@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.2)
+// Prototype Blue - js/app.js (v0.0.3)
 
-import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.1';
+import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
 
-export const APP_VERSION = "v0.0.2";
+export const APP_VERSION = "v0.0.3";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
