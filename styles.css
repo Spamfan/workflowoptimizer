@@ -38,7 +38,7 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  z-index: 100;
+  z-index: 200;
 }
 
 .version-badge {
@@ -63,7 +63,7 @@ body {
   position: fixed;
   top: 12px;
   right: 16px;
-  z-index: 100;
+  z-index: 200;
 }
 
 /* --- MATERIAL 3 PILL BUTTONS --- */
@@ -493,6 +493,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: #000000;
   display: flex;
   align-items: center;
@@ -527,41 +528,54 @@ body {
 
 .viewfinder-box {
   position: relative;
-  width: min(88vw, calc(72vh * 1.25));
-  height: min(calc(88vw / 1.25), 72vh);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  width: min(80vw, calc(64dvh * 0.7727));
+  height: min(calc(80vw / 0.7727), 64dvh);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
 }
 
-.guide-line {
+.reticle-corner {
   position: absolute;
-  left: 0;
-  right: 0;
+  width: 18px;
+  height: 18px;
+  border-color: #ffffff;
+  border-style: solid;
   pointer-events: none;
 }
 
-.guide-line.yellow {
-  height: 2px;
-  background: rgba(234, 179, 8, 0.85);
+.reticle-corner.tl {
+  top: -1px;
+  left: -1px;
+  border-width: 3px 0 0 3px;
+  border-top-left-radius: 8px;
 }
 
-.guide-line.blue {
-  height: 1px;
-  background: rgba(59, 130, 246, 0.75);
+.reticle-corner.tr {
+  top: -1px;
+  right: -1px;
+  border-width: 3px 3px 0 0;
+  border-top-right-radius: 8px;
 }
 
-.y-1 { top: 25%; }
-.y-2 { top: 50%; }
-.y-3 { top: 75%; }
-.b-1 { top: 12.5%; }
-.b-2 { top: 37.5%; }
-.b-3 { top: 62.5%; }
-.b-4 { top: 87.5%; }
+.reticle-corner.bl {
+  bottom: -1px;
+  left: -1px;
+  border-width: 0 0 3px 3px;
+  border-bottom-left-radius: 8px;
+}
+
+.reticle-corner.br {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 3px 3px 0;
+  border-bottom-right-radius: 8px;
+}
 
 .scanner-controls {
   position: absolute;
-  bottom: 30px;
+  bottom: 28px;
+  bottom: max(28px, env(safe-area-inset-bottom, 28px));
   left: 0;
   right: 0;
   display: flex;
