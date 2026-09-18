@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.4)
+// Prototype Blue - js/app.js (v0.0.5)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
-import { startCamera, stopCamera, captureFrame, processUploadedFile, SCANNER_VERSION } from './scanner.js?v=0.0.1';
-import { runOcrPipeline, OCR_VERSION } from './ocr.js?v=0.0.1';
+import { startCamera, stopCamera, captureFrame, processUploadedFile, SCANNER_VERSION } from './scanner.js?v=0.0.3';
+import { runOcrPipeline, OCR_VERSION } from './ocr.js?v=0.0.2';
 import {
   getStagedData,
   commitScanToCarrier,
@@ -13,7 +13,7 @@ import {
   STAGING_VERSION
 } from './staging.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.4";
+export const APP_VERSION = "v0.0.5";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -21,7 +21,7 @@ export const MODULE_VERSIONS = {
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
-  "styles.css": "v0.0.2",
+  "styles.css": "v0.0.3",
   "index.html": "v0.0.4"
 };
 
@@ -134,10 +134,9 @@ btnLogout.addEventListener('click', logout);
 
 // Scanner & Review DOM bindings
 const scannerVideo = document.getElementById('scanner-video');
-const btnScannerRotate = document.getElementById('btn-scanner-rotate');
 const btnScannerShutter = document.getElementById('btn-scanner-shutter');
 const scannerFileInput = document.getElementById('scanner-file-input');
-const scannerProgressOverlay = document.getElementById('scanner-progress-overlay');
+const reviewLoadingState = document.getElementById('review-loading-state');
 const ocrProgressText = document.getElementById('ocr-progress-text');
 
 const reviewMetaThumb = document.getElementById('review-meta-thumb');
@@ -168,6 +167,10 @@ function renderReview(carrierKey) {
   } else {
     reviewMetaThumb.style.display = 'none';
   }
+
+  if (reviewLoadingState) reviewLoadingState.style.display = 'none';
+  stagedItemsContainer.style.display = 'flex';
+  if (btnAddItem) btnAddItem.style.display = 'inline-flex';
 
   stagedItemsContainer.innerHTML = '';
   if (!sheet.items || sheet.items.length === 0) {
@@ -256,24 +259,39 @@ if (reviewMetaThumb) {
 
 // Process captured frame through OCR and Staging
 async function handleCapturedImage(captureResult) {
-  scannerProgressOverlay.style.display = 'flex';
-  ocrProgressText.textContent = 'Reading sheet (0%)...';
+  stopCamera(scannerVideo);
+  switchView('review-view');
+
+  if (reviewMetaThumb) {
+    reviewMetaThumb.src = captureResult.thumbDataUrl;
+    reviewMetaThumb.style.display = 'block';
+  }
+  reviewCarrierTitle.textContent = 'Analyzing sheet...';
+  reviewStoreText.textContent = `Store ${currentStore || '--'}`;
+  reviewTimestampText.textContent = 'Processing OCR...';
+  stagedItemsContainer.style.display = 'none';
+  if (btnAddItem) btnAddItem.style.display = 'none';
+  if (reviewLoadingState) reviewLoadingState.style.display = 'flex';
+  if (ocrProgressText) ocrProgressText.textContent = 'Reading sheet (0%)...';
 
   try {
-    stopCamera(scannerVideo);
-    const { items } = await runOcrPipeline(captureResult.canvas, cachedStats || {}, pct => {
-      ocrProgressText.textContent = `Reading sheet (${pct}%)...`;
+    const { carrier, store, items } = await runOcrPipeline(captureResult.canvas, cachedStats || {}, pct => {
+      if (ocrProgressText) ocrProgressText.textContent = `Reading sheet (${pct}%)...`;
     });
 
+    if (carrier && ['tmo', 'vzw', 'att'].includes(carrier)) {
+      activeCarrier = carrier;
+    }
+
     commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl);
-    scannerProgressOverlay.style.display = 'none';
     renderReview(activeCarrier);
-    switchView('review-view');
   } catch (err) {
     console.error(err);
     alert('Scan processing failed: ' + err.message);
-    scannerProgressOverlay.style.display = 'none';
-    switchView('dashboard-view');
+    if (reviewLoadingState) reviewLoadingState.style.display = 'none';
+    stagedItemsContainer.style.display = 'flex';
+    if (btnAddItem) btnAddItem.style.display = 'inline-flex';
+    renderReview(activeCarrier);
   }
 }
 
@@ -281,19 +299,11 @@ async function handleCapturedImage(captureResult) {
 if (btnScannerShutter) {
   btnScannerShutter.addEventListener('click', () => {
     try {
-      const capture = captureFrame(scannerVideo, scannerRotation);
+      const capture = captureFrame(scannerVideo);
       handleCapturedImage(capture);
     } catch (err) {
       alert('Capture error: ' + err.message);
     }
-  });
-}
-
-// Rotate Shutter Handler
-if (btnScannerRotate) {
-  btnScannerRotate.addEventListener('click', () => {
-    scannerRotation = (scannerRotation + 90) % 360;
-    scannerVideo.style.transform = `rotate(${scannerRotation}deg)`;
   });
 }
 
@@ -303,7 +313,7 @@ if (scannerFileInput) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      const capture = await processUploadedFile(file, scannerRotation);
+      const capture = await processUploadedFile(file);
       handleCapturedImage(capture);
     } catch (err) {
       alert('Image processing error: ' + err.message);
@@ -315,8 +325,6 @@ if (scannerFileInput) {
 if (btnScanNext) {
   btnScanNext.addEventListener('click', async () => {
     activeCarrier = getNextCarrier(activeCarrier);
-    scannerRotation = 0;
-    scannerVideo.style.transform = 'none';
     switchView('scanner-view');
     try {
       await startCamera(scannerVideo);
@@ -352,8 +360,6 @@ btnBack.addEventListener('click', () => {
 
 // Hook "Upload inventory" on dashboard to Scanner View
 document.getElementById('btn-upload-inv').addEventListener('click', async () => {
-  scannerRotation = 0;
-  scannerVideo.style.transform = 'none';
   switchView('scanner-view');
   try {
     await startCamera(scannerVideo);
