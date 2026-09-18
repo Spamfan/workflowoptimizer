@@ -1,11 +1,11 @@
-// Workflow Optimizer - js/scanner.js (v0.0.1)
+// Workflow Optimizer - js/scanner.js (v0.0.3)
 
-export const SCANNER_VERSION = "v0.0.1";
+export const SCANNER_VERSION = "v0.0.3";
 
 let activeStream = null;
 
 /**
- * Initializes and starts the back camera feed on the target video element.
+ * Initializes and starts the camera stream on the target video element.
  * @param {HTMLVideoElement} videoEl 
  * @returns {Promise<MediaStream>}
  */
@@ -34,7 +34,7 @@ export async function startCamera(videoEl) {
 }
 
 /**
- * Stops any active media stream and clears the video element.
+ * Stops any active media stream and resets the video element.
  * @param {HTMLVideoElement} videoEl 
  */
 export function stopCamera(videoEl) {
@@ -48,9 +48,9 @@ export function stopCamera(videoEl) {
 }
 
 /**
- * Crops the video source to a 5:4 aspect ratio with orientation rotation.
+ * Crops image/video frame strictly to 8.5:11 (US Letter portrait) aspect ratio.
  * @param {HTMLVideoElement|HTMLImageElement} sourceEl 
- * @param {number} rotationAngle 0, 90, 180, or 270
+ * @param {number} rotationAngle 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
  */
 export function captureFrame(sourceEl, rotationAngle = 0) {
@@ -62,8 +62,8 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
     throw new Error("Invalid source dimensions for capture");
   }
 
-  // Calculate 5:4 bounding crop
-  const targetRatio = 5 / 4;
+  // Standard US Letter Portrait ratio (8.5 / 11 = ~0.7727)
+  const targetRatio = 8.5 / 11;
   let cropW = sw;
   let cropH = sw / targetRatio;
 
@@ -75,14 +75,14 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
   const sx = (sw - cropW) / 2;
   const sy = (sh - cropH) / 2;
 
-  // Intermediate unrotated canvas
+  // Offscreen unrotated canvas
   const offCanvas = document.createElement("canvas");
   offCanvas.width = cropW;
   offCanvas.height = cropH;
   const offCtx = offCanvas.getContext("2d");
   offCtx.drawImage(sourceEl, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
 
-  // Apply rotation
+  // Output canvas handling optional rotation
   const rads = (rotationAngle * Math.PI) / 180;
   const isPerpendicular = rotationAngle === 90 || rotationAngle === 270;
   const finalCanvas = document.createElement("canvas");
@@ -90,27 +90,31 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
   finalCanvas.height = isPerpendicular ? cropW : cropH;
 
   const fCtx = finalCanvas.getContext("2d");
-  fCtx.translate(finalCanvas.width / 2, finalCanvas.height / 2);
-  fCtx.rotate(rads);
-  fCtx.drawImage(offCanvas, -cropW / 2, -cropH / 2);
+  if (rotationAngle !== 0) {
+    fCtx.translate(finalCanvas.width / 2, finalCanvas.height / 2);
+    fCtx.rotate(rads);
+    fCtx.drawImage(offCanvas, -cropW / 2, -cropH / 2);
+  } else {
+    fCtx.drawImage(offCanvas, 0, 0);
+  }
 
-  // Full-res scan output
-  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.88);
+  // High-res JPEG for OCR
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.90);
 
-  // Low-res thumbnail for staged card headers
+  // Compact thumbnail for review metadata card
   const thumbCanvas = document.createElement("canvas");
   const thumbScale = 160 / Math.max(finalCanvas.width, finalCanvas.height);
   thumbCanvas.width = Math.round(finalCanvas.width * thumbScale);
   thumbCanvas.height = Math.round(finalCanvas.height * thumbScale);
   const tCtx = thumbCanvas.getContext("2d");
   tCtx.drawImage(finalCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
-  const thumbDataUrl = thumbCanvas.toDataURL("image/jpeg", 0.65);
+  const thumbDataUrl = thumbCanvas.toDataURL("image/jpeg", 0.70);
 
   return { fullDataUrl, thumbDataUrl, canvas: finalCanvas };
 }
 
 /**
- * Loads a selected file Blob into an Image and captures frame with rotation.
+ * Loads a selected image file into an Image element and crops to 8.5:11.
  * @param {File} file 
  * @param {number} rotationAngle 
  * @returns {Promise<{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }>}

@@ -1,9 +1,9 @@
-// Workflow Optimizer - js/ocr.js (v0.0.1)
+// Workflow Optimizer - js/ocr.js (v0.0.2)
 
-export const OCR_VERSION = "v0.0.1";
+export const OCR_VERSION = "v0.0.2";
 
 /**
- * Standard Levenshtein Distance metric.
+ * Standard Levenshtein Distance metric for typo tolerance.
  */
 export function getLevenshtein(a, b) {
   const m = [];
@@ -19,167 +19,110 @@ export function getLevenshtein(a, b) {
   return m[b.length][a.length];
 }
 
-// IRIS Pre-split Wildcard Expressions
-const WILDCARD_GARBAGE = [
-  /please.*?below/gi,
-  /or \..*?d d d/gi,
-  /or \..*?s w x/gi,
-  /verizc.*?d d/gi,
-  /prepai.*?k/gi,
-  /\d+\s*total items.*?(out of stock|stock)/gi
-];
-
-// IRIS Cleaver Phrase Splits
-const PHRASE_SPLITS = [
-  /in order to view/gi, /detailed information/gi, /make changes/gi,
-  /show show/gi, /out of stoc/gi, /family mobile/gi, /straight talk/gi,
-  /ol t :/gi, /1 t t :/gi, /ou 1 :/gi, /x n metro/gi, /click any row/gi,
-  /\(carrier\)/gi, /t-mobile/gi, /at&t/gi, /verizon/gi, /cricket/gi,
-  /metro/gi, /u\.s\./gi, /prepai/gi, /what ty/gi, /what fe/gi,
-  /feedb:/gi, /sele/gi, /capac/gi, /pacity/gi, /eedba/gi, /feedb/gi,
-  /ventor/gi, /ct a r/gi, /of stoc/gi, /in stoc/gi, /board \//gi,
-  /device m/gi, /lity sta/gi, /repaid/gi, /ellular/gi, /ceonly/gi,
-  /view in/gi, /dash/gi, /devi/gi, /odel/gi, /ity :/gi, /show/gi,
-  /tus i/gi, /ity i/gi
-];
-
 /**
- * Cleans and reconstructs wrapped inventory rows using IRIS Anchor & Stitcher logic.
- * @param {string} rawText 
- * @returns {string[]}
+ * Parses header metadata from "Inventory View Report" sheets.
+ * @param {string} text 
+ * @returns {{ carrier: string|null, store: string|null }}
  */
-export function cleaveAndStitch(rawText) {
-  let text = rawText;
+export function parseReportHeader(text) {
+  let carrier = null;
+  let store = null;
 
-  // 1. Strip wildcard header/disclaimer noise
-  for (const pattern of WILDCARD_GARBAGE) {
-    text = text.replace(pattern, " ");
+  if (/Carrier\s*[-–:]\s*AT&T/i.test(text)) {
+    carrier = 'att';
+  } else if (/Carrier\s*[-–:]\s*T-Mobile/i.test(text)) {
+    carrier = 'tmo';
+  } else if (/Carrier\s*[-–:]\s*Verizon/i.test(text)) {
+    carrier = 'vzw';
   }
 
-  // 2. Inject line breaks on known noise anchors
-  for (const phrase of PHRASE_SPLITS) {
-    text = text.replace(phrase, "\n");
+  const storeMatch = text.match(/Store:\s*(\d+)/i);
+  if (storeMatch) {
+    store = storeMatch[1];
   }
 
-  // 3. Typo Normalization
-  text = text.replace(/Avallable|Avnitable|Avaltable|Atallabte|Availabie|Avalablel|Avalable/gi, "available");
-  text = text.replace(/(\d)available/gi, "$1 available");
-  text = text.replace(/\b[sS]\s+available/gi, "5 available");
-  text = text.replace(/\b[iIlL]\s+available/gi, "1 available");
-  text = text.replace(/([a-zA-Z])\s+available/gi, "$1 1 available");
-  text = text.replace(/^[Il\-Uu]\s+/gm, "");
-  text = text.replace(/IPhone/g, "iPhone");
-  text = text.replace(/126G5/gi, "128GB");
-  text = text.replace(/BGB/gi, "8GB");
-  text = text.replace(/45G/gi, "4 5G");
-  text = text.replace(/(\d+\s*(?:GB|TB))\s+(?:\d+\s*(?:GB|TB))/gi, "$1");
-
-  // 4. Orphan Stitcher: stitch fragment until line ends with "available"
-  const rawLines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const stitched = rawLines.reduce((acc, line) => {
-    if (acc.length === 0) {
-      acc.push(line);
-    } else {
-      const prev = acc[acc.length - 1];
-      if (/available/i.test(prev)) {
-        acc.push(line);
-      } else {
-        acc[acc.length - 1] = prev + " " + line;
-      }
-    }
-    return acc;
-  }, [])
-  .map(l => l.replace(/(available).*$/i, "available").trim())
-  .filter(l => /available$/i.test(l));
-
-  return stitched;
+  return { carrier, store };
 }
 
 /**
- * Resolves matched canonical device model and color code from a stitched row.
- * @param {string} line 
+ * Parses 4-column tabular rows from "Inventory View Report" sheets.
+ * Format: [Model] [Capacity] [Color] [Quantity Available]
+ * @param {string} text 
  * @param {Object} statsData stats.json dictionary
- * @returns {{ id: string, model: string, capacity: string, color: string, qty: number }}
+ * @returns {Array<{ id: string, model: string, capacity: string, color: string, qty: number }>}
  */
-export function parseRowTokens(line, statsData = {}) {
+export function parseReportRows(text, statsData = {}) {
   const devices = statsData.devices || {};
   const colorsMap = statsData.colors || {};
 
-  // 1. Quantity Extraction (ending anchor)
-  const qtyMatch = line.match(/(\d+)\s*available$/i);
-  const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
-  let working = line.replace(/(\d+)?\s*available$/i, "").trim();
+  const lines = text
+    .replace(/Availab[a-z]*/gi, "Available")
+    .replace(/Avallable|Avalable|Avallabie/gi, "Available")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
 
-  // 2. Capacity Extraction
-  let capacity = "";
-  const capMatch = working.match(/\b(\d{2,3}\s*(?:GB|TB)|1\s*TB|2\s*TB)\b/i);
-  if (capMatch) {
-    capacity = capMatch[1].replace(/\s+/g, "").toUpperCase();
-    working = working.replace(capMatch[0], " ").trim();
-  }
+  const items = [];
 
-  // 3. Color Extraction
-  let color = "BLK";
-  let colorMatched = false;
+  for (const line of lines) {
+    const qtyMatch = line.match(/(\d+)\s*Available/i);
+    if (!qtyMatch) continue;
 
-  // Check known color codes first
-  const knownCodes = Array.from(new Set(Object.values(colorsMap)));
-  for (const code of knownCodes) {
-    const codeRegex = new RegExp(`\\b${code}\\b`, "i");
-    if (codeRegex.test(working)) {
-      color = code;
-      working = working.replace(codeRegex, " ").trim();
-      colorMatched = true;
-      break;
+    const qty = parseInt(qtyMatch[1], 10) || 1;
+    const leftover = line.replace(/(\d+)\s*Available.*/i, "").trim();
+
+    const capMatch = leftover.match(/\b(\d{1,3}\s*(?:GB|TB))\b/i);
+    if (!capMatch) continue;
+
+    const capacity = capMatch[1].replace(/\s+/g, "").toUpperCase();
+    let modelRaw = leftover.substring(0, capMatch.index).trim();
+    let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
+
+    // Fuzzy snap to canonical device name if within typo tolerance
+    let model = modelRaw;
+    let lowestDist = Infinity;
+    let bestMatch = null;
+
+    for (const dev of Object.values(devices)) {
+      const dName = getLevenshtein(modelRaw, dev.name);
+      const dAbbr = dev.abbr ? getLevenshtein(modelRaw, dev.abbr) : Infinity;
+      const minDist = Math.min(dName, dAbbr);
+      if (minDist < lowestDist && minDist <= 3) {
+        lowestDist = minDist;
+        bestMatch = dev.name;
+      }
     }
-  }
+    if (bestMatch) {
+      model = bestMatch;
+    }
 
-  // Check full color names if code not found
-  if (!colorMatched) {
-    for (const [colorName, colorCode] of Object.entries(colorsMap)) {
-      const nameRegex = new RegExp(`\\b${colorName}\\b`, "i");
-      if (nameRegex.test(working)) {
-        color = colorCode;
-        working = working.replace(nameRegex, " ").trim();
-        colorMatched = true;
+    // Color name to abbreviation mapping
+    let color = colorRaw || "BLK";
+    for (const [name, code] of Object.entries(colorsMap)) {
+      if (name.toLowerCase() === colorRaw.toLowerCase()) {
+        color = code;
         break;
       }
     }
+
+    items.push({
+      id: "item_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+      model,
+      capacity,
+      color,
+      qty
+    });
   }
 
-  // 4. Model Matching via Levenshtein
-  const cleanedModelCandidate = working.replace(/[^a-zA-Z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-  let bestModel = cleanedModelCandidate || "Unknown Device";
-  let lowestDist = Infinity;
-
-  for (const dev of Object.values(devices)) {
-    const distName = getLevenshtein(cleanedModelCandidate, dev.name);
-    const distAbbr = getLevenshtein(cleanedModelCandidate, dev.abbr);
-    const minDist = Math.min(distName, distAbbr);
-
-    if (minDist < lowestDist) {
-      lowestDist = minDist;
-      bestModel = dev.name;
-    }
-  }
-
-  const id = "item_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
-
-  return {
-    id,
-    model: bestModel,
-    capacity: capacity || "128GB",
-    color,
-    qty
-  };
+  return items;
 }
 
 /**
- * Runs Tesseract client-side OCR on an image source and parses items.
+ * Executes client-side OCR and extracts report header and tabular inventory rows.
  * @param {HTMLCanvasElement|string} imageSource 
  * @param {Object} statsData 
  * @param {Function} onProgress 
- * @returns {Promise<{ rawText: string, stitchedLines: string[], items: Array }>}
+ * @returns {Promise<{ carrier: string|null, store: string|null, items: Array, rawText: string }>}
  */
 export async function runOcrPipeline(imageSource, statsData = {}, onProgress = () => {}) {
   if (typeof Tesseract === "undefined") {
@@ -195,12 +138,13 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
   });
 
   const rawText = result.data.text || "";
-  const stitchedLines = cleaveAndStitch(rawText);
-  const items = stitchedLines.map(line => parseRowTokens(line, statsData));
+  const { carrier, store } = parseReportHeader(rawText);
+  const items = parseReportRows(rawText, statsData);
 
   return {
-    rawText,
-    stitchedLines,
-    items
+    carrier,
+    store,
+    items,
+    rawText
   };
 }
