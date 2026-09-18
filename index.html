@@ -90,35 +90,30 @@
 
   <!-- SCANNER VIEW -->
   <div id="scanner-view" style="display: none;">
-    <div class="scanner-container">
-      <video id="scanner-video" playsinline></video>
-      <div class="viewfinder-overlay">
-        <div class="viewfinder-box">
-          <div class="reticle-corner tl"></div>
-          <div class="reticle-corner tr"></div>
-          <div class="reticle-corner bl"></div>
-          <div class="reticle-corner br"></div>
-        </div>
+    <div class="scanner-instruction-banner">
+      Place corners of the viewfinder just within the paper's borders.
+    </div>
+    <div class="scanner-card">
+      <div class="scanner-frame">
+        <video id="scanner-video" playsinline></video>
+        <div class="reticle-corner tl"></div>
+        <div class="reticle-corner tr"></div>
+        <div class="reticle-corner bl"></div>
+        <div class="reticle-corner br"></div>
       </div>
-      <div class="scanner-controls">
-        <button id="btn-scanner-rotate" class="icon-btn scanner-btn" title="Rotate 90°">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-          </svg>
-        </button>
-        <button id="btn-scanner-shutter" class="shutter-btn" title="Capture"></button>
-        <label for="scanner-file-input" class="icon-btn scanner-btn" title="Upload Photo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    </div>
+    <div class="scanner-controls-bar">
+      <div class="scanner-controls-spacer"></div>
+      <button id="btn-scanner-shutter" class="shutter-btn" title="Capture"></button>
+      <div class="scanner-controls-upload">
+        <label for="scanner-file-input" class="upload-icon-btn" title="Upload Photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
         </label>
         <input type="file" id="scanner-file-input" accept="image/*,.pdf,application/pdf" style="display: none;">
-      </div>
-      <div id="scanner-progress-overlay" class="progress-overlay" style="display: none;">
-        <div class="spinner-bubble"></div>
-        <div id="ocr-progress-text" class="progress-text">Analyzing sheet...</div>
       </div>
     </div>
   </div>
@@ -140,6 +135,11 @@
         <button class="carrier-tab active" data-carrier="tmo">T-Mobile</button>
         <button class="carrier-tab" data-carrier="vzw">Verizon</button>
         <button class="carrier-tab" data-carrier="att">AT&T</button>
+      </div>
+
+      <div id="review-loading-state" class="review-loading-state" style="display: none;">
+        <div class="spinner-bubble-sm"></div>
+        <span id="ocr-progress-text" class="review-progress-text">Analyzing sheet...</span>
       </div>
 
       <div id="staged-items-container" class="staged-items-container"></div>

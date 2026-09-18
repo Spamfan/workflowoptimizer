@@ -1,4 +1,4 @@
-/* Prototype Blue - styles.css v0.0.2 */
+/* Prototype Blue - styles.css v0.0.3 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -486,29 +486,56 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* --- SCANNER VIEW & VIEWFINDER --- */
+/* --- SCANNER VIEW (CONCEPT ART 1) --- */
 #scanner-view {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  width: 100%;
+  max-width: 500px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 70px 16px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.scanner-instruction-banner {
+  background-color: #fef08a;
+  color: #713f12;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.scanner-card {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 8.5 / 11;
+  max-height: 60vh;
+  max-height: 60dvh;
   background: #000000;
+  border-radius: 16px;
+  border: 3.5px solid #164e9a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 150;
 }
 
-.scanner-container {
+.scanner-frame {
   position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
 }
 
 #scanner-video {
@@ -517,94 +544,67 @@ body {
   object-fit: cover;
 }
 
-.viewfinder-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.viewfinder-box {
-  position: relative;
-  width: min(80vw, calc(64dvh * 0.7727));
-  height: min(calc(80vw / 0.7727), 64dvh);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-}
-
 .reticle-corner {
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-color: #ffffff;
   border-style: solid;
   pointer-events: none;
+  z-index: 10;
 }
 
 .reticle-corner.tl {
-  top: -1px;
-  left: -1px;
+  top: 14px;
+  left: 14px;
   border-width: 3px 0 0 3px;
-  border-top-left-radius: 8px;
+  border-top-left-radius: 6px;
 }
 
 .reticle-corner.tr {
-  top: -1px;
-  right: -1px;
+  top: 14px;
+  right: 14px;
   border-width: 3px 3px 0 0;
-  border-top-right-radius: 8px;
+  border-top-right-radius: 6px;
 }
 
 .reticle-corner.bl {
-  bottom: -1px;
-  left: -1px;
+  bottom: 14px;
+  left: 14px;
   border-width: 0 0 3px 3px;
-  border-bottom-left-radius: 8px;
+  border-bottom-left-radius: 6px;
 }
 
 .reticle-corner.br {
-  bottom: -1px;
-  right: -1px;
+  bottom: 14px;
+  right: 14px;
   border-width: 0 3px 3px 0;
-  border-bottom-right-radius: 8px;
+  border-bottom-right-radius: 6px;
 }
 
-.scanner-controls {
-  position: absolute;
-  bottom: 28px;
-  bottom: max(28px, env(safe-area-inset-bottom, 28px));
-  left: 0;
-  right: 0;
+.scanner-controls-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
-  z-index: 160;
+  width: 100%;
+  max-width: 380px;
+  padding: 16px 0;
+  position: relative;
 }
 
-.scanner-btn {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  backdrop-filter: blur(8px);
-  width: 48px;
-  height: 48px;
-}
-
-.scanner-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+.scanner-controls-spacer {
+  flex: 1;
 }
 
 .shutter-btn {
-  width: 72px;
-  height: 72px;
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
   background: #ffffff;
-  border: 4px solid rgba(255, 255, 255, 0.5);
-  outline: none;
+  border: 5px solid #dadddf;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.8);
   cursor: pointer;
+  outline: none;
   transition: transform 0.1s, background-color 0.2s;
 }
 
@@ -613,32 +613,65 @@ body {
   background: #e4e6eb;
 }
 
-.progress-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+.scanner-controls-upload {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.upload-icon-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #c3c8cf;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #2c3036;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.upload-icon-btn:hover {
+  background: #b1b7bf;
+}
+
+.upload-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.upload-icon-btn svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* --- REVIEW VIEW LOADING STATE --- */
+.review-loading-state {
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  z-index: 170;
+  gap: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-.spinner-bubble {
-  width: 46px;
-  height: 46px;
-  border: 4px solid rgba(255, 255, 255, 0.2);
+.spinner-bubble-sm {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(24, 119, 242, 0.2);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-.progress-text {
-  color: #ffffff;
-  font-size: 1rem;
+.review-progress-text {
+  color: var(--text-sub);
+  font-size: 0.95rem;
   font-weight: 600;
-  letter-spacing: 0.3px;
 }
 
 /* --- REVIEW VIEW & CARDS --- */
