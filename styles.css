@@ -1,4 +1,4 @@
-/* Prototype Blue - styles.css v0.0.3 */
+/* Prototype Blue - styles.css v0.0.4 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -544,6 +544,21 @@ body {
   object-fit: cover;
 }
 
+#scanner-preview-img {
+  position: absolute;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  transition: transform 0.05s ease-out;
+}
+
+#scanner-preview-img:active {
+  cursor: grabbing;
+}
+
 .reticle-corner {
   position: absolute;
   width: 24px;
@@ -645,6 +660,43 @@ body {
   height: 26px;
 }
 
+.scanner-adjuster-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 10px;
+}
+
+.icon-adjust-btn {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  user-select: none;
+}
+
+.icon-adjust-btn:active {
+  transform: scale(0.92);
+  background: #e4e6eb;
+}
+
+.adjust-pill {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
 /* --- REVIEW VIEW LOADING STATE --- */
 .review-loading-state {
   background: var(--card-bg);
@@ -716,6 +768,20 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+}
+
+.btn-diag {
+  background-color: #e4e6eb;
+  color: var(--text-main);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  margin-left: auto;
+  border-color: var(--border);
+}
+
+.btn-diag:hover {
+  background-color: #dadddf;
 }
 
 .meta-carrier-title {
@@ -930,4 +996,124 @@ body {
   max-height: 75vh;
   object-fit: contain;
   border-radius: 8px;
+}
+
+/* --- OCR DIAGNOSTICS MODAL --- */
+.debug-card {
+  max-width: 520px;
+  max-height: 85vh;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.debug-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.debug-metric {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.debug-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+}
+
+.debug-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.debug-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.debug-lines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  padding-right: 4px;
+}
+
+.debug-line-item {
+  font-size: 0.8rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.debug-line-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.debug-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.3px;
+}
+
+.debug-badge.matched {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.debug-badge.skipped {
+  background: #fce8e6;
+  color: var(--danger);
+}
+
+.debug-line-raw {
+  font-family: monospace;
+  font-size: 0.76rem;
+  color: var(--text-sub);
+  word-break: break-all;
+}
+
+.debug-line-note {
+  font-size: 0.72rem;
+  color: #606770;
+}
+
+.debug-raw-pre {
+  background: #202124;
+  color: #8ab4f8;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  max-height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
