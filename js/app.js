@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.6)
+// Prototype Blue - js/app.js (v0.0.9)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
 import {
@@ -8,10 +8,10 @@ import {
   loadFileToImage,
   initAdjuster,
   resetAdjuster,
-  setAdjusterZoom,
+  setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.4';
+} from './scanner.js?v=0.0.5';
 import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.3';
 import {
   getStagedData,
@@ -21,9 +21,9 @@ import {
   addStagedItem,
   getNextCarrier,
   STAGING_VERSION
-} from './staging.js?v=0.0.1';
+} from './staging.js?v=0.0.3';
 
-export const APP_VERSION = "v0.0.6";
+export const APP_VERSION = "v0.0.9";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -31,8 +31,8 @@ export const MODULE_VERSIONS = {
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
-  "styles.css": "v0.0.4",
-  "index.html": "v0.0.5"
+  "styles.css": "v0.0.7",
+  "index.html": "v0.0.6"
 };
 
 const loginView = document.getElementById('login-view');
@@ -52,6 +52,33 @@ let activeCarrier = 'tmo';
 let cachedStats = null;
 let scannerRotation = 0;
 
+export function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'flex';
+  history.pushState({ modalId: modalEl.id }, '', '');
+}
+
+export function closeModal(modalEl) {
+  if (!modalEl || modalEl.style.display !== 'flex') return;
+  modalEl.style.display = 'none';
+  if (history.state && history.state.modalId === modalEl.id) {
+    history.back();
+  }
+}
+
+function updateDashboardStagedButton() {
+  const btnViewStaged = document.getElementById('btn-view-staged');
+  if (!btnViewStaged) return;
+  const state = getStagedData(currentStore);
+  const total = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
+  if (total > 0) {
+    btnViewStaged.textContent = `View Staged (${total})`;
+    btnViewStaged.style.display = 'inline-flex';
+  } else {
+    btnViewStaged.style.display = 'none';
+  }
+}
+
 export function switchView(targetViewId, pushState = true) {
   loginView.style.display = 'none';
   dashboardView.style.display = 'none';
@@ -68,6 +95,7 @@ export function switchView(targetViewId, pushState = true) {
   if (currentView === 'dashboard-view') {
     btnLogout.style.display = 'inline-flex';
     btnBack.style.display = 'none';
+    updateDashboardStagedButton();
   } else if (currentView === 'scanner-view' || currentView === 'review-view') {
     btnLogout.style.display = 'none';
     btnBack.style.display = 'inline-flex';
@@ -81,16 +109,16 @@ export function switchView(targetViewId, pushState = true) {
   }
 }
 
-// History Navigation
+// History Navigation (Universal Modal & View router)
 window.addEventListener('popstate', (e) => {
-  if (termsModal.style.display === 'flex') {
-    termsModal.style.display = 'none';
-    return;
+  const openModals = document.querySelectorAll('.modal-overlay');
+  for (const modal of openModals) {
+    if (modal.style.display === 'flex') {
+      modal.style.display = 'none';
+      return;
+    }
   }
-  if (manifestModal.style.display === 'flex') {
-    manifestModal.style.display = 'none';
-    return;
-  }
+
   let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
   if (!isAuthenticated && dest === 'dashboard-view') {
     dest = 'login-view';
@@ -148,10 +176,14 @@ const scannerFrame = document.getElementById('scanner-frame');
 const scannerPreviewImg = document.getElementById('scanner-preview-img');
 const scannerAdjusterBar = document.getElementById('scanner-adjuster-bar');
 const scannerInstructionBanner = document.getElementById('scanner-instruction-banner');
-const btnAdjustZoomOut = document.getElementById('btn-adjust-zoom-out');
-const btnAdjustZoomIn = document.getElementById('btn-adjust-zoom-in');
+const tiltSlider = document.getElementById('tilt-slider');
+const tiltAngleDisplay = document.getElementById('tilt-angle-display');
 const btnAdjustReset = document.getElementById('btn-adjust-reset');
-const btnAdjustCancel = document.getElementById('btn-adjust-cancel');
+const cameraControlsDeck = document.getElementById('camera-controls-deck');
+const cropControlsDeck = document.getElementById('crop-controls-deck');
+const btnCropCamera = document.getElementById('btn-crop-camera');
+const btnCropConfirm = document.getElementById('btn-crop-confirm');
+const btnCropFile = document.getElementById('btn-crop-file');
 const btnScannerShutter = document.getElementById('btn-scanner-shutter');
 const scannerFileInput = document.getElementById('scanner-file-input');
 const reviewLoadingState = document.getElementById('review-loading-state');
@@ -165,8 +197,12 @@ async function enterCropMode(file) {
   if (scannerVideo) scannerVideo.style.display = 'none';
   if (scannerPreviewImg) scannerPreviewImg.style.display = 'block';
   if (scannerAdjusterBar) scannerAdjusterBar.style.display = 'flex';
+  if (cameraControlsDeck) cameraControlsDeck.style.display = 'none';
+  if (cropControlsDeck) cropControlsDeck.style.display = 'flex';
+  if (tiltSlider) tiltSlider.value = '0';
+  if (tiltAngleDisplay) tiltAngleDisplay.textContent = '0.00°';
   if (scannerInstructionBanner) {
-    scannerInstructionBanner.textContent = "Drag to align paper to reticles, then tap shutter.";
+    scannerInstructionBanner.textContent = "Drag and tilt to align paper to frame, then tap ✓";
   }
   await loadFileToImage(file, scannerPreviewImg);
   if (scannerFrame && scannerPreviewImg) {
@@ -181,28 +217,61 @@ function exitCropMode() {
     resetAdjuster(scannerPreviewImg);
   }
   if (scannerAdjusterBar) scannerAdjusterBar.style.display = 'none';
+  if (cropControlsDeck) cropControlsDeck.style.display = 'none';
+  if (cameraControlsDeck) cameraControlsDeck.style.display = 'flex';
   if (scannerVideo) scannerVideo.style.display = 'block';
+  if (tiltSlider) tiltSlider.value = '0';
+  if (tiltAngleDisplay) tiltAngleDisplay.textContent = '0.00°';
   if (scannerInstructionBanner) {
     scannerInstructionBanner.textContent = "Place corners of the viewfinder just within the paper's borders.";
   }
 }
 
-if (btnAdjustZoomOut) {
-  btnAdjustZoomOut.addEventListener('click', () => setAdjusterZoom(scannerPreviewImg, -0.15));
+if (tiltSlider) {
+  tiltSlider.addEventListener('input', (e) => {
+    const deg = parseFloat(e.target.value) || 0;
+    if (tiltAngleDisplay) {
+      tiltAngleDisplay.textContent = `${deg >= 0 ? '+' : ''}${deg.toFixed(2)}°`;
+    }
+    setAdjusterRotation(scannerPreviewImg, deg);
+  });
 }
-if (btnAdjustZoomIn) {
-  btnAdjustZoomIn.addEventListener('click', () => setAdjusterZoom(scannerPreviewImg, 0.15));
-}
+
 if (btnAdjustReset) {
-  btnAdjustReset.addEventListener('click', () => resetAdjuster(scannerPreviewImg));
+  btnAdjustReset.addEventListener('click', () => {
+    resetAdjuster(scannerPreviewImg);
+    if (tiltSlider) tiltSlider.value = '0';
+    if (tiltAngleDisplay) tiltAngleDisplay.textContent = '0.00°';
+  });
 }
-if (btnAdjustCancel) {
-  btnAdjustCancel.addEventListener('click', async () => {
+
+if (btnCropCamera) {
+  btnCropCamera.addEventListener('click', async () => {
     exitCropMode();
     try {
       await startCamera(scannerVideo);
     } catch (err) {
       alert('Unable to access camera: ' + err.message);
+    }
+  });
+}
+
+if (btnCropFile) {
+  btnCropFile.addEventListener('click', () => {
+    if (scannerFileInput) scannerFileInput.click();
+  });
+}
+
+if (btnCropConfirm) {
+  btnCropConfirm.addEventListener('click', () => {
+    try {
+      if (scannerPreviewImg && scannerFrame) {
+        const capture = captureAdjustedFrame(scannerPreviewImg, scannerFrame);
+        exitCropMode();
+        handleCapturedImage(capture);
+      }
+    } catch (err) {
+      alert('Capture error: ' + err.message);
     }
   });
 }
@@ -252,34 +321,37 @@ function renderReview(carrierKey) {
     card.dataset.id = item.id;
 
     card.innerHTML = `
-      <div class="item-main-info">
+      <div class="item-main-info tap-editable" title="Tap to edit row">
         <span class="item-title">${item.model}</span>
         <div class="item-badge-group">
-          <span class="item-cap">${item.capacity}</span>
-          <span class="color-chip">${item.color}</span>
+          <span class="item-cap-pill">${item.capacity}</span>
+          <span class="color-chip-pill">${item.color}</span>
         </div>
       </div>
       <div class="row-actions">
-        <span class="item-qty-badge">${item.qty}</span>
-        <button class="btn-row-action btn-edit-row" title="Edit row">✎</button>
+        <span class="item-qty-badge tap-editable" title="Tap to edit row">${item.qty}</span>
         <button class="btn-row-action danger btn-delete-row" title="Delete row">✕</button>
       </div>
     `;
 
-    // Row Edit Handler
-    card.querySelector('.btn-edit-row').addEventListener('click', () => {
+    const activateEdit = () => {
       card.innerHTML = `
         <div class="row-edit-form">
-          <input type="text" class="row-input input-model" value="${item.model}">
-          <input type="text" class="row-input input-cap" value="${item.capacity}">
-          <input type="text" class="row-input input-color" value="${item.color}">
-          <input type="number" class="row-input input-qty" value="${item.qty}" min="0">
-          <button class="btn-row-action btn-save-row" title="Save" style="color: var(--primary);">✓</button>
-          <button class="btn-row-action btn-cancel-row" title="Cancel">✕</button>
+          <input type="text" class="row-input input-model" value="${item.model}" placeholder="Model">
+          <input type="text" class="row-input input-cap" value="${item.capacity}" placeholder="Capacity">
+          <input type="text" class="row-input input-color" value="${item.color}" placeholder="Color">
+          <input type="number" class="row-input input-qty" value="${item.qty}" min="0" placeholder="Qty">
+          <div class="edit-btn-group">
+            <button class="btn-row-action btn-save-row" title="Save" style="color: var(--primary); font-weight: 700;">✓</button>
+            <button class="btn-row-action btn-cancel-row" title="Cancel">✕</button>
+          </div>
         </div>
       `;
 
-      card.querySelector('.btn-save-row').addEventListener('click', () => {
+      const modelInput = card.querySelector('.input-model');
+      if (modelInput) modelInput.focus();
+
+      const saveChanges = () => {
         const model = card.querySelector('.input-model').value.trim();
         const capacity = card.querySelector('.input-cap').value.trim();
         const color = card.querySelector('.input-color').value.trim().toUpperCase();
@@ -287,13 +359,24 @@ function renderReview(carrierKey) {
 
         updateStagedItem(currentStore, activeCarrier, item.id, { model, capacity, color, qty });
         renderReview(activeCarrier);
-      });
+      };
 
+      card.querySelector('.btn-save-row').addEventListener('click', saveChanges);
       card.querySelector('.btn-cancel-row').addEventListener('click', () => renderReview(activeCarrier));
+      card.querySelectorAll('.row-input').forEach(input => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') saveChanges();
+          if (e.key === 'Escape') renderReview(activeCarrier);
+        });
+      });
+    };
+
+    card.querySelectorAll('.tap-editable').forEach(el => {
+      el.addEventListener('click', activateEdit);
     });
 
-    // Row Delete Handler
-    card.querySelector('.btn-delete-row').addEventListener('click', () => {
+    card.querySelector('.btn-delete-row').addEventListener('click', (e) => {
+      e.stopPropagation();
       deleteStagedItem(currentStore, activeCarrier, item.id);
       renderReview(activeCarrier);
     });
@@ -351,7 +434,8 @@ async function handleCapturedImage(captureResult) {
       activeCarrier = carrier;
     }
 
-    commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl);
+    const telem = getOcrTelemetry();
+    commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl, telem);
     renderReview(activeCarrier);
   } catch (err) {
     console.error(err);
@@ -363,90 +447,24 @@ async function handleCapturedImage(captureResult) {
   }
 }
 
-// Shutter Click Handler
-if (btnScannerShutter) {
-  btnScannerShutter.addEventListener('click', () => {
-    try {
-      let capture;
-      if (isCropMode && scannerPreviewImg && scannerFrame) {
-        capture = captureAdjustedFrame(scannerPreviewImg, scannerFrame);
-        exitCropMode();
-      } else {
-        capture = captureFrame(scannerVideo);
-      }
-      handleCapturedImage(capture);
-    } catch (err) {
-      alert('Capture error: ' + err.message);
-    }
+// Direct staged view navigation from dashboard
+const btnViewStaged = document.getElementById('btn-view-staged');
+if (btnViewStaged) {
+  btnViewStaged.addEventListener('click', () => {
+    renderReview(activeCarrier);
+    switchView('review-view');
   });
 }
 
-// File Upload with Interactive Crop Adjustment
-if (scannerFileInput) {
-  scannerFileInput.addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    try {
-      switchView('scanner-view');
-      await enterCropMode(file);
-    } catch (err) {
-      alert('Image loading error: ' + err.message);
-      exitCropMode();
-    } finally {
-      scannerFileInput.value = '';
+// Lightbox preview on thumbnail tap
+if (reviewMetaThumb) {
+  reviewMetaThumb.addEventListener('click', () => {
+    if (reviewMetaThumb.src) {
+      lightboxImg.src = reviewMetaThumb.src;
+      openModal(lightboxModal);
     }
   });
 }
-
-// Floating Bar: Next Sheet & Publish
-if (btnScanNext) {
-  btnScanNext.addEventListener('click', async () => {
-    exitCropMode();
-    activeCarrier = getNextCarrier(activeCarrier);
-    switchView('scanner-view');
-    try {
-      await startCamera(scannerVideo);
-    } catch (err) {
-      alert('Unable to access camera: ' + err.message);
-    }
-  });
-}
-
-if (btnPublishAll) {
-  btnPublishAll.addEventListener('click', () => {
-    const state = getStagedData(currentStore);
-    const totalItems = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
-    if (totalItems === 0) {
-      alert('No scanned inventory items to publish.');
-      return;
-    }
-    alert(`Publishing ${totalItems} staged items across 3 carriers. Batch payload staged and ready.`);
-  });
-}
-
-// Back Button Context Router
-btnBack.addEventListener('click', () => {
-  if (currentView === 'scanner-view') {
-    exitCropMode();
-    stopCamera(scannerVideo);
-    const state = getStagedData(currentStore);
-    const hasItems = Object.values(state.sheets).some(s => s.items && s.items.length > 0);
-    switchView(hasItems ? 'review-view' : 'dashboard-view');
-  } else if (currentView === 'review-view') {
-    switchView('dashboard-view');
-  }
-});
-
-// Hook "Upload inventory" on dashboard to Scanner View
-document.getElementById('btn-upload-inv').addEventListener('click', async () => {
-  exitCropMode();
-  switchView('scanner-view');
-  try {
-    await startCamera(scannerVideo);
-  } catch (err) {
-    alert('Unable to access camera: ' + err.message);
-  }
-});
 
 // Modals: Manifest & Terms
 const manifestModal = document.getElementById('manifest-modal');
@@ -457,22 +475,22 @@ versionText.addEventListener('click', () => {
   manifestListBody.innerHTML = Object.entries(MODULE_VERSIONS)
     .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
     .join('');
-  manifestModal.style.display = 'flex';
+  openModal(manifestModal);
 });
 
-btnManifestClose.addEventListener('click', () => { manifestModal.style.display = 'none'; });
+btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
 manifestModal.addEventListener('click', (e) => {
-  if (e.target === manifestModal) manifestModal.style.display = 'none';
+  if (e.target === manifestModal) closeModal(manifestModal);
 });
 
 const termsModal = document.getElementById('terms-modal');
 const btnTerms = document.getElementById('btn-terms');
 const btnTermsClose = document.getElementById('btn-terms-close');
 
-btnTerms.addEventListener('click', () => { termsModal.style.display = 'flex'; });
-btnTermsClose.addEventListener('click', () => { termsModal.style.display = 'none'; });
+btnTerms.addEventListener('click', () => { openModal(termsModal); });
+btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
 termsModal.addEventListener('click', (e) => {
-  if (e.target === termsModal) termsModal.style.display = 'none';
+  if (e.target === termsModal) closeModal(termsModal);
 });
 
 const lightboxModal = document.getElementById('lightbox-modal');
@@ -480,11 +498,11 @@ const lightboxImg = document.getElementById('lightbox-img');
 const btnLightboxClose = document.getElementById('btn-lightbox-close');
 
 if (btnLightboxClose) {
-  btnLightboxClose.addEventListener('click', () => { lightboxModal.style.display = 'none'; });
+  btnLightboxClose.addEventListener('click', () => { closeModal(lightboxModal); });
 }
 if (lightboxModal) {
   lightboxModal.addEventListener('click', (e) => {
-    if (e.target === lightboxModal) lightboxModal.style.display = 'none';
+    if (e.target === lightboxModal) closeModal(lightboxModal);
   });
 }
 
@@ -501,24 +519,31 @@ const ocrDebugRawText = document.getElementById('ocr-debug-raw-text');
 
 if (btnOcrDebug) {
   btnOcrDebug.addEventListener('click', () => {
-    const telem = getOcrTelemetry();
+    const state = getStagedData(currentStore);
+    const sheet = state.sheets[activeCarrier];
+    const telem = (sheet && sheet.telemetry) ? sheet.telemetry : getOcrTelemetry();
+
     if (ocrDebugTimestamp) {
-      ocrDebugTimestamp.textContent = telem.timestamp ? `Captured at ${telem.timestamp}` : 'No scan telemetry recorded';
+      ocrDebugTimestamp.textContent = telem.timestamp
+        ? `Captured at ${telem.timestamp} (${sheet ? sheet.carrier : activeCarrier.toUpperCase()})`
+        : 'No scan telemetry recorded for this carrier';
     }
     if (ocrDebugCarrier) {
-      ocrDebugCarrier.textContent = telem.header.carrier ? telem.header.carrier.toUpperCase() : '--';
+      ocrDebugCarrier.textContent = telem.header && telem.header.carrier
+        ? telem.header.carrier.toUpperCase()
+        : (sheet ? sheet.carrier : '--');
     }
     if (ocrDebugStore) {
-      ocrDebugStore.textContent = telem.header.store || '--';
+      ocrDebugStore.textContent = (telem.header && telem.header.store) || currentStore || '--';
     }
     if (ocrDebugCount) {
-      ocrDebugCount.textContent = String(telem.itemCount || 0);
+      ocrDebugCount.textContent = String(telem.itemCount || (sheet && sheet.items ? sheet.items.length : 0));
     }
 
     if (ocrDebugLinesList) {
       ocrDebugLinesList.innerHTML = '';
       if (!telem.lineLogs || telem.lineLogs.length === 0) {
-        ocrDebugLinesList.innerHTML = '<p class="placeholder-text" style="padding: 10px; text-align: center;">No parsed lines recorded yet.</p>';
+        ocrDebugLinesList.innerHTML = '<p class="placeholder-text" style="padding: 10px; text-align: center;">No telemetry recorded for this sheet yet.</p>';
       } else {
         telem.lineLogs.forEach((log, idx) => {
           const itemEl = document.createElement('div');
@@ -546,30 +571,28 @@ if (btnOcrDebug) {
     }
 
     if (ocrDebugRawText) {
-      ocrDebugRawText.textContent = telem.rawText || '(No raw OCR text captured)';
+      ocrDebugRawText.textContent = telem.rawText || '(No raw OCR text captured for this sheet)';
     }
 
-    if (ocrDebugModal) ocrDebugModal.style.display = 'flex';
+    openModal(ocrDebugModal);
   });
 }
 
 if (btnOcrDebugClose) {
-  btnOcrDebugClose.addEventListener('click', () => {
-    if (ocrDebugModal) ocrDebugModal.style.display = 'none';
-  });
+  btnOcrDebugClose.addEventListener('click', () => { closeModal(ocrDebugModal); });
 }
 if (ocrDebugModal) {
   ocrDebugModal.addEventListener('click', (e) => {
-    if (e.target === ocrDebugModal) ocrDebugModal.style.display = 'none';
+    if (e.target === ocrDebugModal) closeModal(ocrDebugModal);
   });
 }
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    termsModal.style.display = 'none';
-    manifestModal.style.display = 'none';
-    if (lightboxModal) lightboxModal.style.display = 'none';
-    if (ocrDebugModal) ocrDebugModal.style.display = 'none';
+    closeModal(termsModal);
+    closeModal(manifestModal);
+    closeModal(lightboxModal);
+    closeModal(ocrDebugModal);
   }
 });
 

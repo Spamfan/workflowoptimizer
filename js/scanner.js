@@ -1,6 +1,6 @@
-// Workflow Optimizer - js/scanner.js (v0.0.4)
+// Workflow Optimizer - js/scanner.js (v0.0.5)
 
-export const SCANNER_VERSION = "v0.0.4";
+export const SCANNER_VERSION = "v0.0.5";
 
 let activeStream = null;
 
@@ -162,6 +162,7 @@ let adjusterState = {
   curX: 0,
   curY: 0,
   scale: 1,
+  rotation: 0,
   startX: 0,
   startY: 0,
   isDragging: false,
@@ -177,10 +178,23 @@ export function resetAdjuster(imgEl) {
   adjusterState.curX = 0;
   adjusterState.curY = 0;
   adjusterState.scale = 1;
+  adjusterState.rotation = 0;
   adjusterState.isDragging = false;
   adjusterState.initialPinchDist = 0;
   if (imgEl) {
-    imgEl.style.transform = "translate(0px, 0px) scale(1)";
+    imgEl.style.transform = "translate(0px, 0px) scale(1) rotate(0deg)";
+  }
+}
+
+/**
+ * Adjusts framing rotation by target degrees.
+ * @param {HTMLImageElement} imgEl 
+ * @param {number} deg 
+ */
+export function setAdjusterRotation(imgEl, deg) {
+  adjusterState.rotation = deg;
+  if (imgEl) {
+    imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
   }
 }
 
@@ -192,7 +206,7 @@ export function resetAdjuster(imgEl) {
 export function setAdjusterZoom(imgEl, delta) {
   adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.scale + delta));
   if (imgEl) {
-    imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+    imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
   }
 }
 
@@ -229,14 +243,14 @@ export function initAdjuster(imgEl, containerEl) {
     if (activeTouches.size === 1 && adjusterState.isDragging) {
       adjusterState.curX = e.clientX - adjusterState.startX;
       adjusterState.curY = e.clientY - adjusterState.startY;
-      imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+      imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
     } else if (activeTouches.size === 2) {
       const pts = Array.from(activeTouches.values());
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (adjusterState.initialPinchDist > 0) {
         const factor = dist / adjusterState.initialPinchDist;
         adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.initialScale * factor));
-        imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+        imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
       }
     }
   };
@@ -271,30 +285,43 @@ export function initAdjuster(imgEl, containerEl) {
  */
 export function captureAdjustedFrame(imgEl, containerEl) {
   const frameRect = containerEl.getBoundingClientRect();
-  const imgRect = imgEl.getBoundingClientRect();
-
-  if (!imgRect.width || !imgRect.height) {
-    throw new Error("Invalid preview image bounds");
+  if (!frameRect.width || !frameRect.height || !imgEl.naturalWidth || !imgEl.naturalHeight) {
+    throw new Error("Invalid framing dimensions");
   }
 
-  const scaleX = imgEl.naturalWidth / imgRect.width;
-  const scaleY = imgEl.naturalHeight / imgRect.height;
-
-  const cropX = (frameRect.left - imgRect.left) * scaleX;
-  const cropY = (frameRect.top - imgRect.top) * scaleY;
-  const cropW = frameRect.width * scaleX;
-  const cropH = frameRect.height * scaleY;
-
+  const targetW = 1275;
+  const targetH = 1650; // 8.5:11 aspect ratio
   const finalCanvas = document.createElement("canvas");
-  const targetW = Math.max(1275, Math.round(cropW));
-  const targetH = Math.round(targetW * (11 / 8.5));
   finalCanvas.width = targetW;
   finalCanvas.height = targetH;
-
   const ctx = finalCanvas.getContext("2d");
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, targetW, targetH);
-  ctx.drawImage(imgEl, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+
+  const containerRatio = frameRect.width / frameRect.height;
+  const imgRatio = imgEl.naturalWidth / imgEl.naturalHeight;
+  let baseW, baseH;
+  if (imgRatio > containerRatio) {
+    baseW = frameRect.width;
+    baseH = baseW / imgRatio;
+  } else {
+    baseH = frameRect.height;
+    baseW = baseH * imgRatio;
+  }
+
+  const scaleFactor = targetW / frameRect.width;
+  const drawnW = baseW * adjusterState.scale * scaleFactor;
+  const drawnH = baseH * adjusterState.scale * scaleFactor;
+
+  ctx.save();
+  ctx.translate(
+    targetW / 2 + (adjusterState.curX * scaleFactor),
+    targetH / 2 + (adjusterState.curY * scaleFactor)
+  );
+  ctx.rotate((adjusterState.rotation * Math.PI) / 180);
+  ctx.drawImage(imgEl, -drawnW / 2, -drawnH / 2, drawnW, drawnH);
+  ctx.restore();
 
   const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.90);
 

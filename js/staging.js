@@ -1,6 +1,6 @@
-// Workflow Optimizer - js/staging.js (v0.0.1)
+// Workflow Optimizer - js/staging.js (v0.0.3)
 
-export const STAGING_VERSION = "v0.0.1";
+export const STAGING_VERSION = "v0.0.3";
 export const STAGING_STORAGE_KEY = "wfo_staged_inventory";
 
 export const CARRIERS = [
@@ -18,9 +18,9 @@ export function createEmptyState(storeNum = "") {
     store: storeNum,
     activeCarrier: "tmo",
     sheets: {
-      tmo: { carrier: "T-Mobile", timestamp: "", thumb: "", items: [] },
-      vzw: { carrier: "Verizon", timestamp: "", thumb: "", items: [] },
-      att: { carrier: "AT&T", timestamp: "", thumb: "", items: [] }
+      tmo: { carrier: "T-Mobile", timestamp: "", thumb: "", items: [], telemetry: null },
+      vzw: { carrier: "Verizon", timestamp: "", thumb: "", items: [], telemetry: null },
+      att: { carrier: "AT&T", timestamp: "", thumb: "", items: [], telemetry: null }
     }
   };
 }
@@ -68,13 +68,14 @@ export function clearAllStaged(storeNum = "") {
 }
 
 /**
- * Saves a completed scan into the target carrier sheet.
+ * Saves a completed scan into the target carrier sheet with optional telemetry.
  * @param {string} storeNum 
  * @param {string} carrierKey 'tmo' | 'vzw' | 'att'
  * @param {Array} items 
  * @param {string} thumbUrl 
+ * @param {Object} telemetry 
  */
-export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl) {
+export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl, telemetry = null) {
   const state = getStagedData(storeNum);
   if (!state.sheets[carrierKey]) return state;
 
@@ -89,6 +90,7 @@ export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl) {
   state.sheets[carrierKey].timestamp = dateStr;
   state.sheets[carrierKey].thumb = thumbUrl || "";
   state.sheets[carrierKey].items = items;
+  state.sheets[carrierKey].telemetry = telemetry || null;
 
   saveStagedData(state);
   return state;
