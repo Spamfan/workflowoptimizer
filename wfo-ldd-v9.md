@@ -115,15 +115,17 @@ Replace with
 ### **A. ARCHITECTURE & MODULAR FILE TREE**
 * **Repo:** `spamfan/workflowoptimizer` (Hosted at `https://spamfan.github.io/workflowoptimizer`).
 * **Modular ES6 SPA Architecture:** Zero monolith. The app lives across lean, decoupled ES6 modules:
-    ├── index.html        (Shell, modal roots, view mount points)
-    ├── styles.css        (Global M3 design system & pill components)
-    ├── stats.json        (Canonical pricing, devices, color codes)
-    └── js/
-        ├── app.js        (Router, History API, Manifest modal, Ping engine)
-        ├── auth.js       (PIN gatekeeper, in-memory session, store prefill)
-        ├── scanner.js    (Camera viewfinder & capture logic)
-        ├── ocr.js        (OCR worker & token parsers)
-        └── staging.js    (LocalStorage store, review cards, inline edit)
+```text
+├── index.html        (Shell, modal roots, view mount points)
+├── styles.css        (Global M3 design system & pill components)
+├── stats.json        (Canonical pricing, devices, color codes)
+└── js/
+    ├── app.js        (Router, History API, Manifest modal, Ping engine)
+    ├── auth.js       (PIN gatekeeper, in-memory session, store prefill)
+    ├── scanner.js    (Camera viewfinder & capture logic)
+    ├── ocr.js        (OCR worker & token parsers)
+    └── staging.js    (LocalStorage store, review cards, inline edit)
+```
 
 ### **B. DESIGN SYSTEM & UI PALETTE**
 * **Canvas Background:** Light gray (`#f0f2f5`).
