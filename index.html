@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.0.4">
+  <link rel="stylesheet" href="styles.css?v=0.0.7">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -67,6 +67,7 @@
         <div class="card-body">
           <div class="card-actions-row">
             <button id="btn-upload-inv" class="pill-btn btn-action-upload">Upload inventory</button>
+            <button id="btn-view-staged" class="pill-btn btn-action-staged" style="display: none;">View Staged (0)</button>
             <button id="btn-print-inv" class="pill-btn btn-action-print">Print inventory</button>
           </div>
           <div class="ping-display-box">
@@ -97,19 +98,22 @@
       <div id="scanner-frame" class="scanner-frame">
         <video id="scanner-video" playsinline></video>
         <img id="scanner-preview-img" alt="Crop preview" style="display: none;">
-        <div class="reticle-corner tl"></div>
-        <div class="reticle-corner tr"></div>
-        <div class="reticle-corner bl"></div>
-        <div class="reticle-corner br"></div>
+        <div class="scanner-guide-box">
+          <div class="reticle-corner tl"></div>
+          <div class="reticle-corner tr"></div>
+          <div class="reticle-corner bl"></div>
+          <div class="reticle-corner br"></div>
+        </div>
       </div>
     </div>
     <div id="scanner-adjuster-bar" class="scanner-adjuster-bar" style="display: none;">
-      <button id="btn-adjust-zoom-out" class="icon-adjust-btn" title="Zoom Out">−</button>
-      <button id="btn-adjust-zoom-in" class="icon-adjust-btn" title="Zoom In">+</button>
-      <button id="btn-adjust-reset" class="pill-btn btn-secondary adjust-pill">Reset</button>
-      <button id="btn-adjust-cancel" class="pill-btn btn-logout adjust-pill">Live Camera</button>
+      <div id="tilt-angle-display" class="tilt-angle-display">0.00°</div>
+      <div class="tilt-controls-row">
+        <button id="btn-adjust-reset" class="pill-btn btn-tilt-reset">reset</button>
+        <input type="range" id="tilt-slider" class="tilt-slider" min="-30" max="30" step="0.25" value="0">
+      </div>
     </div>
-    <div class="scanner-controls-bar">
+    <div id="camera-controls-deck" class="scanner-controls-bar">
       <div class="scanner-controls-spacer"></div>
       <button id="btn-scanner-shutter" class="shutter-btn" title="Capture"></button>
       <div class="scanner-controls-upload">
@@ -120,9 +124,23 @@
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
         </label>
-        <input type="file" id="scanner-file-input" accept="image/*,.pdf,application/pdf" style="display: none;">
       </div>
     </div>
+    <div id="crop-controls-deck" class="crop-controls-deck" style="display: none;">
+      <button id="btn-crop-camera" class="pill-btn btn-crop-camera crop-deck-btn">Camera</button>
+      <button id="btn-crop-confirm" class="shutter-btn shutter-confirm" title="Confirm Crop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </button>
+      <button id="btn-crop-file" class="pill-btn btn-hub crop-deck-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span>different file</span>
+      </button>
+    </div>
+    <input type="file" id="scanner-file-input" accept="image/*,.pdf,application/pdf" style="display: none;">
   </div>
 
   <!-- REVIEW VIEW -->
@@ -234,6 +252,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.0.6"></script>
+  <script type="module" src="js/app.js?v=0.0.9"></script>
 </body>
 </html>
