@@ -1,6 +1,6 @@
-// Workflow Optimizer - js/scanner.js (v0.0.3)
+// Workflow Optimizer - js/scanner.js (v0.0.4)
 
-export const SCANNER_VERSION = "v0.0.3";
+export const SCANNER_VERSION = "v0.0.4";
 
 let activeStream = null;
 
@@ -137,4 +137,174 @@ export function processUploadedFile(file, rotationAngle = 0) {
     reader.onerror = () => reject(new Error("Failed to read image file"));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Loads a file directly into an HTMLImageElement for interactive framing.
+ * @param {File} file 
+ * @param {HTMLImageElement} imgEl 
+ * @returns {Promise<HTMLImageElement>}
+ */
+export function loadFileToImage(file, imgEl) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      imgEl.onload = () => resolve(imgEl);
+      imgEl.onerror = () => reject(new Error("Failed to load uploaded image"));
+      imgEl.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+let adjusterState = {
+  curX: 0,
+  curY: 0,
+  scale: 1,
+  startX: 0,
+  startY: 0,
+  isDragging: false,
+  initialPinchDist: 0,
+  initialScale: 1
+};
+
+/**
+ * Resets the framing adjuster offsets and transform.
+ * @param {HTMLImageElement} imgEl 
+ */
+export function resetAdjuster(imgEl) {
+  adjusterState.curX = 0;
+  adjusterState.curY = 0;
+  adjusterState.scale = 1;
+  adjusterState.isDragging = false;
+  adjusterState.initialPinchDist = 0;
+  if (imgEl) {
+    imgEl.style.transform = "translate(0px, 0px) scale(1)";
+  }
+}
+
+/**
+ * Adjusts framing zoom by a relative delta.
+ * @param {HTMLImageElement} imgEl 
+ * @param {number} delta 
+ */
+export function setAdjusterZoom(imgEl, delta) {
+  adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.scale + delta));
+  if (imgEl) {
+    imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+  }
+}
+
+/**
+ * Binds pointer pan and multi-touch pinch-to-zoom to the framing container.
+ * @param {HTMLImageElement} imgEl 
+ * @param {HTMLElement} containerEl 
+ */
+export function initAdjuster(imgEl, containerEl) {
+  resetAdjuster(imgEl);
+  const activeTouches = new Map();
+
+  containerEl.onpointerdown = (e) => {
+    activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activeTouches.size === 1) {
+      adjusterState.isDragging = true;
+      adjusterState.startX = e.clientX - adjusterState.curX;
+      adjusterState.startY = e.clientY - adjusterState.curY;
+    } else if (activeTouches.size === 2) {
+      adjusterState.isDragging = false;
+      const pts = Array.from(activeTouches.values());
+      adjusterState.initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      adjusterState.initialScale = adjusterState.scale;
+    }
+    try {
+      containerEl.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  containerEl.onpointermove = (e) => {
+    if (!activeTouches.has(e.pointerId)) return;
+    activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activeTouches.size === 1 && adjusterState.isDragging) {
+      adjusterState.curX = e.clientX - adjusterState.startX;
+      adjusterState.curY = e.clientY - adjusterState.startY;
+      imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+    } else if (activeTouches.size === 2) {
+      const pts = Array.from(activeTouches.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (adjusterState.initialPinchDist > 0) {
+        const factor = dist / adjusterState.initialPinchDist;
+        adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.initialScale * factor));
+        imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale})`;
+      }
+    }
+  };
+
+  const endPointer = (e) => {
+    activeTouches.delete(e.pointerId);
+    if (activeTouches.size === 1) {
+      adjusterState.isDragging = true;
+      const pt = activeTouches.values().next().value;
+      adjusterState.startX = pt.x - adjusterState.curX;
+      adjusterState.startY = pt.y - adjusterState.curY;
+    } else {
+      adjusterState.isDragging = false;
+    }
+  };
+
+  containerEl.onpointerup = endPointer;
+  containerEl.onpointercancel = endPointer;
+
+  containerEl.onwheel = (e) => {
+    e.preventDefault();
+    const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
+    setAdjusterZoom(imgEl, zoomDelta);
+  };
+}
+
+/**
+ * Extracts the 8.5:11 framed viewport slice from the preview image at natural resolution.
+ * @param {HTMLImageElement} imgEl 
+ * @param {HTMLElement} containerEl 
+ * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
+ */
+export function captureAdjustedFrame(imgEl, containerEl) {
+  const frameRect = containerEl.getBoundingClientRect();
+  const imgRect = imgEl.getBoundingClientRect();
+
+  if (!imgRect.width || !imgRect.height) {
+    throw new Error("Invalid preview image bounds");
+  }
+
+  const scaleX = imgEl.naturalWidth / imgRect.width;
+  const scaleY = imgEl.naturalHeight / imgRect.height;
+
+  const cropX = (frameRect.left - imgRect.left) * scaleX;
+  const cropY = (frameRect.top - imgRect.top) * scaleY;
+  const cropW = frameRect.width * scaleX;
+  const cropH = frameRect.height * scaleY;
+
+  const finalCanvas = document.createElement("canvas");
+  const targetW = Math.max(1275, Math.round(cropW));
+  const targetH = Math.round(targetW * (11 / 8.5));
+  finalCanvas.width = targetW;
+  finalCanvas.height = targetH;
+
+  const ctx = finalCanvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, targetW, targetH);
+  ctx.drawImage(imgEl, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.90);
+
+  const thumbCanvas = document.createElement("canvas");
+  const thumbScale = 160 / Math.max(targetW, targetH);
+  thumbCanvas.width = Math.round(targetW * thumbScale);
+  thumbCanvas.height = Math.round(targetH * thumbScale);
+  const tCtx = thumbCanvas.getContext("2d");
+  tCtx.drawImage(finalCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+  const thumbDataUrl = thumbCanvas.toDataURL("image/jpeg", 0.70);
+
+  return { fullDataUrl, thumbDataUrl, canvas: finalCanvas };
 }

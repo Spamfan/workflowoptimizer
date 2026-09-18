@@ -1,8 +1,18 @@
-// Prototype Blue - js/app.js (v0.0.5)
+// Prototype Blue - js/app.js (v0.0.6)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
-import { startCamera, stopCamera, captureFrame, processUploadedFile, SCANNER_VERSION } from './scanner.js?v=0.0.3';
-import { runOcrPipeline, OCR_VERSION } from './ocr.js?v=0.0.2';
+import {
+  startCamera,
+  stopCamera,
+  captureFrame,
+  loadFileToImage,
+  initAdjuster,
+  resetAdjuster,
+  setAdjusterZoom,
+  captureAdjustedFrame,
+  SCANNER_VERSION
+} from './scanner.js?v=0.0.4';
+import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.3';
 import {
   getStagedData,
   commitScanToCarrier,
@@ -13,7 +23,7 @@ import {
   STAGING_VERSION
 } from './staging.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.5";
+export const APP_VERSION = "v0.0.6";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -21,8 +31,8 @@ export const MODULE_VERSIONS = {
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
-  "styles.css": "v0.0.3",
-  "index.html": "v0.0.4"
+  "styles.css": "v0.0.4",
+  "index.html": "v0.0.5"
 };
 
 const loginView = document.getElementById('login-view');
@@ -134,10 +144,68 @@ btnLogout.addEventListener('click', logout);
 
 // Scanner & Review DOM bindings
 const scannerVideo = document.getElementById('scanner-video');
+const scannerFrame = document.getElementById('scanner-frame');
+const scannerPreviewImg = document.getElementById('scanner-preview-img');
+const scannerAdjusterBar = document.getElementById('scanner-adjuster-bar');
+const scannerInstructionBanner = document.getElementById('scanner-instruction-banner');
+const btnAdjustZoomOut = document.getElementById('btn-adjust-zoom-out');
+const btnAdjustZoomIn = document.getElementById('btn-adjust-zoom-in');
+const btnAdjustReset = document.getElementById('btn-adjust-reset');
+const btnAdjustCancel = document.getElementById('btn-adjust-cancel');
 const btnScannerShutter = document.getElementById('btn-scanner-shutter');
 const scannerFileInput = document.getElementById('scanner-file-input');
 const reviewLoadingState = document.getElementById('review-loading-state');
 const ocrProgressText = document.getElementById('ocr-progress-text');
+
+let isCropMode = false;
+
+async function enterCropMode(file) {
+  isCropMode = true;
+  stopCamera(scannerVideo);
+  if (scannerVideo) scannerVideo.style.display = 'none';
+  if (scannerPreviewImg) scannerPreviewImg.style.display = 'block';
+  if (scannerAdjusterBar) scannerAdjusterBar.style.display = 'flex';
+  if (scannerInstructionBanner) {
+    scannerInstructionBanner.textContent = "Drag to align paper to reticles, then tap shutter.";
+  }
+  await loadFileToImage(file, scannerPreviewImg);
+  if (scannerFrame && scannerPreviewImg) {
+    initAdjuster(scannerPreviewImg, scannerFrame);
+  }
+}
+
+function exitCropMode() {
+  isCropMode = false;
+  if (scannerPreviewImg) {
+    scannerPreviewImg.style.display = 'none';
+    resetAdjuster(scannerPreviewImg);
+  }
+  if (scannerAdjusterBar) scannerAdjusterBar.style.display = 'none';
+  if (scannerVideo) scannerVideo.style.display = 'block';
+  if (scannerInstructionBanner) {
+    scannerInstructionBanner.textContent = "Place corners of the viewfinder just within the paper's borders.";
+  }
+}
+
+if (btnAdjustZoomOut) {
+  btnAdjustZoomOut.addEventListener('click', () => setAdjusterZoom(scannerPreviewImg, -0.15));
+}
+if (btnAdjustZoomIn) {
+  btnAdjustZoomIn.addEventListener('click', () => setAdjusterZoom(scannerPreviewImg, 0.15));
+}
+if (btnAdjustReset) {
+  btnAdjustReset.addEventListener('click', () => resetAdjuster(scannerPreviewImg));
+}
+if (btnAdjustCancel) {
+  btnAdjustCancel.addEventListener('click', async () => {
+    exitCropMode();
+    try {
+      await startCamera(scannerVideo);
+    } catch (err) {
+      alert('Unable to access camera: ' + err.message);
+    }
+  });
+}
 
 const reviewMetaThumb = document.getElementById('review-meta-thumb');
 const reviewCarrierTitle = document.getElementById('review-carrier-title');
@@ -299,7 +367,13 @@ async function handleCapturedImage(captureResult) {
 if (btnScannerShutter) {
   btnScannerShutter.addEventListener('click', () => {
     try {
-      const capture = captureFrame(scannerVideo);
+      let capture;
+      if (isCropMode && scannerPreviewImg && scannerFrame) {
+        capture = captureAdjustedFrame(scannerPreviewImg, scannerFrame);
+        exitCropMode();
+      } else {
+        capture = captureFrame(scannerVideo);
+      }
       handleCapturedImage(capture);
     } catch (err) {
       alert('Capture error: ' + err.message);
@@ -307,16 +381,19 @@ if (btnScannerShutter) {
   });
 }
 
-// File Upload Fallback
+// File Upload with Interactive Crop Adjustment
 if (scannerFileInput) {
   scannerFileInput.addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      const capture = await processUploadedFile(file);
-      handleCapturedImage(capture);
+      switchView('scanner-view');
+      await enterCropMode(file);
     } catch (err) {
-      alert('Image processing error: ' + err.message);
+      alert('Image loading error: ' + err.message);
+      exitCropMode();
+    } finally {
+      scannerFileInput.value = '';
     }
   });
 }
@@ -324,6 +401,7 @@ if (scannerFileInput) {
 // Floating Bar: Next Sheet & Publish
 if (btnScanNext) {
   btnScanNext.addEventListener('click', async () => {
+    exitCropMode();
     activeCarrier = getNextCarrier(activeCarrier);
     switchView('scanner-view');
     try {
@@ -349,6 +427,7 @@ if (btnPublishAll) {
 // Back Button Context Router
 btnBack.addEventListener('click', () => {
   if (currentView === 'scanner-view') {
+    exitCropMode();
     stopCamera(scannerVideo);
     const state = getStagedData(currentStore);
     const hasItems = Object.values(state.sheets).some(s => s.items && s.items.length > 0);
@@ -360,6 +439,7 @@ btnBack.addEventListener('click', () => {
 
 // Hook "Upload inventory" on dashboard to Scanner View
 document.getElementById('btn-upload-inv').addEventListener('click', async () => {
+  exitCropMode();
   switchView('scanner-view');
   try {
     await startCamera(scannerVideo);
@@ -408,11 +488,88 @@ if (lightboxModal) {
   });
 }
 
+// OCR Diagnostics Modal Binding
+const ocrDebugModal = document.getElementById('ocr-debug-modal');
+const btnOcrDebug = document.getElementById('btn-ocr-debug');
+const btnOcrDebugClose = document.getElementById('btn-ocr-debug-close');
+const ocrDebugTimestamp = document.getElementById('ocr-debug-timestamp');
+const ocrDebugCarrier = document.getElementById('ocr-debug-carrier');
+const ocrDebugStore = document.getElementById('ocr-debug-store');
+const ocrDebugCount = document.getElementById('ocr-debug-count');
+const ocrDebugLinesList = document.getElementById('ocr-debug-lines-list');
+const ocrDebugRawText = document.getElementById('ocr-debug-raw-text');
+
+if (btnOcrDebug) {
+  btnOcrDebug.addEventListener('click', () => {
+    const telem = getOcrTelemetry();
+    if (ocrDebugTimestamp) {
+      ocrDebugTimestamp.textContent = telem.timestamp ? `Captured at ${telem.timestamp}` : 'No scan telemetry recorded';
+    }
+    if (ocrDebugCarrier) {
+      ocrDebugCarrier.textContent = telem.header.carrier ? telem.header.carrier.toUpperCase() : '--';
+    }
+    if (ocrDebugStore) {
+      ocrDebugStore.textContent = telem.header.store || '--';
+    }
+    if (ocrDebugCount) {
+      ocrDebugCount.textContent = String(telem.itemCount || 0);
+    }
+
+    if (ocrDebugLinesList) {
+      ocrDebugLinesList.innerHTML = '';
+      if (!telem.lineLogs || telem.lineLogs.length === 0) {
+        ocrDebugLinesList.innerHTML = '<p class="placeholder-text" style="padding: 10px; text-align: center;">No parsed lines recorded yet.</p>';
+      } else {
+        telem.lineLogs.forEach((log, idx) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'debug-line-item';
+          const isMatched = log.status === 'matched';
+          const badgeHtml = `<span class="debug-badge ${isMatched ? 'matched' : 'skipped'}">${isMatched ? 'MATCHED' : 'SKIPPED'}</span>`;
+          const topCandidates = log.topCandidates && log.topCandidates.length > 0
+            ? log.topCandidates.map(c => `${c.name} (dist: ${c.dist})`).join(', ')
+            : '';
+          const details = isMatched
+            ? `Parsed: <strong>${log.item.model}</strong> • ${log.item.capacity} • ${log.item.color} • Qty: ${log.item.qty}${topCandidates ? `<br><span class="debug-line-note">Candidates: ${topCandidates}</span>` : ''}`
+            : `<span style="color: var(--danger);">${log.reason || 'Not matched'}</span>`;
+
+          itemEl.innerHTML = `
+            <div class="debug-line-header">
+              <span style="font-weight: 700; font-size: 0.75rem;">Row #${idx + 1}</span>
+              ${badgeHtml}
+            </div>
+            <div class="debug-line-raw">${log.line}</div>
+            <div style="font-size: 0.76rem;">${details}</div>
+          `;
+          ocrDebugLinesList.appendChild(itemEl);
+        });
+      }
+    }
+
+    if (ocrDebugRawText) {
+      ocrDebugRawText.textContent = telem.rawText || '(No raw OCR text captured)';
+    }
+
+    if (ocrDebugModal) ocrDebugModal.style.display = 'flex';
+  });
+}
+
+if (btnOcrDebugClose) {
+  btnOcrDebugClose.addEventListener('click', () => {
+    if (ocrDebugModal) ocrDebugModal.style.display = 'none';
+  });
+}
+if (ocrDebugModal) {
+  ocrDebugModal.addEventListener('click', (e) => {
+    if (e.target === ocrDebugModal) ocrDebugModal.style.display = 'none';
+  });
+}
+
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     termsModal.style.display = 'none';
     manifestModal.style.display = 'none';
     if (lightboxModal) lightboxModal.style.display = 'none';
+    if (ocrDebugModal) ocrDebugModal.style.display = 'none';
   }
 });
 

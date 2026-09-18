@@ -1,6 +1,21 @@
-// Workflow Optimizer - js/ocr.js (v0.0.2)
+// Workflow Optimizer - js/ocr.js (v0.0.3)
 
-export const OCR_VERSION = "v0.0.2";
+export const OCR_VERSION = "v0.0.3";
+
+let lastOcrTelemetry = {
+  timestamp: null,
+  rawText: "",
+  header: { carrier: null, store: null },
+  lineLogs: [],
+  itemCount: 0
+};
+
+/**
+ * Returns latest OCR telemetry data for on-device diagnostics.
+ */
+export function getOcrTelemetry() {
+  return lastOcrTelemetry;
+}
 
 /**
  * Standard Levenshtein Distance metric for typo tolerance.
@@ -55,6 +70,8 @@ export function parseReportRows(text, statsData = {}) {
   const devices = statsData.devices || {};
   const colorsMap = statsData.colors || {};
 
+  lastOcrTelemetry.lineLogs = [];
+
   const lines = text
     .replace(/Availab[a-z]*/gi, "Available")
     .replace(/Avallable|Avalable|Avallabie/gi, "Available")
@@ -66,13 +83,27 @@ export function parseReportRows(text, statsData = {}) {
 
   for (const line of lines) {
     const qtyMatch = line.match(/(\d+)\s*Available/i);
-    if (!qtyMatch) continue;
+    if (!qtyMatch) {
+      lastOcrTelemetry.lineLogs.push({
+        line,
+        status: "skipped",
+        reason: "Missing 'Available' / quantity pattern"
+      });
+      continue;
+    }
 
     const qty = parseInt(qtyMatch[1], 10) || 1;
     const leftover = line.replace(/(\d+)\s*Available.*/i, "").trim();
 
     const capMatch = leftover.match(/\b(\d{1,3}\s*(?:GB|TB))\b/i);
-    if (!capMatch) continue;
+    if (!capMatch) {
+      lastOcrTelemetry.lineLogs.push({
+        line,
+        status: "skipped",
+        reason: "Missing capacity pattern (e.g. 128GB)"
+      });
+      continue;
+    }
 
     const capacity = capMatch[1].replace(/\s+/g, "").toUpperCase();
     let modelRaw = leftover.substring(0, capMatch.index).trim();
@@ -83,17 +114,19 @@ export function parseReportRows(text, statsData = {}) {
     let lowestDist = Infinity;
     let bestMatch = null;
 
-    for (const dev of Object.values(devices)) {
+    const candidateDistances = Object.values(devices).map(dev => {
       const dName = getLevenshtein(modelRaw, dev.name);
       const dAbbr = dev.abbr ? getLevenshtein(modelRaw, dev.abbr) : Infinity;
-      const minDist = Math.min(dName, dAbbr);
-      if (minDist < lowestDist && minDist <= 3) {
-        lowestDist = minDist;
-        bestMatch = dev.name;
+      const dist = Math.min(dName, dAbbr);
+      return { name: dev.name, dist };
+    }).sort((a, b) => a.dist - b.dist);
+
+    if (candidateDistances.length > 0) {
+      lowestDist = candidateDistances[0].dist;
+      if (lowestDist <= 3) {
+        bestMatch = candidateDistances[0].name;
+        model = bestMatch;
       }
-    }
-    if (bestMatch) {
-      model = bestMatch;
     }
 
     // Color name to abbreviation mapping
@@ -105,12 +138,24 @@ export function parseReportRows(text, statsData = {}) {
       }
     }
 
-    items.push({
+    const newItem = {
       id: "item_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
       model,
       capacity,
       color,
       qty
+    };
+
+    items.push(newItem);
+    lastOcrTelemetry.lineLogs.push({
+      line,
+      status: "matched",
+      item: newItem,
+      modelRaw,
+      colorRaw,
+      lowestDist,
+      matchedCanonical: !!bestMatch,
+      topCandidates: candidateDistances.slice(0, 3)
     });
   }
 
@@ -140,6 +185,11 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
   const rawText = result.data.text || "";
   const { carrier, store } = parseReportHeader(rawText);
   const items = parseReportRows(rawText, statsData);
+
+  lastOcrTelemetry.timestamp = new Date().toLocaleTimeString();
+  lastOcrTelemetry.rawText = rawText;
+  lastOcrTelemetry.header = { carrier, store };
+  lastOcrTelemetry.itemCount = items.length;
 
   return {
     carrier,
