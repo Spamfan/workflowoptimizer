@@ -24,7 +24,7 @@ import {
   STAGING_VERSION
 } from './staging.js?v=0.0.3';
 
-export const APP_VERSION = "v0.0.10";
+export const APP_VERSION = "v0.0.11";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -33,7 +33,7 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "styles.css": "v0.0.7",
-  "index.html": "v0.0.7"
+  "index.html": "v0.0.8"
 };
 
 const loginView = document.getElementById('login-view');
@@ -54,6 +54,7 @@ let currentStore = '';
 let activeCarrier = 'tmo';
 let cachedStats = null;
 let scannerRotation = 0;
+let latestFullCaptureUrl = null;
 
 export function openModal(modalEl) {
   if (!modalEl) return;
@@ -465,15 +466,17 @@ if (btnClearStaged) {
 // Lightbox preview on thumbnail tap
 if (reviewMetaThumb) {
   reviewMetaThumb.addEventListener('click', () => {
-    if (reviewMetaThumb.src) {
-      lightboxImg.src = reviewMetaThumb.src;
-      lightboxModal.style.display = 'flex';
+    const src = latestFullCaptureUrl || reviewMetaThumb.src;
+    if (src) {
+      lightboxImg.src = src;
+      openModal(lightboxModal);
     }
   });
 }
 
 // Process captured frame through OCR and Staging
 async function handleCapturedImage(captureResult) {
+  latestFullCaptureUrl = captureResult.fullDataUrl;
   stopCamera(scannerVideo);
   switchView('review-view');
 
@@ -521,16 +524,6 @@ if (btnViewStaged) {
   });
 }
 
-// Lightbox preview on thumbnail tap
-if (reviewMetaThumb) {
-  reviewMetaThumb.addEventListener('click', () => {
-    if (reviewMetaThumb.src) {
-      lightboxImg.src = reviewMetaThumb.src;
-      openModal(lightboxModal);
-    }
-  });
-}
-
 // Modals: Manifest & Terms
 const manifestModal = document.getElementById('manifest-modal');
 const manifestListBody = document.getElementById('manifest-list-body');
@@ -575,6 +568,8 @@ if (lightboxModal) {
 const ocrDebugModal = document.getElementById('ocr-debug-modal');
 const btnOcrDebug = document.getElementById('btn-ocr-debug');
 const btnOcrDebugClose = document.getElementById('btn-ocr-debug-close');
+const btnOcrCopyJson = document.getElementById('btn-ocr-copy-json');
+const btnOcrDownloadImg = document.getElementById('btn-ocr-download-img');
 const ocrDebugTimestamp = document.getElementById('ocr-debug-timestamp');
 const ocrDebugCarrier = document.getElementById('ocr-debug-carrier');
 const ocrDebugStore = document.getElementById('ocr-debug-store');
@@ -640,6 +635,57 @@ if (btnOcrDebug) {
     }
 
     openModal(ocrDebugModal);
+  });
+}
+
+if (btnOcrCopyJson) {
+  btnOcrCopyJson.addEventListener('click', async () => {
+    const state = getStagedData(currentStore);
+    const sheet = state.sheets[activeCarrier];
+    const payload = {
+      store: currentStore,
+      carrier: activeCarrier,
+      timestamp: (sheet && sheet.timestamp) || new Date().toISOString(),
+      items: (sheet && sheet.items) || [],
+      telemetry: (sheet && sheet.telemetry) || getOcrTelemetry()
+    };
+    const jsonText = JSON.stringify(payload, null, 2);
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(jsonText);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = jsonText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      const origText = btnOcrCopyJson.textContent;
+      btnOcrCopyJson.textContent = 'Copied!';
+      setTimeout(() => { btnOcrCopyJson.textContent = origText; }, 2000);
+    } catch (err) {
+      alert('Failed to copy telemetry: ' + err.message);
+    }
+  });
+}
+
+if (btnOcrDownloadImg) {
+  btnOcrDownloadImg.addEventListener('click', () => {
+    const state = getStagedData(currentStore);
+    const sheet = state.sheets[activeCarrier];
+    const targetSrc = latestFullCaptureUrl || (sheet && sheet.thumb);
+    if (!targetSrc) {
+      alert('No capture image available to download.');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = targetSrc;
+    a.download = `wfo_scan_${currentStore || 'store'}_${activeCarrier}_${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   });
 }
 
