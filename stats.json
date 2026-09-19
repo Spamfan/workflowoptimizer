@@ -265,6 +265,18 @@
       "vzwBIC": null,
       "tmoBIC": null
     },
+    "galaxys26fe5g": {
+      "name": "Galaxy S26 FE 5G",
+      "abbr": "S26FE",
+      "vzwMO": 0,
+      "attMO": 0,
+      "tmoDP": null,
+      "tmoMOADP": null,
+      "tmoMO": null,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
     "galaxys26ultra5g": {
       "name": "Galaxy S26 Ultra",
       "abbr": "S26U",
@@ -453,6 +465,42 @@
       "tmoDP": 867,
       "tmoMOADP": 11.75,
       "tmoMO": 47.88,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
+    "iphone18pro": {
+      "name": "iPhone 18 Pro",
+      "abbr": "IP18PR",
+      "vzwMO": 0,
+      "attMO": 0,
+      "tmoDP": null,
+      "tmoMOADP": null,
+      "tmoMO": null,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
+    "iphone18promax": {
+      "name": "iPhone 18 Pro Max",
+      "abbr": "IP18PM",
+      "vzwMO": 0,
+      "attMO": 0,
+      "tmoDP": null,
+      "tmoMOADP": null,
+      "tmoMO": null,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
+    "iphoneduo": {
+      "name": "iPhone Duo",
+      "abbr": "IP DUO",
+      "vzwMO": 0,
+      "attMO": 0,
+      "tmoDP": null,
+      "tmoMOADP": null,
+      "tmoMO": null,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
@@ -719,6 +767,7 @@
     "Coal Smoke": "BLK",
     "Cosmic Orange": "ORNG",
     "Deep Blue": "BLU",
+    "Evening Blue": "BLU",
     "Desert Titanium": "DSRT",
     "Graphite": "BLK",
     "Gray": "GRY",
