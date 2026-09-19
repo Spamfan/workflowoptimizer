@@ -170,7 +170,10 @@
 
       <div id="staged-items-container" class="staged-items-container"></div>
 
-      <button id="btn-add-item" class="pill-btn btn-secondary add-row-btn">+ Add Device</button>
+      <div style="display: flex; gap: 10px; margin-top: 8px;">
+        <button id="btn-add-item" class="pill-btn btn-secondary add-row-btn">+ Add Device</button>
+        <button id="btn-clear-staged" class="pill-btn btn-secondary" style="color: var(--danger); border-color: var(--danger);">Clear Scans</button>
+      </div>
     </div>
 
     <div class="floating-action-bar">
@@ -252,6 +255,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.0.9"></script>
+  <script type="module" src="js/app.js?v=0.0.10"></script>
 </body>
 </html>
