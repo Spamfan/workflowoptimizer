@@ -249,12 +249,14 @@
       <div id="ocr-debug-lines-list" class="debug-lines-list"></div>
       <h4 class="debug-section-title">Raw Extracted OCR Text</h4>
       <pre id="ocr-debug-raw-text" class="debug-raw-pre"></pre>
-      <div class="modal-actions">
+      <div class="modal-actions" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+        <button id="btn-ocr-copy-json" class="pill-btn btn-secondary" style="width: auto;">Copy Telemetry</button>
+        <button id="btn-ocr-download-img" class="pill-btn btn-secondary" style="width: auto;">Download Image</button>
         <button id="btn-ocr-debug-close" class="pill-btn btn-primary" style="width: auto;">Done</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.0.10"></script>
+  <script type="module" src="js/app.js?v=0.0.11"></script>
 </body>
 </html>
