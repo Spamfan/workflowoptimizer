@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.9)
+// Prototype Blue - js/app.js (v0.0.12)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
 import {
@@ -20,11 +20,13 @@ import {
   deleteStagedItem,
   addStagedItem,
   clearAllStaged,
+  clearCarrierStaged,
+  getSessionMedia,
   getNextCarrier,
   STAGING_VERSION
-} from './staging.js?v=0.0.3';
+} from './staging.js?v=0.0.4';
 
-export const APP_VERSION = "v0.0.11";
+export const APP_VERSION = "v0.0.12";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -32,8 +34,8 @@ export const MODULE_VERSIONS = {
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
-  "styles.css": "v0.0.7",
-  "index.html": "v0.0.8"
+  "styles.css": "v0.0.8",
+  "index.html": "v0.0.9"
 };
 
 const loginView = document.getElementById('login-view');
@@ -348,8 +350,20 @@ function renderReview(carrierKey) {
   reviewStoreText.textContent = `Store ${currentStore || '--'}`;
   reviewTimestampText.textContent = sheet.timestamp || 'Not scanned yet';
 
-  if (sheet.thumb) {
-    reviewMetaThumb.src = sheet.thumb;
+  const pageBadge = document.getElementById('review-page-badge');
+  const pageCount = sheet.pageCount || (sheet.items && sheet.items.length > 0 ? 1 : 0);
+  if (pageBadge) {
+    if (pageCount > 0) {
+      pageBadge.textContent = `Page ${pageCount}/5`;
+      pageBadge.style.display = 'inline-block';
+    } else {
+      pageBadge.style.display = 'none';
+    }
+  }
+
+  const media = getSessionMedia(carrierKey);
+  if (media.thumb) {
+    reviewMetaThumb.src = media.thumb;
     reviewMetaThumb.style.display = 'block';
   } else {
     reviewMetaThumb.style.display = 'none';
@@ -503,7 +517,7 @@ async function handleCapturedImage(captureResult) {
     }
 
     const telem = getOcrTelemetry();
-    commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl, telem);
+    commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl, telem, "append");
     renderReview(activeCarrier);
   } catch (err) {
     console.error(err);
@@ -581,7 +595,8 @@ if (btnOcrDebug) {
   btnOcrDebug.addEventListener('click', () => {
     const state = getStagedData(currentStore);
     const sheet = state.sheets[activeCarrier];
-    const telem = (sheet && sheet.telemetry) ? sheet.telemetry : getOcrTelemetry();
+    const media = getSessionMedia(activeCarrier);
+    const telem = media.telemetry || getOcrTelemetry();
 
     if (ocrDebugTimestamp) {
       ocrDebugTimestamp.textContent = telem.timestamp
@@ -675,7 +690,8 @@ if (btnOcrDownloadImg) {
   btnOcrDownloadImg.addEventListener('click', () => {
     const state = getStagedData(currentStore);
     const sheet = state.sheets[activeCarrier];
-    const targetSrc = latestFullCaptureUrl || (sheet && sheet.thumb);
+    const media = getSessionMedia(activeCarrier);
+    const targetSrc = latestFullCaptureUrl || media.thumb;
     if (!targetSrc) {
       alert('No capture image available to download.');
       return;
@@ -698,12 +714,147 @@ if (ocrDebugModal) {
   });
 }
 
+// GitHub REST API Publish Engine (stocks.json)
+const patModal = document.getElementById('pat-modal');
+const patInput = document.getElementById('pat-input');
+const btnPatCancel = document.getElementById('btn-pat-cancel');
+const btnPatSave = document.getElementById('btn-pat-save');
+
+async function publishAllToGitHub() {
+  const state = getStagedData(currentStore);
+  const totalItems = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
+  if (totalItems === 0) {
+    alert('No staged items to publish.');
+    return;
+  }
+
+  const pat = localStorage.getItem('wfo_admin_pat') || '';
+  if (!pat) {
+    if (patInput) patInput.value = '';
+    openModal(patModal);
+    return;
+  }
+
+  if (btnPublishAll) {
+    btnPublishAll.disabled = true;
+    btnPublishAll.textContent = 'Publishing...';
+  }
+
+  try {
+    const owner = 'spamfan';
+    const repo = 'workflowoptimizer';
+    const path = 'stocks.json';
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+    let sha = null;
+    let existingData = { stores: {} };
+
+    const getRes = await fetch(url, {
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `token ${pat}`
+      },
+      cache: 'no-store'
+    });
+
+    if (getRes.ok) {
+      const fileJson = await getRes.json();
+      sha = fileJson.sha;
+      const decoded = decodeURIComponent(escape(atob(fileJson.content.replace(/\s/g, ''))));
+      existingData = JSON.parse(decoded);
+      if (!existingData.stores) existingData.stores = {};
+    } else if (getRes.status === 404) {
+      existingData = { stores: {} };
+    } else if (getRes.status === 401) {
+      localStorage.removeItem('wfo_admin_pat');
+      throw new Error('Invalid GitHub PAT. Please re-enter.');
+    } else {
+      throw new Error(`GitHub API error: ${getRes.status}`);
+    }
+
+    existingData.stores[currentStore] = {
+      lastUpdated: new Date().toISOString(),
+      inventory: {
+        tmo: state.sheets.tmo ? state.sheets.tmo.items : [],
+        vzw: state.sheets.vzw ? state.sheets.vzw.items : [],
+        att: state.sheets.att ? state.sheets.att.items : []
+      }
+    };
+
+    const contentStr = JSON.stringify(existingData, null, 2);
+    const contentB64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+    const bodyPayload = {
+      message: `Update stocks.json for Store ${currentStore}`,
+      content: contentB64
+    };
+    if (sha) bodyPayload.sha = sha;
+
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `token ${pat}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(bodyPayload)
+    });
+
+    if (!putRes.ok) {
+      const errJson = await putRes.json().catch(() => ({}));
+      throw new Error(`Commit failed (${putRes.status}): ${errJson.message || putRes.statusText}`);
+    }
+
+    alert(`Successfully published inventory for Store ${currentStore} to stocks.json!`);
+    clearAllStaged(currentStore);
+    renderReview(activeCarrier);
+    updateDashboardStagedButton();
+  } catch (err) {
+    alert('Publish failed: ' + err.message);
+    if (err.message.includes('Invalid GitHub PAT')) {
+      if (patInput) patInput.value = '';
+      openModal(patModal);
+    }
+  } finally {
+    if (btnPublishAll) {
+      btnPublishAll.disabled = false;
+      btnPublishAll.textContent = 'Publish All';
+    }
+  }
+}
+
+if (btnPublishAll) {
+  btnPublishAll.addEventListener('click', publishAllToGitHub);
+}
+
+if (btnPatCancel) {
+  btnPatCancel.addEventListener('click', () => { closeModal(patModal); });
+}
+if (patModal) {
+  patModal.addEventListener('click', (e) => {
+    if (e.target === patModal) closeModal(patModal);
+  });
+}
+if (btnPatSave) {
+  btnPatSave.addEventListener('click', () => {
+    const val = patInput ? patInput.value.trim() : '';
+    if (!val) {
+      alert('Please enter a valid GitHub token.');
+      return;
+    }
+    localStorage.setItem('wfo_admin_pat', val);
+    closeModal(patModal);
+    publishAllToGitHub();
+  });
+}
+
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeModal(termsModal);
     closeModal(manifestModal);
     closeModal(lightboxModal);
     closeModal(ocrDebugModal);
+    closeModal(patModal);
   }
 });
 

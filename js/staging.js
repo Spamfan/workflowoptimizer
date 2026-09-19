@@ -1,6 +1,6 @@
-// Workflow Optimizer - js/staging.js (v0.0.3)
+// Workflow Optimizer - js/staging.js (v0.0.4)
 
-export const STAGING_VERSION = "v0.0.3";
+export const STAGING_VERSION = "v0.0.4";
 export const STAGING_STORAGE_KEY = "wfo_staged_inventory";
 
 export const CARRIERS = [
@@ -8,6 +8,22 @@ export const CARRIERS = [
   { key: "vzw", label: "Verizon" },
   { key: "att", label: "AT&T" }
 ];
+
+const sessionMedia = {
+  tmo: { thumb: "", telemetry: null },
+  vzw: { thumb: "", telemetry: null },
+  att: { thumb: "", telemetry: null }
+};
+
+export function getSessionMedia(carrierKey) {
+  return sessionMedia[carrierKey] || { thumb: "", telemetry: null };
+}
+
+export function setSessionMedia(carrierKey, thumb, telemetry) {
+  if (!sessionMedia[carrierKey]) sessionMedia[carrierKey] = {};
+  if (thumb !== undefined) sessionMedia[carrierKey].thumb = thumb;
+  if (telemetry !== undefined) sessionMedia[carrierKey].telemetry = telemetry;
+}
 
 /**
  * Creates a fresh staged inventory state object.
@@ -18,9 +34,9 @@ export function createEmptyState(storeNum = "") {
     store: storeNum,
     activeCarrier: "tmo",
     sheets: {
-      tmo: { carrier: "T-Mobile", timestamp: "", thumb: "", items: [], telemetry: null },
-      vzw: { carrier: "Verizon", timestamp: "", thumb: "", items: [], telemetry: null },
-      att: { carrier: "AT&T", timestamp: "", thumb: "", items: [], telemetry: null }
+      tmo: { carrier: "T-Mobile", timestamp: "", pageCount: 0, items: [] },
+      vzw: { carrier: "Verizon", timestamp: "", pageCount: 0, items: [] },
+      att: { carrier: "AT&T", timestamp: "", pageCount: 0, items: [] }
     }
   };
 }
@@ -51,7 +67,17 @@ export function getStagedData(storeNum = "") {
  */
 export function saveStagedData(state) {
   try {
-    localStorage.setItem(STAGING_STORAGE_KEY, JSON.stringify(state));
+    const cleanState = {
+      ...state,
+      sheets: { ...state.sheets }
+    };
+    Object.keys(cleanState.sheets).forEach(k => {
+      const sheet = { ...cleanState.sheets[k] };
+      delete sheet.thumb;
+      delete sheet.telemetry;
+      cleanState.sheets[k] = sheet;
+    });
+    localStorage.setItem(STAGING_STORAGE_KEY, JSON.stringify(cleanState));
   } catch (err) {
     console.error("Failed to save staged data:", err);
   }
@@ -62,9 +88,25 @@ export function saveStagedData(state) {
  * @param {string} storeNum 
  */
 export function clearAllStaged(storeNum = "") {
+  ['tmo', 'vzw', 'att'].forEach(k => setSessionMedia(k, "", null));
   const empty = createEmptyState(storeNum);
   saveStagedData(empty);
   return empty;
+}
+
+/**
+ * Clears staged items for a single carrier sheet.
+ */
+export function clearCarrierStaged(storeNum, carrierKey) {
+  const state = getStagedData(storeNum);
+  if (state.sheets[carrierKey]) {
+    state.sheets[carrierKey].items = [];
+    state.sheets[carrierKey].timestamp = "";
+    state.sheets[carrierKey].pageCount = 0;
+    setSessionMedia(carrierKey, "", null);
+    saveStagedData(state);
+  }
+  return state;
 }
 
 /**
@@ -75,7 +117,7 @@ export function clearAllStaged(storeNum = "") {
  * @param {string} thumbUrl 
  * @param {Object} telemetry 
  */
-export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl, telemetry = null) {
+export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl, telemetry = null, mode = "append") {
   const state = getStagedData(storeNum);
   if (!state.sheets[carrierKey]) return state;
 
@@ -87,10 +129,33 @@ export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl, telem
   });
 
   state.activeCarrier = carrierKey;
-  state.sheets[carrierKey].timestamp = dateStr;
-  state.sheets[carrierKey].thumb = thumbUrl || "";
-  state.sheets[carrierKey].items = items;
-  state.sheets[carrierKey].telemetry = telemetry || null;
+  const sheet = state.sheets[carrierKey];
+  sheet.timestamp = dateStr;
+
+  setSessionMedia(carrierKey, thumbUrl || "", telemetry || null);
+
+  const currentPageCount = sheet.pageCount || (sheet.items && sheet.items.length > 0 ? 1 : 0);
+
+  if (mode === "replace" || currentPageCount === 0) {
+    sheet.items = items.map(it => ({ ...it }));
+    sheet.pageCount = items.length > 0 ? 1 : 0;
+  } else {
+    if (currentPageCount < 5) {
+      sheet.pageCount = currentPageCount + 1;
+    }
+    items.forEach(incoming => {
+      const match = sheet.items.find(existing =>
+        existing.model.trim().toLowerCase() === incoming.model.trim().toLowerCase() &&
+        existing.capacity.trim().toLowerCase() === incoming.capacity.trim().toLowerCase() &&
+        existing.color.trim().toUpperCase() === incoming.color.trim().toUpperCase()
+      );
+      if (match) {
+        match.qty = (parseInt(match.qty, 10) || 0) + (parseInt(incoming.qty, 10) || 0);
+      } else {
+        sheet.items.push({ ...incoming });
+      }
+    });
+  }
 
   saveStagedData(state);
   return state;
