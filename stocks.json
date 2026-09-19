@@ -1,0 +1,246 @@
+{
+  "stores": {
+    "": {
+      "lastUpdated": "2026-09-19T18:44:41.629Z",
+      "inventory": {
+        "tmo": [
+          {
+            "id": "item_mu8px0c6_kv1n",
+            "model": "Galaxy A17 5G",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 5
+          },
+          {
+            "id": "item_mu8px0ch_vl9q",
+            "model": "Moto G 2026",
+            "capacity": "128GB",
+            "color": "GRY",
+            "qty": 3
+          },
+          {
+            "id": "item_mu8px0co_7893",
+            "model": "Moto G Play 2026",
+            "capacity": "64GB",
+            "color": "BLU",
+            "qty": 2
+          }
+        ],
+        "vzw": [
+          {
+            "id": "item_mu8pst94_mdh5",
+            "model": "Galaxy A17 5G",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 6
+          },
+          {
+            "id": "item_mu8pst9b_p4qt",
+            "model": "Galaxy S26 FE 5G",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pst9d_ka34",
+            "model": "Moto G 2026",
+            "capacity": "128GB",
+            "color": "GRY",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pst9g_jt5g",
+            "model": "Moto G Power 2026",
+            "capacity": "128GB",
+            "color": "BGE",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pst9j_9zmh",
+            "model": "Moto G Stylus 2026",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pst9l_fvo6",
+            "model": "TCL Flip 3",
+            "capacity": "16GB",
+            "color": "GRY",
+            "qty": 3
+          },
+          {
+            "id": "item_mu8ptgz3_idh8",
+            "model": "iPhone 16",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8ptgz6_83r6",
+            "model": "iPhone 17",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8ptgzc_zy5z",
+            "model": "iPhone 17 Pro",
+            "capacity": "256GB",
+            "color": "BLU",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8ptgzj_4hs3",
+            "model": "iPhone 17 Pro Max",
+            "capacity": "256GB",
+            "color": "BLU",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8ptgzn_y4kw",
+            "model": "iPhone 17 Pro Max",
+            "capacity": "256GB",
+            "color": "ORNG",
+            "qty": 3
+          },
+          {
+            "id": "item_mu8ptgzq_vkfg",
+            "model": "iPhone 17 Pro Max",
+            "capacity": "256GB",
+            "color": "SLVR",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8ptgzs_rvlr",
+            "model": "iPhone 18 Pro",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8ptgzu_cjdx",
+            "model": "iPhone 18 Pro",
+            "capacity": "256GB",
+            "color": "Burgundy",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8ptgzx_9jmh",
+            "model": "iPhone 18 Pro Max",
+            "capacity": "256GB",
+            "color": "Burgundy",
+            "qty": 4
+          },
+          {
+            "id": "item_mu8pth00_qrgs",
+            "model": "iPhone 18 Pro Max",
+            "capacity": "256GB",
+            "color": "Glacier",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pth03_s80n",
+            "model": "iPhone 18 Pro Max",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pth05_8uae",
+            "model": "iPhone Air",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 5
+          },
+          {
+            "id": "item_mu8pth06_vd6i",
+            "model": "iPhone Air",
+            "capacity": "256GB",
+            "color": "BLU",
+            "qty": 2
+          }
+        ],
+        "att": [
+          {
+            "id": "item_mu8pwdkm_ln4x",
+            "model": "Classic",
+            "capacity": "8GB",
+            "color": "BLK",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pwdkr_oz8x",
+            "model": "Galaxy A17 5G",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 3
+          },
+          {
+            "id": "item_mu8pwdkw_rgxd",
+            "model": "Galaxy S24 FE",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pwdl0_uxzd",
+            "model": "Galaxy S25 FE",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pwdl3_du5x",
+            "model": "Galaxy S25 Plus 5G",
+            "capacity": "256GB",
+            "color": "BLU",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pwdl8_i041",
+            "model": "Galaxy S25 Ultra 5G",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 3
+          },
+          {
+            "id": "item_mu8pwdlb_pj19",
+            "model": "Galaxy S26 FE 5G",
+            "capacity": "128GB",
+            "color": "BLK",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pwdld_2lrw",
+            "model": "Galaxy S26 Ultra",
+            "capacity": "256GB",
+            "color": "BLK",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pwdlf_7e6o",
+            "model": "Moto G 2026",
+            "capacity": "128GB",
+            "color": "GRY",
+            "qty": 1
+          },
+          {
+            "id": "item_mu8pwdlj_cbw6",
+            "model": "Moto G Power 2026",
+            "capacity": "128GB",
+            "color": "BLU",
+            "qty": 2
+          },
+          {
+            "id": "item_mu8pwdln_m254",
+            "model": "Moto G Stylus 2026",
+            "capacity": "128GB",
+            "color": "~ Coal Smoke",
+            "qty": 2
+          }
+        ]
+      }
+    }
+  }
+}
