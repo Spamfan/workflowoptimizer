@@ -19,11 +19,12 @@ import {
   updateStagedItem,
   deleteStagedItem,
   addStagedItem,
+  clearAllStaged,
   getNextCarrier,
   STAGING_VERSION
 } from './staging.js?v=0.0.3';
 
-export const APP_VERSION = "v0.0.9";
+export const APP_VERSION = "v0.0.10";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -32,7 +33,7 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "styles.css": "v0.0.7",
-  "index.html": "v0.0.6"
+  "index.html": "v0.0.7"
 };
 
 const loginView = document.getElementById('login-view');
@@ -41,6 +42,8 @@ const scannerView = document.getElementById('scanner-view');
 const reviewView = document.getElementById('review-view');
 const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
+const btnUploadInv = document.getElementById('btn-upload-inv');
+const btnClearStaged = document.getElementById('btn-clear-staged');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
 if (versionText) versionText.textContent = `BLUE ${APP_VERSION}`;
@@ -80,6 +83,9 @@ function updateDashboardStagedButton() {
 }
 
 export function switchView(targetViewId, pushState = true) {
+  if (targetViewId !== 'scanner-view' && scannerVideo) {
+    stopCamera(scannerVideo);
+  }
   loginView.style.display = 'none';
   dashboardView.style.display = 'none';
   if (scannerView) scannerView.style.display = 'none';
@@ -169,6 +175,28 @@ async function fetchPing() {
 
 btnRefresh.addEventListener('click', fetchPing);
 btnLogout.addEventListener('click', logout);
+
+btnBack.addEventListener('click', () => {
+  if (currentView === 'scanner-view' || currentView === 'review-view') {
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+  } else {
+    switchView('login-view');
+  }
+});
+
+async function openScanner() {
+  exitCropMode();
+  switchView('scanner-view');
+  try {
+    await startCamera(scannerVideo);
+  } catch (err) {
+    alert('Unable to access camera: ' + err.message);
+  }
+}
+
+if (btnUploadInv) {
+  btnUploadInv.addEventListener('click', openScanner);
+}
 
 // Scanner & Review DOM bindings
 const scannerVideo = document.getElementById('scanner-video');
@@ -276,6 +304,27 @@ if (btnCropConfirm) {
   });
 }
 
+if (btnScannerShutter) {
+  btnScannerShutter.addEventListener('click', () => {
+    try {
+      const capture = captureFrame(scannerVideo, scannerRotation);
+      handleCapturedImage(capture);
+    } catch (err) {
+      alert('Capture error: ' + err.message);
+    }
+  });
+}
+
+if (scannerFileInput) {
+  scannerFileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      enterCropMode(file);
+    }
+    scannerFileInput.value = '';
+  });
+}
+
 const reviewMetaThumb = document.getElementById('review-meta-thumb');
 const reviewCarrierTitle = document.getElementById('review-carrier-title');
 const reviewStoreText = document.getElementById('review-store-text');
@@ -308,6 +357,7 @@ function renderReview(carrierKey) {
   if (reviewLoadingState) reviewLoadingState.style.display = 'none';
   stagedItemsContainer.style.display = 'flex';
   if (btnAddItem) btnAddItem.style.display = 'inline-flex';
+  if (btnClearStaged) btnClearStaged.style.display = 'inline-flex';
 
   stagedItemsContainer.innerHTML = '';
   if (!sheet.items || sheet.items.length === 0) {
@@ -398,6 +448,20 @@ if (btnAddItem) {
   });
 }
 
+if (btnScanNext) {
+  btnScanNext.addEventListener('click', openScanner);
+}
+
+if (btnClearStaged) {
+  btnClearStaged.addEventListener('click', () => {
+    if (confirm('Clear all staged scans for this store?')) {
+      clearAllStaged(currentStore);
+      renderReview(activeCarrier);
+      updateDashboardStagedButton();
+    }
+  });
+}
+
 // Lightbox preview on thumbnail tap
 if (reviewMetaThumb) {
   reviewMetaThumb.addEventListener('click', () => {
@@ -422,6 +486,7 @@ async function handleCapturedImage(captureResult) {
   reviewTimestampText.textContent = 'Processing OCR...';
   stagedItemsContainer.style.display = 'none';
   if (btnAddItem) btnAddItem.style.display = 'none';
+  if (btnClearStaged) btnClearStaged.style.display = 'none';
   if (reviewLoadingState) reviewLoadingState.style.display = 'flex';
   if (ocrProgressText) ocrProgressText.textContent = 'Reading sheet (0%)...';
 
