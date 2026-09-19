@@ -1,4 +1,4 @@
-/* Prototype Blue - styles.css v0.0.7 */
+/* Prototype Blue - styles.css v0.0.8 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -886,10 +886,25 @@ body {
   background-color: #dadddf;
 }
 
+.meta-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .meta-carrier-title {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-main);
+}
+
+.review-page-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: #e7f3ff;
+  padding: 3px 8px;
+  border-radius: 9999px;
 }
 
 .meta-details {
