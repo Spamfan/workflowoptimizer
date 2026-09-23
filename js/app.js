@@ -1,6 +1,7 @@
-// Prototype Blue - js/app.js (v0.0.12)
+// Prototype Blue - js/app.js (v0.0.13)
 
 import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.1';
 import {
   startCamera,
   stopCamera,
@@ -26,7 +27,7 @@ import {
   STAGING_VERSION
 } from './staging.js?v=0.0.4';
 
-export const APP_VERSION = "v0.0.12";
+export const APP_VERSION = "v0.0.13";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -34,17 +35,20 @@ export const MODULE_VERSIONS = {
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
-  "styles.css": "v0.0.8",
-  "index.html": "v0.0.9"
+  "print.js": PRINT_VERSION,
+  "styles.css": "v0.0.9",
+  "index.html": "v0.0.10"
 };
 
 const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
 const scannerView = document.getElementById('scanner-view');
 const reviewView = document.getElementById('review-view');
+const printView = document.getElementById('print-view');
 const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const btnUploadInv = document.getElementById('btn-upload-inv');
+const btnPrintInv = document.getElementById('btn-print-inv');
 const btnClearStaged = document.getElementById('btn-clear-staged');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
@@ -93,6 +97,7 @@ export function switchView(targetViewId, pushState = true) {
   dashboardView.style.display = 'none';
   if (scannerView) scannerView.style.display = 'none';
   if (reviewView) reviewView.style.display = 'none';
+  if (printView) printView.style.display = 'none';
 
   const targetEl = document.getElementById(targetViewId);
   if (targetEl) {
@@ -105,7 +110,7 @@ export function switchView(targetViewId, pushState = true) {
     btnLogout.style.display = 'inline-flex';
     btnBack.style.display = 'none';
     updateDashboardStagedButton();
-  } else if (currentView === 'scanner-view' || currentView === 'review-view') {
+  } else if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
     btnLogout.style.display = 'none';
     btnBack.style.display = 'inline-flex';
   } else {
@@ -180,12 +185,21 @@ btnRefresh.addEventListener('click', fetchPing);
 btnLogout.addEventListener('click', logout);
 
 btnBack.addEventListener('click', () => {
-  if (currentView === 'scanner-view' || currentView === 'review-view') {
+  if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
     switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
   } else {
     switchView('login-view');
   }
 });
+
+initPrintEngine();
+
+if (btnPrintInv) {
+  btnPrintInv.addEventListener('click', () => {
+    switchView('print-view');
+    openPrintPreview(currentStore);
+  });
+}
 
 async function openScanner() {
   exitCropMode();
