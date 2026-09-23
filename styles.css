@@ -1,4 +1,4 @@
-/* Prototype Blue - styles.css v0.0.8 */
+/* Prototype Blue - styles.css v0.0.9 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -1271,4 +1271,240 @@ body {
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* --- PRINT VIEW & WYSIWYG PREVIEW --- */
+#print-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 68px 16px 40px;
+}
+
+.print-controls-bar {
+  width: 100%;
+  max-width: 8.5in;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.print-controls-left {
+  display: flex;
+  gap: 8px;
+}
+
+.print-comment-field {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  outline: none;
+  background: #ffffff;
+}
+
+.print-comment-field:focus {
+  border-color: var(--primary);
+}
+
+.btn-print-sheet {
+  width: auto;
+  padding: 8px 24px;
+}
+
+.print-paper-viewport {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+
+.print-preview-sheet {
+  background: #ffffff;
+  width: 8.5in;
+  min-height: 11in;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border);
+  padding: 0.3in 0.35in;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  color: #000000;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.print-doc-header {
+  margin-bottom: 12px;
+}
+
+.print-doc-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.3;
+}
+
+.print-doc-sources {
+  font-size: 0.8rem;
+  color: #111;
+  margin-top: 2px;
+}
+
+.print-doc-banner {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #000;
+  margin-top: 8px;
+}
+
+.print-doc-comment {
+  font-size: 0.85rem;
+  color: #000;
+  margin-top: 6px;
+}
+
+.print-doc-body {
+  display: flex;
+  justify-content: space-between;
+  gap: 2%;
+  flex: 1;
+}
+
+.print-col {
+  width: 49%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.print-section-header {
+  font-size: 1rem;
+  font-weight: 800;
+  text-decoration: underline;
+  margin-bottom: 4px;
+  color: #000;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.78rem;
+}
+
+.print-table th, .print-table td {
+  vertical-align: bottom;
+  padding: 2.5px 2px;
+  line-height: 1.2;
+}
+
+.print-table th {
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 1px solid #ccc;
+  color: #000;
+}
+
+.col-item {
+  width: 46%;
+  word-break: break-word;
+}
+
+.col-price {
+  width: 40%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.col-qty {
+  width: 14%;
+  text-align: right;
+  font-weight: 700;
+}
+
+.tap-item, .tap-qty {
+  cursor: pointer;
+  user-select: none;
+}
+
+.print-row.hl-partial .col-item {
+  background-color: #dadddf;
+}
+
+.print-row.hl-full {
+  background-color: #dadddf;
+}
+
+.print-doc-footer {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid #111;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-summary-row {
+  word-break: break-word;
+}
+
+.footer-audit-notice {
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* --- PRINT RULES (GHOST PAGE DEFENSE) --- */
+@page {
+  size: letter portrait;
+  margin: 0.25in;
+}
+
+@media print {
+  body, html {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+  }
+
+  #top-left-controls,
+  #top-right-hub,
+  #dashboard-view,
+  #login-view,
+  #scanner-view,
+  #review-view,
+  .print-controls-bar,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  #print-view {
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .print-paper-viewport {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-preview-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-height: 10.8in !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }
