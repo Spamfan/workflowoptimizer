@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.6)
+// Workflow Optimizer - js/ocr.js (v0.0.7)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.6";
+export const OCR_VERSION = "v0.0.7";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -36,54 +36,6 @@ export function getLevenshtein(a, b) {
 }
 
 /**
- * Preprocesses a canvas image for OCR: Perceptual Grayscale + Continuous Linear Contrast Stretching.
- * Preserves font anti-aliasing and character edge fidelity for Tesseract.js.
- * @param {HTMLCanvasElement} sourceCanvas 
- * @returns {HTMLCanvasElement}
- */
-export function preprocessOcrCanvas(sourceCanvas) {
-  if (!sourceCanvas || !sourceCanvas.width || !sourceCanvas.height) return sourceCanvas;
-
-  const width = sourceCanvas.width;
-  const height = sourceCanvas.height;
-  const processedCanvas = document.createElement("canvas");
-  processedCanvas.width = width;
-  processedCanvas.height = height;
-  const ctx = processedCanvas.getContext("2d");
-
-  ctx.drawImage(sourceCanvas, 0, 0);
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
-
-  // 1. Grayscale & luminosity histogram
-  let minLum = 255;
-  let maxLum = 0;
-  const grayValues = new Uint8Array(width * height);
-
-  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    // Standard perceptual luminance: 0.299R + 0.587G + 0.114B
-    const gray = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
-    grayValues[p] = gray;
-    if (gray < minLum) minLum = gray;
-    if (gray > maxLum) maxLum = gray;
-  }
-
-  // 2. Non-destructive continuous contrast stretching
-  const range = (maxLum - minLum) || 1;
-
-  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    const stretched = Math.round(((grayValues[p] - minLum) * 255) / range);
-    data[i] = stretched;
-    data[i + 1] = stretched;
-    data[i + 2] = stretched;
-    // Alpha remains untouched
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-  return processedCanvas;
-}
-
-/**
  * Parses header metadata from "Inventory View Report" sheets with fuzzy OCR tolerance.
  * @param {string} text 
  * @returns {{ carrier: string|null, store: string|null }}
@@ -93,11 +45,11 @@ export function parseReportHeader(text) {
   let store = null;
 
   // Resilient carrier regex matching OCR misreads (e.g. AI&T, AT&I, Verlzon)
-  if (/Carrier\s*[-–:]\s*(?:AT&?T|AI&?T|ATT|AT\s*T)/i.test(text)) {
+  if (/Carrier\s*[-–:]\s*(?:AT&?T|AI&?T|ATT|AT\s*T)\b/i.test(text)) {
     carrier = 'att';
-  } else if (/Carrier\s*[-–:]\s*T[- ]?Mobile/i.test(text)) {
+  } else if (/Carrier\s*[-–:]\s*T[- ]?Mobile\b/i.test(text)) {
     carrier = 'tmo';
-  } else if (/Carrier\s*[-–:]\s*(?:Verizon|Verlzon|VZW)/i.test(text)) {
+  } else if (/Carrier\s*[-–:]\s*(?:Verizon|Verlzon|VZW)\b/i.test(text)) {
     carrier = 'vzw';
   }
 
@@ -151,7 +103,7 @@ export function parseReportRows(text, statsData = {}) {
     const qty = parseInt(qtyStr, 10) || 1;
     const leftover = line.replace(/([0-9SOlIB|]+)\s*Available.*/i, "").trim();
 
-    const capMatch = leftover.match(/(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08)|(?:68|08|G8|6B))/i);
+    const capMatch = leftover.match(/\b(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08)|(?:68|08|G8|6B))\b/i);
     if (!capMatch) {
       lastOcrTelemetry.lineLogs.push({
         line,
@@ -169,8 +121,8 @@ export function parseReportRows(text, statsData = {}) {
     let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
 
     // Model name cleanup and OCR spacing repair
-    modelRaw = modelRaw.replace(/^Phone/i, "iPhone");
-    modelRaw = modelRaw.replace(/(iPhone)(\d)/i, "$1 $2");
+    modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
+    modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/[:|,\-_]+$/g, "").trim();
@@ -265,7 +217,8 @@ export function parseReportRows(text, statsData = {}) {
 }
 
 /**
- * Executes client-side OCR with canvas preprocessing and extracts report header and tabular inventory rows.
+ * Executes client-side OCR on raw unmanipulated image source.
+ * Passes clean camera/file intake directly into Tesseract.js native engine.
  * @param {HTMLCanvasElement|string} imageSource 
  * @param {Object} statsData 
  * @param {Function} onProgress 
@@ -276,18 +229,7 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
     throw new Error("Tesseract.js is not loaded");
   }
 
-  // Apply automatic canvas contrast stretching if source is a canvas
-  let inputSource = imageSource;
-  if (imageSource instanceof HTMLCanvasElement) {
-    try {
-      inputSource = preprocessOcrCanvas(imageSource);
-    } catch (e) {
-      console.warn("Preprocessing failed; using original canvas", e);
-      inputSource = imageSource;
-    }
-  }
-
-  const result = await Tesseract.recognize(inputSource, "eng", {
+  const result = await Tesseract.recognize(imageSource, "eng", {
     logger: m => {
       if (m.status === "recognizing text" && m.progress) {
         onProgress(Math.round(m.progress * 100));

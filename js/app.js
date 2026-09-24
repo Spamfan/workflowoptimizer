@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.17)
+// Prototype Blue - js/app.js (v0.0.18)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
@@ -6,15 +6,15 @@ import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0
 import {
   startCamera,
   stopCamera,
-  captureFrame,
+  takePhotoFromCamera,
   loadFileToImage,
   initAdjuster,
   resetAdjuster,
   setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.7';
-import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.6';
+} from './scanner.js?v=0.0.8';
+import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.7';
 import {
   getStagedData,
   getStagedInventoryPayload,
@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.17";
+export const APP_VERSION = "v0.0.18";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -114,6 +114,24 @@ function updateDashboardStagedButton() {
   }
 }
 
+// Add Pair Device Button to Dashboard Card Actions Row
+function ensurePairingButtonOnDashboard() {
+  if (document.getElementById('btn-pair-device')) return;
+  const targetContainer = document.querySelector('#dashboard-view .card-actions-row')
+    || document.querySelector('#dashboard-view .dash-card .card-body')
+    || document.querySelector('#dashboard-view .dash-card');
+
+  if (targetContainer) {
+    const btnPair = document.createElement('button');
+    btnPair.id = 'btn-pair-device';
+    btnPair.className = 'pill-btn btn-action-pair';
+    btnPair.style.display = 'inline-flex';
+    btnPair.textContent = '🔑 Store Key / Pair';
+    btnPair.addEventListener('click', openPairingModal);
+    targetContainer.appendChild(btnPair);
+  }
+}
+
 export function switchView(targetViewId, pushState = true) {
   if (targetViewId !== 'scanner-view' && scannerVideo) {
     stopCamera(scannerVideo);
@@ -134,6 +152,7 @@ export function switchView(targetViewId, pushState = true) {
   if (currentView === 'dashboard-view') {
     btnLogout.style.display = 'inline-flex';
     btnBack.style.display = 'none';
+    ensurePairingButtonOnDashboard();
     updateDashboardStagedButton();
   } else if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
     btnLogout.style.display = 'none';
@@ -332,12 +351,15 @@ if (btnCropConfirm) {
 }
 
 if (btnScannerShutter) {
-  btnScannerShutter.addEventListener('click', () => {
+  btnScannerShutter.addEventListener('click', async () => {
     try {
-      const capture = captureFrame(scannerVideo, scannerRotation);
+      btnScannerShutter.disabled = true;
+      const capture = await takePhotoFromCamera(scannerVideo, scannerRotation);
       handleCapturedImage(capture);
     } catch (err) {
-      alert('Capture error: ' + err.message);
+      alert('Photo capture failed: ' + err.message);
+    } finally {
+      btnScannerShutter.disabled = false;
     }
   });
 }
@@ -902,24 +924,6 @@ export function openPairingModal() {
   openModal(modalEl);
   const input = modalEl.querySelector('#input-pairing-manual');
   if (input) setTimeout(() => input.focus(), 150);
-}
-
-// Add Pair Device Button to Dashboard Deck
-function ensurePairingButtonOnDashboard() {
-  if (document.getElementById('btn-pair-device')) return;
-  const dashboardCard = document.querySelector('#dashboard-view .card-container');
-  if (dashboardCard) {
-    const btnPair = document.createElement('button');
-    btnPair.id = 'btn-pair-device';
-    btnPair.className = 'btn-pill secondary';
-    btnPair.style.display = 'inline-flex';
-    btnPair.style.marginTop = '12px';
-    btnPair.textContent = '🔑 Store Key / Pair Terminal';
-    btnPair.addEventListener('click', openPairingModal);
-
-    const btnContainer = dashboardCard.querySelector('.dashboard-button-deck') || dashboardCard;
-    btnContainer.appendChild(btnPair);
-  }
 }
 
 // GitHub REST API Publish Engine (stocks.json with AES-GCM Encryption)

@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.7)
-// Mobile Camera Viewfinder, Touch Pan/Zoom Adjuster & Frame Capture
+// Workflow Optimizer - js/scanner.js (v0.0.8)
+// Mobile Camera Hardware Sensor Photo Capture & Touch Pan/Zoom Adjuster
 
-export const SCANNER_VERSION = "v0.0.7";
+export const SCANNER_VERSION = "v0.0.8";
 
 let activeStream = null;
 
@@ -18,7 +18,7 @@ export function triggerHaptic(ms = 20) {
 }
 
 /**
- * Initializes and starts the camera stream on the target video element with high resolution & autofocus.
+ * Initializes and starts the camera stream on the target video element with autofocus.
  * @param {HTMLVideoElement} videoEl 
  * @returns {Promise<MediaStream>}
  */
@@ -47,9 +47,7 @@ export async function startCamera(videoEl) {
         await track.applyConstraints({
           advanced: [{ focusMode: "continuous" }]
         });
-      } catch (_) {
-        // Continuous focus constraint rejected or unsupported; proceed with native defaults
-      }
+      } catch (_) {}
     }
 
     return activeStream;
@@ -74,20 +72,18 @@ export function stopCamera(videoEl) {
 }
 
 /**
- * Crops image/video frame strictly to 8.5:11 (US Letter portrait) aspect ratio at high resolution.
- * @param {HTMLVideoElement|HTMLImageElement} sourceEl 
+ * Crops an Image element strictly to 8.5:11 (US Letter portrait) aspect ratio at 100% natural resolution.
+ * Zero digital upscaling or artificial smoothing.
+ * @param {HTMLImageElement} img 
  * @param {number} rotationAngle 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
  */
-export function captureFrame(sourceEl, rotationAngle = 0) {
-  triggerHaptic(25);
-
-  const isVideo = sourceEl instanceof HTMLVideoElement;
-  const sw = isVideo ? sourceEl.videoWidth : sourceEl.naturalWidth;
-  const sh = isVideo ? sourceEl.videoHeight : sourceEl.naturalHeight;
+export function cropImageToLetter(img, rotationAngle = 0) {
+  const sw = img.naturalWidth || img.width;
+  const sh = img.naturalHeight || img.height;
 
   if (!sw || !sh) {
-    throw new Error("Invalid source dimensions for capture");
+    throw new Error("Invalid image dimensions for photo capture");
   }
 
   // Standard US Letter Portrait ratio (8.5 / 11 = ~0.7727)
@@ -103,37 +99,31 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
   const sx = (sw - cropW) / 2;
   const sy = (sh - cropH) / 2;
 
-  // Scale up to high-density target canvas (~200 DPI minimum: 1700x2200) to preserve text sharpness
-  const minTargetW = 1700;
-  const destW = Math.max(cropW, minTargetW);
-  const destH = Math.round(destW / targetRatio);
-
+  // Offscreen unrotated canvas at full 100% natural photo resolution
   const offCanvas = document.createElement("canvas");
-  offCanvas.width = destW;
-  offCanvas.height = destH;
+  offCanvas.width = Math.round(cropW);
+  offCanvas.height = Math.round(cropH);
   const offCtx = offCanvas.getContext("2d");
-  offCtx.imageSmoothingEnabled = true;
-  offCtx.imageSmoothingQuality = "high";
-  offCtx.drawImage(sourceEl, sx, sy, cropW, cropH, 0, 0, destW, destH);
+  offCtx.drawImage(img, sx, sy, cropW, cropH, 0, 0, offCanvas.width, offCanvas.height);
 
-  // Output canvas handling optional rotation
+  // Handle optional rotation
   const rads = (rotationAngle * Math.PI) / 180;
   const isPerpendicular = rotationAngle === 90 || rotationAngle === 270;
   const finalCanvas = document.createElement("canvas");
-  finalCanvas.width = isPerpendicular ? destH : destW;
-  finalCanvas.height = isPerpendicular ? destW : destH;
+  finalCanvas.width = isPerpendicular ? offCanvas.height : offCanvas.width;
+  finalCanvas.height = isPerpendicular ? offCanvas.width : offCanvas.height;
 
   const fCtx = finalCanvas.getContext("2d");
   if (rotationAngle !== 0) {
     fCtx.translate(finalCanvas.width / 2, finalCanvas.height / 2);
     fCtx.rotate(rads);
-    fCtx.drawImage(offCanvas, -destW / 2, -destH / 2);
+    fCtx.drawImage(offCanvas, -offCanvas.width / 2, -offCanvas.height / 2);
   } else {
     fCtx.drawImage(offCanvas, 0, 0);
   }
 
   // High-res JPEG for OCR
-  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.92);
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.95);
 
   // Compact thumbnail for review metadata card
   const thumbCanvas = document.createElement("canvas");
@@ -148,7 +138,52 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
 }
 
 /**
- * Loads a selected image file into an Image element and crops to 8.5:11.
+ * Takes an actual high-resolution hardware camera sensor photo via ImageCapture.
+ * Taps the phone's physical sensor (up to 50MP/12MP) with native ISP and autofocus.
+ * @param {HTMLVideoElement} videoEl 
+ * @param {number} rotationAngle 
+ * @returns {Promise<{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }>}
+ */
+export async function takePhotoFromCamera(videoEl, rotationAngle = 0) {
+  triggerHaptic(35);
+
+  if (!activeStream) {
+    throw new Error("Camera stream is not active");
+  }
+
+  const track = activeStream.getVideoTracks()[0];
+  if (!track || track.readyState !== "live") {
+    throw new Error("Active camera video track not available");
+  }
+
+  if (typeof window.ImageCapture === "undefined") {
+    throw new Error("ImageCapture API not supported on this browser. Please use the upload file button.");
+  }
+
+  const capturer = new window.ImageCapture(track);
+  const photoBlob = await capturer.takePhoto();
+
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(photoBlob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try {
+        resolve(cropImageToLetter(img, rotationAngle));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to decode sensor photo"));
+    };
+    img.src = url;
+  });
+}
+
+/**
+ * Loads a selected image file into an Image element and crops to 8.5:11 at natural resolution.
  * @param {File} file 
  * @param {number} rotationAngle 
  * @returns {Promise<{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }>}
@@ -160,7 +195,7 @@ export function processUploadedFile(file, rotationAngle = 0) {
       const img = new Image();
       img.onload = () => {
         try {
-          resolve(captureFrame(img, rotationAngle));
+          resolve(cropImageToLetter(img, rotationAngle));
         } catch (err) {
           reject(err);
         }
@@ -283,7 +318,7 @@ export function initAdjuster(imgEl, containerEl) {
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (adjusterState.initialPinchDist > 0) {
         const factor = dist / adjusterState.initialPinchDist;
-        adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.initialScale * factor));
+        adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.scale * factor));
         imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
       }
     }
@@ -312,8 +347,7 @@ export function initAdjuster(imgEl, containerEl) {
 }
 
 /**
- * Extracts the 8.5:11 framed viewport slice from the preview image at high natural resolution (~250 DPI: 2125x2750).
- * Preserves crisp character edges for uploaded images.
+ * Extracts the 8.5:11 framed viewport slice from the preview image at natural resolution.
  * @param {HTMLImageElement} imgEl 
  * @param {HTMLElement} containerEl 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
@@ -326,8 +360,9 @@ export function captureAdjustedFrame(imgEl, containerEl) {
     throw new Error("Invalid framing dimensions");
   }
 
-  const targetW = 2125;
-  const targetH = 2750; // 8.5:11 aspect ratio (~250 DPI)
+  // Preserve natural image dimensions for 8.5:11 target crop
+  const targetW = imgEl.naturalWidth >= 1700 ? Math.round(imgEl.naturalWidth) : 2125;
+  const targetH = Math.round(targetW / (8.5 / 11));
   const finalCanvas = document.createElement("canvas");
   finalCanvas.width = targetW;
   finalCanvas.height = targetH;
@@ -362,7 +397,7 @@ export function captureAdjustedFrame(imgEl, containerEl) {
   ctx.drawImage(imgEl, -drawnW / 2, -drawnH / 2, drawnW, drawnH);
   ctx.restore();
 
-  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.92);
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.95);
 
   const thumbCanvas = document.createElement("canvas");
   const thumbScale = 160 / Math.max(targetW, targetH);
