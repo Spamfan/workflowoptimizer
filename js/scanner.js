@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.6)
+// Workflow Optimizer - js/scanner.js (v0.0.7)
 // Mobile Camera Viewfinder, Touch Pan/Zoom Adjuster & Frame Capture
 
-export const SCANNER_VERSION = "v0.0.6";
+export const SCANNER_VERSION = "v0.0.7";
 
 let activeStream = null;
 
@@ -18,7 +18,7 @@ export function triggerHaptic(ms = 20) {
 }
 
 /**
- * Initializes and starts the camera stream on the target video element.
+ * Initializes and starts the camera stream on the target video element with high resolution & autofocus.
  * @param {HTMLVideoElement} videoEl 
  * @returns {Promise<MediaStream>}
  */
@@ -29,8 +29,8 @@ export async function startCamera(videoEl) {
     audio: false,
     video: {
       facingMode: { ideal: "environment" },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
+      width: { ideal: 3840 },
+      height: { ideal: 2160 }
     }
   };
 
@@ -39,6 +39,19 @@ export async function startCamera(videoEl) {
     videoEl.srcObject = activeStream;
     videoEl.setAttribute("playsinline", "true");
     await videoEl.play();
+
+    // Request continuous autofocus if supported by device hardware
+    const track = activeStream.getVideoTracks()[0];
+    if (track && typeof track.applyConstraints === "function") {
+      try {
+        await track.applyConstraints({
+          advanced: [{ focusMode: "continuous" }]
+        });
+      } catch (_) {
+        // Continuous focus constraint rejected or unsupported; proceed with native defaults
+      }
+    }
+
     return activeStream;
   } catch (err) {
     console.error("Camera access failed:", err);
@@ -61,7 +74,7 @@ export function stopCamera(videoEl) {
 }
 
 /**
- * Crops image/video frame strictly to 8.5:11 (US Letter portrait) aspect ratio.
+ * Crops image/video frame strictly to 8.5:11 (US Letter portrait) aspect ratio at high resolution.
  * @param {HTMLVideoElement|HTMLImageElement} sourceEl 
  * @param {number} rotationAngle 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
@@ -90,31 +103,37 @@ export function captureFrame(sourceEl, rotationAngle = 0) {
   const sx = (sw - cropW) / 2;
   const sy = (sh - cropH) / 2;
 
-  // Offscreen unrotated canvas
+  // Scale up to high-density target canvas (~200 DPI minimum: 1700x2200) to preserve text sharpness
+  const minTargetW = 1700;
+  const destW = Math.max(cropW, minTargetW);
+  const destH = Math.round(destW / targetRatio);
+
   const offCanvas = document.createElement("canvas");
-  offCanvas.width = cropW;
-  offCanvas.height = cropH;
+  offCanvas.width = destW;
+  offCanvas.height = destH;
   const offCtx = offCanvas.getContext("2d");
-  offCtx.drawImage(sourceEl, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = "high";
+  offCtx.drawImage(sourceEl, sx, sy, cropW, cropH, 0, 0, destW, destH);
 
   // Output canvas handling optional rotation
   const rads = (rotationAngle * Math.PI) / 180;
   const isPerpendicular = rotationAngle === 90 || rotationAngle === 270;
   const finalCanvas = document.createElement("canvas");
-  finalCanvas.width = isPerpendicular ? cropH : cropW;
-  finalCanvas.height = isPerpendicular ? cropW : cropH;
+  finalCanvas.width = isPerpendicular ? destH : destW;
+  finalCanvas.height = isPerpendicular ? destW : destH;
 
   const fCtx = finalCanvas.getContext("2d");
   if (rotationAngle !== 0) {
     fCtx.translate(finalCanvas.width / 2, finalCanvas.height / 2);
     fCtx.rotate(rads);
-    fCtx.drawImage(offCanvas, -cropW / 2, -cropH / 2);
+    fCtx.drawImage(offCanvas, -destW / 2, -destH / 2);
   } else {
     fCtx.drawImage(offCanvas, 0, 0);
   }
 
   // High-res JPEG for OCR
-  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.90);
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.92);
 
   // Compact thumbnail for review metadata card
   const thumbCanvas = document.createElement("canvas");
@@ -293,7 +312,8 @@ export function initAdjuster(imgEl, containerEl) {
 }
 
 /**
- * Extracts the 8.5:11 framed viewport slice from the preview image at natural resolution.
+ * Extracts the 8.5:11 framed viewport slice from the preview image at high natural resolution (~250 DPI: 2125x2750).
+ * Preserves crisp character edges for uploaded images.
  * @param {HTMLImageElement} imgEl 
  * @param {HTMLElement} containerEl 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
@@ -306,8 +326,8 @@ export function captureAdjustedFrame(imgEl, containerEl) {
     throw new Error("Invalid framing dimensions");
   }
 
-  const targetW = 1275;
-  const targetH = 1650; // 8.5:11 aspect ratio
+  const targetW = 2125;
+  const targetH = 2750; // 8.5:11 aspect ratio (~250 DPI)
   const finalCanvas = document.createElement("canvas");
   finalCanvas.width = targetW;
   finalCanvas.height = targetH;
@@ -315,6 +335,8 @@ export function captureAdjustedFrame(imgEl, containerEl) {
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, targetW, targetH);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   const containerRatio = frameRect.width / frameRect.height;
   const imgRatio = imgEl.naturalWidth / imgEl.naturalHeight;
@@ -340,7 +362,7 @@ export function captureAdjustedFrame(imgEl, containerEl) {
   ctx.drawImage(imgEl, -drawnW / 2, -drawnH / 2, drawnW, drawnH);
   ctx.restore();
 
-  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.90);
+  const fullDataUrl = finalCanvas.toDataURL("image/jpeg", 0.92);
 
   const thumbCanvas = document.createElement("canvas");
   const thumbScale = 160 / Math.max(targetW, targetH);

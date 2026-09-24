@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.5)
+// Workflow Optimizer - js/ocr.js (v0.0.6)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.5";
+export const OCR_VERSION = "v0.0.6";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -36,8 +36,8 @@ export function getLevenshtein(a, b) {
 }
 
 /**
- * Preprocesses a canvas image for OCR: Grayscale conversion + Contrast Stretching + Adaptive Binarization.
- * Dramatically improves Tesseract character recognition under uneven retail store lighting.
+ * Preprocesses a canvas image for OCR: Perceptual Grayscale + Continuous Linear Contrast Stretching.
+ * Preserves font anti-aliasing and character edge fidelity for Tesseract.js.
  * @param {HTMLCanvasElement} sourceCanvas 
  * @returns {HTMLCanvasElement}
  */
@@ -68,16 +68,14 @@ export function preprocessOcrCanvas(sourceCanvas) {
     if (gray > maxLum) maxLum = gray;
   }
 
-  // 2. Contrast normalization & dynamic thresholding
+  // 2. Non-destructive continuous contrast stretching
   const range = (maxLum - minLum) || 1;
-  const threshold = minLum + (range * 0.52); // Bias slightly toward darker text
 
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    const normalized = ((grayValues[p] - minLum) * 255) / range;
-    const finalVal = normalized < (threshold * 255 / (maxLum || 255)) ? 0 : 255;
-    data[i] = finalVal;
-    data[i + 1] = finalVal;
-    data[i + 2] = finalVal;
+    const stretched = Math.round(((grayValues[p] - minLum) * 255) / range);
+    data[i] = stretched;
+    data[i + 1] = stretched;
+    data[i + 2] = stretched;
     // Alpha remains untouched
   }
 
@@ -95,11 +93,11 @@ export function parseReportHeader(text) {
   let store = null;
 
   // Resilient carrier regex matching OCR misreads (e.g. AI&T, AT&I, Verlzon)
-  if (/Carrier\s*[-–:]\s*(?:AT&?T|AI&?T|ATT|AT\s*T)\b/i.test(text)) {
+  if (/Carrier\s*[-–:]\s*(?:AT&?T|AI&?T|ATT|AT\s*T)/i.test(text)) {
     carrier = 'att';
-  } else if (/Carrier\s*[-–:]\s*T[- ]?Mobile\b/i.test(text)) {
+  } else if (/Carrier\s*[-–:]\s*T[- ]?Mobile/i.test(text)) {
     carrier = 'tmo';
-  } else if (/Carrier\s*[-–:]\s*(?:Verizon|Verlzon|VZW)\b/i.test(text)) {
+  } else if (/Carrier\s*[-–:]\s*(?:Verizon|Verlzon|VZW)/i.test(text)) {
     carrier = 'vzw';
   }
 
@@ -153,7 +151,7 @@ export function parseReportRows(text, statsData = {}) {
     const qty = parseInt(qtyStr, 10) || 1;
     const leftover = line.replace(/([0-9SOlIB|]+)\s*Available.*/i, "").trim();
 
-    const capMatch = leftover.match(/\b(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08)|(?:68|08|G8|6B))\b/i);
+    const capMatch = leftover.match(/(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08)|(?:68|08|G8|6B))/i);
     if (!capMatch) {
       lastOcrTelemetry.lineLogs.push({
         line,
@@ -171,8 +169,8 @@ export function parseReportRows(text, statsData = {}) {
     let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
 
     // Model name cleanup and OCR spacing repair
-    modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
-    modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
+    modelRaw = modelRaw.replace(/^Phone/i, "iPhone");
+    modelRaw = modelRaw.replace(/(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/[:|,\-_]+$/g, "").trim();
@@ -278,7 +276,7 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
     throw new Error("Tesseract.js is not loaded");
   }
 
-  // Apply automatic canvas contrast and binarization preprocessing if source is a canvas
+  // Apply automatic canvas contrast stretching if source is a canvas
   let inputSource = imageSource;
   if (imageSource instanceof HTMLCanvasElement) {
     try {

@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.16)
+// Prototype Blue - js/app.js (v0.0.17)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
@@ -13,8 +13,8 @@ import {
   setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.6';
-import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.5';
+} from './scanner.js?v=0.0.7';
+import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.6';
 import {
   getStagedData,
   getStagedInventoryPayload,
@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.16";
+export const APP_VERSION = "v0.0.17";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -754,7 +754,7 @@ function initPairingModal() {
           Scan this Code 128 barcode using your handheld scanner, or copy/paste the code below.
         </p>
 
-        <div id="pairing-barcode-container" style="margin: 12px 0; background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid #e1e4e8;"></div>
+        <div id="pairing-barcode-container" style="margin: 12px 0; background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid #e1e4e8; min-height: 100px; display: flex; align-items: center; justify-content: center;"></div>
 
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;">
           <code id="pairing-code-text" style="font-size: 0.95rem; font-weight: 700; background: #f0f2f5; padding: 6px 12px; border-radius: 6px; letter-spacing: 1px;"></code>
@@ -763,7 +763,7 @@ function initPairingModal() {
 
         <div style="margin-top: 16px; border-top: 1px solid #e1e4e8; padding-top: 16px; text-align: left;">
           <label style="font-size: 0.78rem; font-weight: 700; color: #4b5563; display: block; margin-bottom: 4px;">
-            Pair this Terminal (Scan with handheld scanner or paste code):
+            Pair this Terminal (Scan with handheld scanner or paste key):
           </label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="input-pairing-manual" class="row-input" placeholder="Scan barcode or paste key..." style="flex: 1;">
@@ -793,7 +793,7 @@ function initPairingModal() {
       btnCopy.addEventListener('click', async () => {
         const textEl = modalEl.querySelector('#pairing-code-text');
         const code = textEl ? textEl.textContent.trim() : '';
-        if (code) {
+        if (code && code !== 'UNPAIRED') {
           try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
               await navigator.clipboard.writeText(code);
@@ -858,21 +858,41 @@ function initPairingModal() {
 
 function refreshPairingDisplay() {
   const modalEl = initPairingModal();
-  let key = getStoreKey(currentStore);
-  if (!key) {
-    key = generateStoreKey();
-    setStoreKey(currentStore, key);
-  }
+  const key = getStoreKey(currentStore);
 
   const barcodeContainer = modalEl.querySelector('#pairing-barcode-container');
   const codeText = modalEl.querySelector('#pairing-code-text');
   const manualInput = modalEl.querySelector('#input-pairing-manual');
+  const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
 
-  if (codeText) codeText.textContent = key;
   if (manualInput) manualInput.value = '';
 
-  if (barcodeContainer) {
-    barcodeContainer.innerHTML = renderCode128Svg(key, { barWidth: 2.2, height: 80, quietZone: 25 });
+  if (key) {
+    if (codeText) {
+      codeText.textContent = key;
+      codeText.style.color = '#111827';
+    }
+    if (btnCopy) btnCopy.disabled = false;
+    if (barcodeContainer) {
+      barcodeContainer.innerHTML = renderCode128Svg(key, { barWidth: 2.2, height: 80, quietZone: 25 });
+    }
+  } else {
+    if (codeText) {
+      codeText.textContent = 'UNPAIRED';
+      codeText.style.color = '#dc2626';
+    }
+    if (btnCopy) btnCopy.disabled = true;
+    if (barcodeContainer) {
+      barcodeContainer.innerHTML = `
+        <div style="padding: 20px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
+          <strong>⚠️ Terminal Not Paired</strong><br>
+          <span style="color: #6b7280; font-size: 0.78rem;">
+            No Store Key enrolled for Store ${currentStore || '--'}.<br>
+            Scan barcode from your paired mobile phone or enter key below.
+          </span>
+        </div>
+      `;
+    }
   }
 }
 
@@ -894,7 +914,7 @@ function ensurePairingButtonOnDashboard() {
     btnPair.className = 'btn-pill secondary';
     btnPair.style.display = 'inline-flex';
     btnPair.style.marginTop = '12px';
-    btnPair.textContent = 'Pair Devices / Store Key';
+    btnPair.textContent = '🔑 Store Key / Pair Terminal';
     btnPair.addEventListener('click', openPairingModal);
 
     const btnContainer = dashboardCard.querySelector('.dashboard-button-deck') || dashboardCard;
