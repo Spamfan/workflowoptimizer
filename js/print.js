@@ -1,6 +1,9 @@
-// Prototype Blue - js/print.js (v0.0.1)
+// Prototype Blue - js/print.js (v0.0.2)
+// Print Inventory Engine & Session Overrides Persistence
 
-export const PRINT_VERSION = "v0.0.1";
+import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.1';
+
+export const PRINT_VERSION = "v0.0.2";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
@@ -12,46 +15,42 @@ let hiddenItemKeys = new Set();
 let manualHighlights = {}; // key -> 'partial' | 'full'
 let quantityOverrides = {}; // key -> qty
 
-// Centralized Encapsulated Data Loaders
-export async function fetchCatalog() {
-  if (catalogData) return catalogData;
+const getSessionOverrideKey = (store) => `wfo_print_overrides_${store || 'default'}`;
+
+function saveSessionOverrides() {
+  if (!activeStore) return;
   try {
-    const res = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
-      headers: { 'Accept': 'application/vnd.github.v3+json' },
-      cache: 'no-store'
-    });
-    if (!res.ok) throw new Error('API ' + res.status);
-    const raw = await res.json();
-    const decoded = decodeURIComponent(escape(atob(raw.content.replace(/\s/g, ''))));
-    catalogData = JSON.parse(decoded);
-  } catch (err) {
-    const localRes = await fetch('./stats.json?t=' + Date.now());
-    if (localRes.ok) {
-      catalogData = await localRes.json();
-    }
-  }
-  return catalogData || { devices: {}, colors: {} };
+    const payload = {
+      hidden: Array.from(hiddenItemKeys),
+      highlights: manualHighlights,
+      qtyOverrides: quantityOverrides,
+      comment: shiftComment,
+      isEdited: isDocumentEdited
+    };
+    sessionStorage.setItem(getSessionOverrideKey(activeStore), JSON.stringify(payload));
+  } catch (_) {}
 }
 
-export async function fetchStoreInventory(storeNum) {
+function loadSessionOverrides(store) {
   try {
-    const res = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stocks.json', {
-      headers: { 'Accept': 'application/vnd.github.v3+json' },
-      cache: 'no-store'
-    });
-    if (!res.ok) throw new Error('API ' + res.status);
-    const raw = await res.json();
-    const decoded = decodeURIComponent(escape(atob(raw.content.replace(/\s/g, ''))));
-    const data = JSON.parse(decoded);
-    return data.stores && data.stores[storeNum] ? data.stores[storeNum] : null;
-  } catch (err) {
-    const localRes = await fetch('./stocks.json?t=' + Date.now());
-    if (localRes.ok) {
-      const data = await localRes.json();
-      return data.stores && data.stores[storeNum] ? data.stores[storeNum] : null;
-    }
+    const raw = sessionStorage.getItem(getSessionOverrideKey(store));
+    if (!raw) return false;
+    const p = JSON.parse(raw);
+    hiddenItemKeys = new Set(p.hidden || []);
+    manualHighlights = p.highlights || {};
+    quantityOverrides = p.qtyOverrides || {};
+    shiftComment = p.comment || '';
+    isDocumentEdited = Boolean(p.isEdited);
+    return true;
+  } catch (_) {
+    return false;
   }
-  return null;
+}
+
+function clearSessionOverrides(store) {
+  try {
+    sessionStorage.removeItem(getSessionOverrideKey(store));
+  } catch (_) {}
 }
 
 // Model Normalization & Lookup Index
@@ -174,7 +173,10 @@ export function initPrintEngine() {
       hiddenItemKeys.clear();
       manualHighlights = {};
       quantityOverrides = {};
+      shiftComment = '';
       isDocumentEdited = false;
+      clearSessionOverrides(activeStore);
+      if (commentInput) commentInput.value = '';
       renderPrintDocument();
     });
   }
@@ -186,12 +188,13 @@ export function initPrintEngine() {
   if (commentInput) {
     commentInput.addEventListener('input', (e) => {
       shiftComment = e.target.value;
+      saveSessionOverrides();
       renderPrintDocument();
     });
   }
 }
 
-export async function openPrintPreview(storeNum) {
+export async function openPrintPreview(storeNum, storeSecret = '') {
   activeStore = storeNum;
   currentMode = 'inventory';
   isDocumentEdited = false;
@@ -199,18 +202,32 @@ export async function openPrintPreview(storeNum) {
   manualHighlights = {};
   quantityOverrides = {};
 
-  const sheetContainer = document.getElementById('print-preview-sheet');
-  if (sheetContainer) {
-    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #606770;">Loading catalog and inventory data...</div>';
+  const hasSavedOverrides = loadSessionOverrides(storeNum);
+  const commentInput = document.getElementById('print-comment-input');
+  if (commentInput && hasSavedOverrides) {
+    commentInput.value = shiftComment;
   }
 
-  const [catalog, storeRecord] = await Promise.all([
-    fetchCatalog(),
-    fetchStoreInventory(storeNum)
-  ]);
+  const sheetContainer = document.getElementById('print-preview-sheet');
+  if (sheetContainer) {
+    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #606770;">Loading catalog and decrypting inventory...</div>';
+  }
 
-  catalogData = catalog;
-  storeInventoryData = storeRecord;
+  try {
+    const [catalog, storeRecord] = await Promise.all([
+      fetchCatalog(),
+      fetchStoreInventory(storeNum, storeSecret)
+    ]);
+
+    catalogData = catalog;
+    storeInventoryData = storeRecord;
+  } catch (err) {
+    console.error("Failed to load print preview data:", err);
+    if (sheetContainer) {
+      sheetContainer.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">Error loading inventory: ${err.message}</div>`;
+    }
+    return;
+  }
 
   renderPrintDocument();
 }
@@ -460,6 +477,7 @@ export function renderPrintDocument() {
       if (newVal !== null && !isNaN(parseInt(newVal, 10))) {
         quantityOverrides[uid] = parseInt(newVal, 10);
         isDocumentEdited = true;
+        saveSessionOverrides();
         renderPrintDocument();
       }
     });
@@ -475,6 +493,7 @@ export function renderPrintDocument() {
         hiddenItemKeys.add(uid);
       }
       isDocumentEdited = true;
+      saveSessionOverrides();
       renderPrintDocument();
     });
 
@@ -486,6 +505,7 @@ export function renderPrintDocument() {
       else if (cur === 'partial') manualHighlights[uid] = 'full';
       else delete manualHighlights[uid];
       isDocumentEdited = true;
+      saveSessionOverrides();
       renderPrintDocument();
     });
   });

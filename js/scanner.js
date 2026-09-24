@@ -1,8 +1,21 @@
-// Workflow Optimizer - js/scanner.js (v0.0.5)
+// Workflow Optimizer - js/scanner.js (v0.0.6)
+// Mobile Camera Viewfinder, Touch Pan/Zoom Adjuster & Frame Capture
 
-export const SCANNER_VERSION = "v0.0.5";
+export const SCANNER_VERSION = "v0.0.6";
 
 let activeStream = null;
+
+/**
+ * Triggers subtle device haptic feedback on touch devices if supported.
+ * @param {number} ms 
+ */
+export function triggerHaptic(ms = 20) {
+  try {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(ms);
+    }
+  } catch (_) {}
+}
 
 /**
  * Initializes and starts the camera stream on the target video element.
@@ -54,6 +67,8 @@ export function stopCamera(videoEl) {
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
  */
 export function captureFrame(sourceEl, rotationAngle = 0) {
+  triggerHaptic(25);
+
   const isVideo = sourceEl instanceof HTMLVideoElement;
   const sw = isVideo ? sourceEl.videoWidth : sourceEl.naturalWidth;
   const sh = isVideo ? sourceEl.videoHeight : sourceEl.naturalHeight;
@@ -284,6 +299,8 @@ export function initAdjuster(imgEl, containerEl) {
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
  */
 export function captureAdjustedFrame(imgEl, containerEl) {
+  triggerHaptic(30);
+
   const frameRect = containerEl.getBoundingClientRect();
   if (!frameRect.width || !frameRect.height || !imgEl.naturalWidth || !imgEl.naturalHeight) {
     throw new Error("Invalid framing dimensions");

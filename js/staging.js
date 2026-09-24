@@ -1,6 +1,7 @@
-// Workflow Optimizer - js/staging.js (v0.0.4)
+// Workflow Optimizer - js/staging.js (v0.0.5)
+// Staging Storage & Multi-Page Append Defense Engine
 
-export const STAGING_VERSION = "v0.0.4";
+export const STAGING_VERSION = "v0.0.5";
 export const STAGING_STORAGE_KEY = "wfo_staged_inventory";
 
 export const CARRIERS = [
@@ -63,6 +64,7 @@ export function getStagedData(storeNum = "") {
 
 /**
  * Persists staged state to localStorage.
+ * Enforces storage footprint defense by stripping media blobs.
  * @param {Object} state 
  */
 export function saveStagedData(state) {
@@ -81,6 +83,30 @@ export function saveStagedData(state) {
   } catch (err) {
     console.error("Failed to save staged data:", err);
   }
+}
+
+/**
+ * Returns clean 3-carrier inventory payload compiled for commit.
+ * @param {string} storeNum 
+ * @returns {{ tmo: Array, vzw: Array, att: Array }}
+ */
+export function getStagedInventoryPayload(storeNum = "") {
+  const state = getStagedData(storeNum);
+  return {
+    tmo: state.sheets.tmo ? state.sheets.tmo.items : [],
+    vzw: state.sheets.vzw ? state.sheets.vzw.items : [],
+    att: state.sheets.att ? state.sheets.att.items : []
+  };
+}
+
+/**
+ * Checks if any carrier has staged inventory rows.
+ * @param {string} storeNum 
+ * @returns {boolean}
+ */
+export function hasStagedData(storeNum = "") {
+  const state = getStagedData(storeNum);
+  return Object.values(state.sheets).some(s => s.items && s.items.length > 0);
 }
 
 /**
@@ -111,11 +137,13 @@ export function clearCarrierStaged(storeNum, carrierKey) {
 
 /**
  * Saves a completed scan into the target carrier sheet with optional telemetry.
+ * Supports up to 5-page append merging by Model + Capacity + Color.
  * @param {string} storeNum 
  * @param {string} carrierKey 'tmo' | 'vzw' | 'att'
  * @param {Array} items 
  * @param {string} thumbUrl 
  * @param {Object} telemetry 
+ * @param {'append'|'replace'} mode
  */
 export function commitScanToCarrier(storeNum, carrierKey, items, thumbUrl, telemetry = null, mode = "append") {
   const state = getStagedData(storeNum);

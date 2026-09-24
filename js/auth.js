@@ -1,13 +1,20 @@
-// Prototype Blue - js/auth.js (v0.0.2)
+// Prototype Blue - js/auth.js (v0.0.3)
+// Gatekeeper, In-Memory Session & Store PIN Validation
 
-export const AUTH_VERSION = "v0.0.2";
+export const AUTH_VERSION = "v0.0.3";
 
 const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
 const MASTER_PIN = atob('MTAyMDMw');   // "102030"
 
+let currentSessionPin = '';
+
 export function isValidAuth(store, pin) {
   if (!store) return false;
   return pin === (store + SECRET_SUFFIX) || pin === MASTER_PIN;
+}
+
+export function getSessionPin() {
+  return currentSessionPin;
 }
 
 export function getSavedStore() {
@@ -19,6 +26,7 @@ export function saveStore(storeVal) {
 }
 
 export function logout() {
+  currentSessionPin = '';
   window.location.reload();
 }
 
@@ -41,7 +49,8 @@ export function initAuth({ onSuccess }) {
     if (isValidAuth(storeVal, pinVal)) {
       pinError.style.display = 'none';
       saveStore(storeVal);
-      if (typeof onSuccess === 'function') onSuccess(storeVal);
+      currentSessionPin = pinVal;
+      if (typeof onSuccess === 'function') onSuccess(storeVal, pinVal);
     } else {
       pinError.style.display = 'block';
       pinInput.value = '';
@@ -70,7 +79,8 @@ export function initAuth({ onSuccess }) {
       e.target.blur();
       pinError.style.display = 'none';
       saveStore(storeVal);
-      if (typeof onSuccess === 'function') onSuccess(storeVal);
+      currentSessionPin = pinVal;
+      if (typeof onSuccess === 'function') onSuccess(storeVal, pinVal);
     }
   });
 }

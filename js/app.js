@@ -1,7 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.13)
+// Prototype Blue - js/app.js (v0.0.14)
+// Master Router, Unified View Coordinator & Lifecycle Controller
 
-import { initAuth, getSavedStore, logout, AUTH_VERSION } from './auth.js?v=0.0.2';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.1';
+import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.3';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.2';
 import {
   startCamera,
   stopCamera,
@@ -12,10 +13,11 @@ import {
   setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.5';
-import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.3';
+} from './scanner.js?v=0.0.6';
+import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.5';
 import {
   getStagedData,
+  getStagedInventoryPayload,
   commitScanToCarrier,
   updateStagedItem,
   deleteStagedItem,
@@ -25,12 +27,21 @@ import {
   getSessionMedia,
   getNextCarrier,
   STAGING_VERSION
-} from './staging.js?v=0.0.4';
+} from './staging.js?v=0.0.5';
+import {
+  fetchCatalog,
+  commitStoreInventory,
+  getOfflineQueueCount,
+  API_VERSION
+} from './api.js?v=0.0.1';
+import { CRYPTO_VERSION } from './crypto.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.13";
+export const APP_VERSION = "v0.0.14";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
+  "crypto.js": CRYPTO_VERSION,
+  "api.js": API_VERSION,
   "auth.js": AUTH_VERSION,
   "scanner.js": SCANNER_VERSION,
   "ocr.js": OCR_VERSION,
@@ -57,6 +68,7 @@ if (versionText) versionText.textContent = `BLUE ${APP_VERSION}`;
 let currentView = 'login-view';
 let isAuthenticated = false;
 let currentStore = '';
+let currentStoreSecret = '';
 let activeCarrier = 'tmo';
 let cachedStats = null;
 let scannerRotation = 0;
@@ -81,8 +93,13 @@ function updateDashboardStagedButton() {
   if (!btnViewStaged) return;
   const state = getStagedData(currentStore);
   const total = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
+  const offlineCount = getOfflineQueueCount();
+
   if (total > 0) {
-    btnViewStaged.textContent = `View Staged (${total})`;
+    btnViewStaged.textContent = `View Staged (${total})${offlineCount > 0 ? ` • ${offlineCount} Offline` : ''}`;
+    btnViewStaged.style.display = 'inline-flex';
+  } else if (offlineCount > 0) {
+    btnViewStaged.textContent = `${offlineCount} Offline Pending`;
     btnViewStaged.style.display = 'inline-flex';
   } else {
     btnViewStaged.style.display = 'none';
@@ -153,24 +170,9 @@ async function fetchPing() {
   pingStatusEl.textContent = 'Checking...';
 
   try {
-    let data;
-    try {
-      const apiRes = await fetch('https://api.github.com/repos/spamfan/workflowoptimizer/contents/stats.json', {
-        headers: { 'Accept': 'application/vnd.github.v3+json' },
-        cache: 'no-store'
-      });
-      if (!apiRes.ok) throw new Error('API ' + apiRes.status);
-      const rawApi = await apiRes.json();
-      const decodedStr = decodeURIComponent(escape(atob(rawApi.content.replace(/\s/g, ''))));
-      data = JSON.parse(decodedStr);
-    } catch (apiErr) {
-      const localRes = await fetch('./stats.json?t=' + Date.now());
-      if (!localRes.ok) throw new Error('Local ' + localRes.status);
-      data = await localRes.json();
-    }
-
+    const data = await fetchCatalog();
     cachedStats = data;
-    pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'N/A';
+    pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'Connected.';
     pingStatusEl.textContent = 'Refresh complete';
     statusTimer = setTimeout(() => { pingStatusEl.textContent = ''; }, 2000);
   } catch (err) {
@@ -197,7 +199,7 @@ initPrintEngine();
 if (btnPrintInv) {
   btnPrintInv.addEventListener('click', () => {
     switchView('print-view');
-    openPrintPreview(currentStore);
+    openPrintPreview(currentStore, currentStoreSecret);
   });
 }
 
@@ -728,15 +730,16 @@ if (ocrDebugModal) {
   });
 }
 
-// GitHub REST API Publish Engine (stocks.json)
+// GitHub REST API Publish Engine (stocks.json with AES-GCM Encryption)
 const patModal = document.getElementById('pat-modal');
 const patInput = document.getElementById('pat-input');
 const btnPatCancel = document.getElementById('btn-pat-cancel');
 const btnPatSave = document.getElementById('btn-pat-save');
 
 async function publishAllToGitHub() {
-  const state = getStagedData(currentStore);
-  const totalItems = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
+  const inventoryPayload = getStagedInventoryPayload(currentStore);
+  const totalItems = Object.values(inventoryPayload).reduce((sum, list) => sum + list.length, 0);
+
   if (totalItems === 0) {
     alert('No staged items to publish.');
     return;
@@ -751,81 +754,25 @@ async function publishAllToGitHub() {
 
   if (btnPublishAll) {
     btnPublishAll.disabled = true;
-    btnPublishAll.textContent = 'Publishing...';
+    btnPublishAll.textContent = 'Encrypting & Publishing...';
   }
 
   try {
-    const owner = 'spamfan';
-    const repo = 'workflowoptimizer';
-    const path = 'stocks.json';
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-    let sha = null;
-    let existingData = { stores: {} };
-
-    const getRes = await fetch(url, {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${pat}`
-      },
-      cache: 'no-store'
+    const res = await commitStoreInventory({
+      storeNum: currentStore,
+      inventoryObj: inventoryPayload,
+      pat,
+      storeSecret: currentStoreSecret || getSessionPin(),
+      encrypt: true
     });
 
-    if (getRes.ok) {
-      const fileJson = await getRes.json();
-      sha = fileJson.sha;
-      const decoded = decodeURIComponent(escape(atob(fileJson.content.replace(/\s/g, ''))));
-      existingData = JSON.parse(decoded);
-      if (!existingData.stores) existingData.stores = {};
-    } else if (getRes.status === 404) {
-      existingData = { stores: {} };
-    } else if (getRes.status === 401) {
-      localStorage.removeItem('wfo_admin_pat');
-      throw new Error('Invalid GitHub PAT. Please re-enter.');
-    } else {
-      throw new Error(`GitHub API error: ${getRes.status}`);
-    }
-
-    existingData.stores[currentStore] = {
-      lastUpdated: new Date().toISOString(),
-      inventory: {
-        tmo: state.sheets.tmo ? state.sheets.tmo.items : [],
-        vzw: state.sheets.vzw ? state.sheets.vzw.items : [],
-        att: state.sheets.att ? state.sheets.att.items : []
-      }
-    };
-
-    const contentStr = JSON.stringify(existingData, null, 2);
-    const contentB64 = btoa(unescape(encodeURIComponent(contentStr)));
-
-    const bodyPayload = {
-      message: `Update stocks.json for Store ${currentStore}`,
-      content: contentB64
-    };
-    if (sha) bodyPayload.sha = sha;
-
-    const putRes = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${pat}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(bodyPayload)
-    });
-
-    if (!putRes.ok) {
-      const errJson = await putRes.json().catch(() => ({}));
-      throw new Error(`Commit failed (${putRes.status}): ${errJson.message || putRes.statusText}`);
-    }
-
-    alert(`Successfully published inventory for Store ${currentStore} to stocks.json!`);
+    alert(`Success: ${res.message}`);
     clearAllStaged(currentStore);
     renderReview(activeCarrier);
     updateDashboardStagedButton();
   } catch (err) {
-    alert('Publish failed: ' + err.message);
-    if (err.message.includes('Invalid GitHub PAT')) {
+    alert('Publish status: ' + err.message);
+    if (err.message.includes('Invalid or expired GitHub Personal Access Token')) {
       if (patInput) patInput.value = '';
       openModal(patModal);
     }
@@ -874,8 +821,10 @@ window.addEventListener('keydown', (e) => {
 
 // Bootstrap
 initAuth({
-  onSuccess: (storeVal) => {
+  onSuccess: (storeVal, pinVal) => {
     isAuthenticated = true;
+    currentStore = storeVal;
+    currentStoreSecret = pinVal;
     cardPrintTitle.textContent = `Print inventory (${storeVal})`;
     switchView('dashboard-view');
     fetchPing();
