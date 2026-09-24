@@ -1,10 +1,10 @@
-// Prototype Blue - js/print.js (v0.0.3)
-// Print Inventory Engine & Session Overrides Persistence
+// Prototype Blue - js/print.js (v0.0.4)
+// Print Inventory Engine & Store-Key Decryption Integration
 
-import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.2';
-import { getSessionPin, AUTH_VERSION } from './auth.js?v=0.0.4';
+import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.3';
+import { getStoreKey, hasStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
 
-export const PRINT_VERSION = "v0.0.3";
+export const PRINT_VERSION = "v0.0.4";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
@@ -214,7 +214,7 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
     sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #606770;">Loading catalog and decrypting inventory...</div>';
   }
 
-  const effectiveSecret = storeSecret || getSessionPin();
+  const effectiveSecret = storeSecret || getStoreKey(storeNum);
 
   try {
     const [catalog, storeRecord] = await Promise.all([
@@ -227,7 +227,20 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   } catch (err) {
     console.error("Failed to load print preview data:", err);
     if (sheetContainer) {
-      sheetContainer.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">Error loading inventory: ${err.message}</div>`;
+      sheetContainer.innerHTML = `
+        <div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">
+          <p style="font-weight: 700; margin-bottom: 8px;">Error loading inventory:</p>
+          <p style="margin-bottom: 16px;">${err.message}</p>
+          <button id="btn-print-pair-prompt" class="btn-pill secondary" style="margin: 0 auto; display: inline-flex;">Pair Device / Enter Store Key</button>
+        </div>
+      `;
+      const btnPair = document.getElementById('btn-print-pair-prompt');
+      if (btnPair) {
+        btnPair.addEventListener('click', () => {
+          const pairModal = document.getElementById('pairing-modal');
+          if (pairModal) pairModal.style.display = 'flex';
+        });
+      }
     }
     return;
   }

@@ -1,17 +1,24 @@
-// Prototype Blue - js/auth.js (v0.0.4)
-// Gatekeeper, In-Memory Session & Store PIN Validation
+// Prototype Blue - js/auth.js (v0.0.5)
+// Gatekeeper & Strict Store PIN Validation (Master PIN Retired)
 
-export const AUTH_VERSION = "v0.0.4";
+export const AUTH_VERSION = "v0.0.5";
 
 const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
-const MASTER_PIN = atob('MTAyMDMw');   // "102030"
 const SESSION_PIN_KEY = "wfo_session_pin";
 
 let currentSessionPin = '';
 
+/**
+ * Validates store authentication.
+ * Enforces strictly: PIN must equal store number + "1020".
+ * Master PIN 102030 is permanently retired.
+ * @param {string} store 
+ * @param {string} pin 
+ * @returns {boolean}
+ */
 export function isValidAuth(store, pin) {
-  if (!store) return false;
-  return pin === (store + SECRET_SUFFIX) || pin === MASTER_PIN;
+  if (!store || !pin) return false;
+  return pin === (store + SECRET_SUFFIX);
 }
 
 export function getSessionPin() {

@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.15)
+// Prototype Blue - js/app.js (v0.0.16)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
-import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.4';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.3';
+import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.4';
 import {
   startCamera,
   stopCamera,
@@ -33,13 +33,21 @@ import {
   commitStoreInventory,
   getOfflineQueueCount,
   API_VERSION
-} from './api.js?v=0.0.2';
-import { CRYPTO_VERSION } from './crypto.js?v=0.0.1';
+} from './api.js?v=0.0.3';
+import {
+  getStoreKey,
+  setStoreKey,
+  generateStoreKey,
+  hasStoreKey,
+  CRYPTO_VERSION
+} from './crypto.js?v=0.0.2';
+import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.15";
+export const APP_VERSION = "v0.0.16";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
+  "barcode.js": BARCODE_VERSION,
   "crypto.js": CRYPTO_VERSION,
   "api.js": API_VERSION,
   "auth.js": AUTH_VERSION,
@@ -199,8 +207,7 @@ initPrintEngine();
 if (btnPrintInv) {
   btnPrintInv.addEventListener('click', () => {
     switchView('print-view');
-    const effectiveSecret = currentStoreSecret || getSessionPin();
-    openPrintPreview(currentStore, effectiveSecret);
+    openPrintPreview(currentStore, getStoreKey(currentStore));
   });
 }
 
@@ -731,6 +738,170 @@ if (ocrDebugModal) {
   });
 }
 
+// Store Key Pairing Modal & Code 128 Barcode Engine
+function initPairingModal() {
+  let modalEl = document.getElementById('pairing-modal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'pairing-modal';
+    modalEl.className = 'modal-overlay';
+    modalEl.style.display = 'none';
+
+    modalEl.innerHTML = `
+      <div class="modal-card" style="max-width: 480px; text-align: center; padding: 24px;">
+        <h3 style="margin-top: 0; margin-bottom: 6px;">Device Pairing & Store Key</h3>
+        <p style="font-size: 0.82rem; color: #606770; margin-bottom: 16px;">
+          Scan this Code 128 barcode using your handheld scanner, or copy/paste the code below.
+        </p>
+
+        <div id="pairing-barcode-container" style="margin: 12px 0; background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid #e1e4e8;"></div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;">
+          <code id="pairing-code-text" style="font-size: 0.95rem; font-weight: 700; background: #f0f2f5; padding: 6px 12px; border-radius: 6px; letter-spacing: 1px;"></code>
+          <button id="btn-copy-pairing-code" class="btn-pill secondary" style="padding: 6px 14px; font-size: 0.8rem;">Copy</button>
+        </div>
+
+        <div style="margin-top: 16px; border-top: 1px solid #e1e4e8; padding-top: 16px; text-align: left;">
+          <label style="font-size: 0.78rem; font-weight: 700; color: #4b5563; display: block; margin-bottom: 4px;">
+            Pair this Terminal (Scan with handheld scanner or paste code):
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="input-pairing-manual" class="row-input" placeholder="Scan barcode or paste key..." style="flex: 1;">
+            <button id="btn-save-pairing-manual" class="btn-pill primary" style="padding: 6px 16px;">Save</button>
+          </div>
+          <p id="pairing-status-msg" style="font-size: 0.78rem; margin-top: 6px; display: none;"></p>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <button id="btn-generate-new-key" class="btn-pill danger" style="font-size: 0.75rem; padding: 6px 12px;">Generate New Key</button>
+          <button id="btn-close-pairing-modal" class="btn-pill secondary">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modalEl);
+
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) closeModal(modalEl);
+    });
+
+    const btnClose = modalEl.querySelector('#btn-close-pairing-modal');
+    if (btnClose) btnClose.addEventListener('click', () => closeModal(modalEl));
+
+    const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
+    if (btnCopy) {
+      btnCopy.addEventListener('click', async () => {
+        const textEl = modalEl.querySelector('#pairing-code-text');
+        const code = textEl ? textEl.textContent.trim() : '';
+        if (code) {
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(code);
+            } else {
+              const ta = document.createElement('textarea');
+              ta.value = code;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+            }
+            btnCopy.textContent = 'Copied!';
+            setTimeout(() => { btnCopy.textContent = 'Copy'; }, 2000);
+          } catch (_) {
+            alert('Failed to copy code');
+          }
+        }
+      });
+    }
+
+    const manualInput = modalEl.querySelector('#input-pairing-manual');
+    const btnSave = modalEl.querySelector('#btn-save-pairing-manual');
+    const statusMsg = modalEl.querySelector('#pairing-status-msg');
+
+    const handleSaveKey = () => {
+      const val = manualInput.value.trim();
+      if (!val) return;
+      setStoreKey(currentStore, val);
+      if (statusMsg) {
+        statusMsg.style.display = 'block';
+        statusMsg.style.color = '#10b981';
+        statusMsg.textContent = '✓ Store Key saved successfully!';
+        setTimeout(() => {
+          closeModal(modalEl);
+          statusMsg.style.display = 'none';
+        }, 1200);
+      }
+      refreshPairingDisplay();
+    };
+
+    if (btnSave) btnSave.addEventListener('click', handleSaveKey);
+    if (manualInput) {
+      manualInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSaveKey();
+      });
+    }
+
+    const btnGen = modalEl.querySelector('#btn-generate-new-key');
+    if (btnGen) {
+      btnGen.addEventListener('click', () => {
+        if (confirm(`Generate a brand new Store Key for Store ${currentStore || '--'}?\n\nWarning: All other devices at this store will need to scan this new barcode to decrypt future reports.`)) {
+          const freshKey = generateStoreKey();
+          setStoreKey(currentStore, freshKey);
+          refreshPairingDisplay();
+        }
+      });
+    }
+  }
+
+  return modalEl;
+}
+
+function refreshPairingDisplay() {
+  const modalEl = initPairingModal();
+  let key = getStoreKey(currentStore);
+  if (!key) {
+    key = generateStoreKey();
+    setStoreKey(currentStore, key);
+  }
+
+  const barcodeContainer = modalEl.querySelector('#pairing-barcode-container');
+  const codeText = modalEl.querySelector('#pairing-code-text');
+  const manualInput = modalEl.querySelector('#input-pairing-manual');
+
+  if (codeText) codeText.textContent = key;
+  if (manualInput) manualInput.value = '';
+
+  if (barcodeContainer) {
+    barcodeContainer.innerHTML = renderCode128Svg(key, { barWidth: 2.2, height: 80, quietZone: 25 });
+  }
+}
+
+export function openPairingModal() {
+  refreshPairingDisplay();
+  const modalEl = document.getElementById('pairing-modal');
+  openModal(modalEl);
+  const input = modalEl.querySelector('#input-pairing-manual');
+  if (input) setTimeout(() => input.focus(), 150);
+}
+
+// Add Pair Device Button to Dashboard Deck
+function ensurePairingButtonOnDashboard() {
+  if (document.getElementById('btn-pair-device')) return;
+  const dashboardCard = document.querySelector('#dashboard-view .card-container');
+  if (dashboardCard) {
+    const btnPair = document.createElement('button');
+    btnPair.id = 'btn-pair-device';
+    btnPair.className = 'btn-pill secondary';
+    btnPair.style.display = 'inline-flex';
+    btnPair.style.marginTop = '12px';
+    btnPair.textContent = 'Pair Devices / Store Key';
+    btnPair.addEventListener('click', openPairingModal);
+
+    const btnContainer = dashboardCard.querySelector('.dashboard-button-deck') || dashboardCard;
+    btnContainer.appendChild(btnPair);
+  }
+}
+
 // GitHub REST API Publish Engine (stocks.json with AES-GCM Encryption)
 const patModal = document.getElementById('pat-modal');
 const patInput = document.getElementById('pat-input');
@@ -759,12 +930,17 @@ async function publishAllToGitHub() {
   }
 
   try {
-    const effectiveSecret = currentStoreSecret || getSessionPin();
+    const storeKey = getStoreKey(currentStore);
+    if (!storeKey) {
+      openPairingModal();
+      throw new Error(`Store Key missing for Store ${currentStore}. Please pair device.`);
+    }
+
     const res = await commitStoreInventory({
       storeNum: currentStore,
       inventoryObj: inventoryPayload,
       pat,
-      storeSecret: effectiveSecret,
+      storeSecret: storeKey,
       encrypt: true
     });
 
@@ -818,6 +994,8 @@ window.addEventListener('keydown', (e) => {
     closeModal(lightboxModal);
     closeModal(ocrDebugModal);
     closeModal(patModal);
+    const pairModal = document.getElementById('pairing-modal');
+    if (pairModal) closeModal(pairModal);
   }
 });
 
@@ -826,8 +1004,9 @@ initAuth({
   onSuccess: (storeVal, pinVal) => {
     isAuthenticated = true;
     currentStore = storeVal;
-    currentStoreSecret = pinVal || getSessionPin();
+    currentStoreSecret = pinVal;
     cardPrintTitle.textContent = `Print inventory (${storeVal})`;
+    ensurePairingButtonOnDashboard();
     switchView('dashboard-view');
     fetchPing();
   }

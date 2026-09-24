@@ -1,10 +1,9 @@
-// Workflow Optimizer - js/api.js (v0.0.2)
+// Workflow Optimizer - js/api.js (v0.0.3)
 // Decoupled GitHub REST API Client & Network Transport Engine
 
-import { encryptStoreData, decryptStoreData, CRYPTO_VERSION } from './crypto.js?v=0.0.1';
-import { getSessionPin, AUTH_VERSION } from './auth.js?v=0.0.4';
+import { encryptStoreData, decryptStoreData, getStoreKey, hasStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
 
-export const API_VERSION = "v0.0.2";
+export const API_VERSION = "v0.0.3";
 
 const REPO_OWNER = 'spamfan';
 const REPO_NAME = 'workflowoptimizer';
@@ -83,7 +82,7 @@ export async function fetchCatalog() {
 }
 
 /**
- * Fetches store inventory and decrypts it using the provided secret key or session PIN.
+ * Fetches store inventory and decrypts it using the provided secret key or local Store Key.
  * @param {string} storeNum 
  * @param {string} [secret] 
  * @returns {Promise<{ lastUpdated: string, inventory: Object }|null>}
@@ -95,7 +94,7 @@ export async function fetchStoreInventory(storeNum, secret = '') {
       return null;
     }
     const rawStore = data.stores[storeNum];
-    const effectiveSecret = secret || getSessionPin();
+    const effectiveSecret = secret || getStoreKey(storeNum);
     return await decryptStoreData(rawStore, storeNum, effectiveSecret);
   } catch (err) {
     console.error(`fetchStoreInventory failed for store ${storeNum}:`, err);
@@ -105,12 +104,12 @@ export async function fetchStoreInventory(storeNum, secret = '') {
 
 /**
  * Commits updated store inventory to stocks.json via GitHub REST API.
- * Automatically encrypts the payload if a secret is provided or available in session.
+ * Encrypts payload using the store's high-entropy Store Key.
  * @param {Object} options
  * @param {string} options.storeNum
  * @param {Object} options.inventoryObj { tmo: [], vzw: [], att: [] }
  * @param {string} options.pat GitHub Personal Access Token
- * @param {string} [options.storeSecret] PIN or store passphrase for encryption
+ * @param {string} [options.storeSecret] Optional explicit key
  * @param {boolean} [options.encrypt] Default true
  * @returns {Promise<{ success: boolean, message: string }>}
  */
@@ -153,7 +152,7 @@ export async function commitStoreInventory({ storeNum, inventoryObj, pat, storeS
     throw new Error(`Network unreachable. Commit queued locally for Store ${storeNum}: ${err.message}`);
   }
 
-  const effectiveSecret = storeSecret || getSessionPin();
+  const effectiveSecret = storeSecret || getStoreKey(storeNum);
   let storeRecord;
   if (encrypt && effectiveSecret) {
     storeRecord = await encryptStoreData(inventoryObj, storeNum, effectiveSecret);
@@ -192,7 +191,6 @@ export async function commitStoreInventory({ storeNum, inventoryObj, pat, storeS
     throw new Error(`Commit failed (${putRes.status}): ${errJson.message || putRes.statusText}`);
   }
 
-  // Remove from offline queue if it was pending
   removeOfflineCommit(storeNum);
 
   return { success: true, message: `Successfully committed Store ${storeNum} inventory.` };
