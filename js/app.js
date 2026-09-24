@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.14)
+// Prototype Blue - js/app.js (v0.0.15)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
-import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.3';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.2';
+import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.4';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.3';
 import {
   startCamera,
   stopCamera,
@@ -33,10 +33,10 @@ import {
   commitStoreInventory,
   getOfflineQueueCount,
   API_VERSION
-} from './api.js?v=0.0.1';
+} from './api.js?v=0.0.2';
 import { CRYPTO_VERSION } from './crypto.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.14";
+export const APP_VERSION = "v0.0.15";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -199,7 +199,8 @@ initPrintEngine();
 if (btnPrintInv) {
   btnPrintInv.addEventListener('click', () => {
     switchView('print-view');
-    openPrintPreview(currentStore, currentStoreSecret);
+    const effectiveSecret = currentStoreSecret || getSessionPin();
+    openPrintPreview(currentStore, effectiveSecret);
   });
 }
 
@@ -758,11 +759,12 @@ async function publishAllToGitHub() {
   }
 
   try {
+    const effectiveSecret = currentStoreSecret || getSessionPin();
     const res = await commitStoreInventory({
       storeNum: currentStore,
       inventoryObj: inventoryPayload,
       pat,
-      storeSecret: currentStoreSecret || getSessionPin(),
+      storeSecret: effectiveSecret,
       encrypt: true
     });
 
@@ -824,7 +826,7 @@ initAuth({
   onSuccess: (storeVal, pinVal) => {
     isAuthenticated = true;
     currentStore = storeVal;
-    currentStoreSecret = pinVal;
+    currentStoreSecret = pinVal || getSessionPin();
     cardPrintTitle.textContent = `Print inventory (${storeVal})`;
     switchView('dashboard-view');
     fetchPing();

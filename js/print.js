@@ -1,9 +1,10 @@
-// Prototype Blue - js/print.js (v0.0.2)
+// Prototype Blue - js/print.js (v0.0.3)
 // Print Inventory Engine & Session Overrides Persistence
 
-import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.1';
+import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.2';
+import { getSessionPin, AUTH_VERSION } from './auth.js?v=0.0.4';
 
-export const PRINT_VERSION = "v0.0.2";
+export const PRINT_VERSION = "v0.0.3";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
@@ -213,10 +214,12 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
     sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #606770;">Loading catalog and decrypting inventory...</div>';
   }
 
+  const effectiveSecret = storeSecret || getSessionPin();
+
   try {
     const [catalog, storeRecord] = await Promise.all([
       fetchCatalog(),
-      fetchStoreInventory(storeNum, storeSecret)
+      fetchStoreInventory(storeNum, effectiveSecret)
     ]);
 
     catalogData = catalog;

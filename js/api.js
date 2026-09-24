@@ -1,9 +1,10 @@
-// Workflow Optimizer - js/api.js (v0.0.1)
+// Workflow Optimizer - js/api.js (v0.0.2)
 // Decoupled GitHub REST API Client & Network Transport Engine
 
 import { encryptStoreData, decryptStoreData, CRYPTO_VERSION } from './crypto.js?v=0.0.1';
+import { getSessionPin, AUTH_VERSION } from './auth.js?v=0.0.4';
 
-export const API_VERSION = "v0.0.1";
+export const API_VERSION = "v0.0.2";
 
 const REPO_OWNER = 'spamfan';
 const REPO_NAME = 'workflowoptimizer';
@@ -82,9 +83,9 @@ export async function fetchCatalog() {
 }
 
 /**
- * Fetches store inventory and decrypts it using the provided secret key.
+ * Fetches store inventory and decrypts it using the provided secret key or session PIN.
  * @param {string} storeNum 
- * @param {string} secret 
+ * @param {string} [secret] 
  * @returns {Promise<{ lastUpdated: string, inventory: Object }|null>}
  */
 export async function fetchStoreInventory(storeNum, secret = '') {
@@ -94,7 +95,8 @@ export async function fetchStoreInventory(storeNum, secret = '') {
       return null;
     }
     const rawStore = data.stores[storeNum];
-    return await decryptStoreData(rawStore, storeNum, secret);
+    const effectiveSecret = secret || getSessionPin();
+    return await decryptStoreData(rawStore, storeNum, effectiveSecret);
   } catch (err) {
     console.error(`fetchStoreInventory failed for store ${storeNum}:`, err);
     throw err;
@@ -103,7 +105,7 @@ export async function fetchStoreInventory(storeNum, secret = '') {
 
 /**
  * Commits updated store inventory to stocks.json via GitHub REST API.
- * Automatically encrypts the payload if a secret is provided.
+ * Automatically encrypts the payload if a secret is provided or available in session.
  * @param {Object} options
  * @param {string} options.storeNum
  * @param {Object} options.inventoryObj { tmo: [], vzw: [], att: [] }
@@ -151,9 +153,10 @@ export async function commitStoreInventory({ storeNum, inventoryObj, pat, storeS
     throw new Error(`Network unreachable. Commit queued locally for Store ${storeNum}: ${err.message}`);
   }
 
+  const effectiveSecret = storeSecret || getSessionPin();
   let storeRecord;
-  if (encrypt && storeSecret) {
-    storeRecord = await encryptStoreData(inventoryObj, storeNum, storeSecret);
+  if (encrypt && effectiveSecret) {
+    storeRecord = await encryptStoreData(inventoryObj, storeNum, effectiveSecret);
   } else {
     storeRecord = {
       encrypted: false,
