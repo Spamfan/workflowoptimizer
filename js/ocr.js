@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.7)
+// Workflow Optimizer - js/ocr.js (v0.0.8)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.7";
+export const OCR_VERSION = "v0.0.8";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -121,13 +121,14 @@ export function parseReportRows(text, statsData = {}) {
     let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
 
     // Model name cleanup and OCR spacing repair
+    modelRaw = modelRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
     modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
     modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
-    modelRaw = modelRaw.replace(/[:|,\-_]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
 
-    // Fuzzy & prefix matching against canonical devices
+    // Safe tiered matching against canonical devices
     const calcCandidateDist = (raw, target) => {
       if (!raw || !target) return { dist: Infinity, matchLen: 0 };
       const r = raw.toLowerCase().trim();
@@ -135,13 +136,14 @@ export function parseReportRows(text, statsData = {}) {
       if (r === t) return { dist: 0, matchLen: t.length };
       const isPrefix = r.startsWith(t) && (r.length === t.length || /[\s:|\-_]/.test(r.charAt(t.length)));
       if (isPrefix) return { dist: 0, matchLen: t.length };
+
       const fullDist = getLevenshtein(r, t);
-      let prefixDist = Infinity;
-      if (r.length > t.length) {
-        const slice = r.substring(0, t.length).trim();
-        prefixDist = getLevenshtein(slice, t);
+      // Dynamic ceiling: short names (<6) require exact match; 6-10 allow 1; >10 allow 2
+      const maxAllowed = t.length < 6 ? 0 : (t.length <= 10 ? 1 : 2);
+      if (fullDist <= maxAllowed) {
+        return { dist: fullDist, matchLen: t.length };
       }
-      return { dist: Math.min(fullDist, prefixDist), matchLen: t.length };
+      return { dist: Infinity, matchLen: 0 };
     };
 
     let model = modelRaw;
@@ -153,21 +155,19 @@ export function parseReportRows(text, statsData = {}) {
       const scoreAbbr = dev.abbr ? calcCandidateDist(modelRaw, dev.abbr) : { dist: Infinity, matchLen: 0 };
       const best = scoreName.dist <= scoreAbbr.dist ? scoreName : scoreAbbr;
       return { name: dev.name, dist: best.dist, matchLen: best.matchLen };
-    }).sort((a, b) => {
+    }).filter(c => c.dist !== Infinity).sort((a, b) => {
       if (a.dist !== b.dist) return a.dist - b.dist;
       return b.matchLen - a.matchLen;
     });
 
     if (candidateDistances.length > 0) {
       lowestDist = candidateDistances[0].dist;
-      if (lowestDist <= 3) {
-        bestMatch = candidateDistances[0].name;
-        model = bestMatch;
-      }
+      bestMatch = candidateDistances[0].name;
+      model = bestMatch;
     }
 
     // Color name cleaning and mapping
-    let cleanColorRaw = colorRaw.replace(/^[:|\-_\s]+|[:|\-_\s]+$/g, "").trim();
+    let cleanColorRaw = colorRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
     if (/^siver$/i.test(cleanColorRaw)) {
       cleanColorRaw = "Silver";
     }
@@ -182,7 +182,7 @@ export function parseReportRows(text, statsData = {}) {
     }
     if (!matchedColorCode && cleanColorRaw) {
       for (const [name, code] of Object.entries(colorsMap)) {
-        if (getLevenshtein(cleanColorRaw, name) <= 1) {
+        if (cleanColorRaw.length > 4 && getLevenshtein(cleanColorRaw, name) <= 1) {
           matchedColorCode = code;
           break;
         }
