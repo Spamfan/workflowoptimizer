@@ -157,7 +157,7 @@ Replace with
 
 ---
 
-## **PART II: ACTIVE ARCHITECTURE & BASELINE (PROTOTYPE BLUE v0.0.16)**
+## **PART II: ACTIVE ARCHITECTURE & BASELINE (PROTOTYPE BLUE v0.0.18)**
 
 ### **A. ACTIVE BASELINE FLOOR (v20 GROUND TRUTH)**
 
@@ -169,7 +169,7 @@ Replace with
 | **`barcode.js`** | `v0.0.1` | Native Vanilla Code 128 (Subset B) SVG Generator |
 | **`crypto.js`** | `v0.0.2` | Web Crypto AES-GCM (256-bit) Engine & Store Key Manager |
 | **`api.js`** | `v0.0.3` | Decoupled GitHub REST API Client & Offline Stash Queue |
-| **`scanner.js`** | `v0.0.8` | Hardware Sensor Photos (`ImageCapture.takePhoto()`), 100% Native 8.5:11 Crop |
+| **`scanner.js`** | `v0.0.9` | Hardware Sensor Photos (`ImageCapture.takePhoto()`), 100% Native 8.5:11 Crop, Linear Touch Pan/Zoom Adjuster |
 | **`ocr.js`** | `v0.0.7` | Tesseract.js Driver, Raw Pristine Intake (Zero Canvas Preprocessing) |
 | **`staging.js`** | `v0.0.5` | Multi-Page Append Engine (Up to 5 Pages) & Storage Defense |
 | **`print.js`** | `v0.0.4` | Store-Key Decrypted Ingestion & `sessionStorage` Overrides |
@@ -296,6 +296,14 @@ Replace with
     * Dedicated dashboard admin control panels and legacy client-side passphrases are permanently retired.
     * Administrative operations (committing `stocks.json` and managing baseline data) are executed headlessly, gated strictly by the Admin PAT (`wfo_admin_pat`) and store-scoped AES-GCM cryptography.
 
+14. **Interactive Touch Pan & Pinch-to-Zoom Framing Engine (`js/scanner.js`):**
+    * **Single-Pointer Pan:** Direct touch translation tracking (`curX`, `curY`) with active pointer capture (`setPointerCapture`) on `#scanner-preview-img`. Panning smoothly updates translation offsets while preserving active rotation and zoom scale.
+    * **Linear Pinch Tracking (Zero Compounding):** Dual-touch pinch magnification is anchored strictly to initial touch distance to prevent exponential compounding:
+      $$\text{scale} = \max(0.5, \min(4.0, \text{initialScale} \times (\text{dist} / \text{initialPinchDist})))$$
+      Compounding frame-by-frame delta multipliers (`scale * factor`) are strictly prohibited to eliminate runaway sensitivity. A minimum distance threshold (`initialPinchDist > 10`) prevents zero-distance division and jitter.
+    * **Touch Release Re-anchoring:** Seamless transition between dual-pointer pinch and single-pointer drag re-anchors `startX`/`startY` against current offsets to prevent visual snapping/jumping.
+    * **Natural Aspect Slice Extraction:** `captureAdjustedFrame` projects user pan/zoom/rotation transforms onto an offscreen canvas matching the 8.5:11 US Letter ratio at 100% natural resolution.
+
 ---
 
 ## **PART IV: FEATURE PIPELINE & ROADMAP**
@@ -303,6 +311,7 @@ Replace with
 * **Module A (Add Inventory / Standardized Report Intake Pipeline) - [COMPLETE / OPERATIONAL BASELINE v0.0.18]:**
   * **Target Input Standard ("Inventory View Report"):** Ingests standardized printed physical reports containing Store # and Carrier in the header (`Carrier - AT&T`, `Carrier - T-Mobile`, `Carrier - Verizon Wireless`) and 4-column tabular inventory data (`Model`, `Capacity`, `Color`, `Quantity Available`). Legacy IRIS screen-scraping logic is permanently decommissioned.
   * **Framed Card Viewfinder:** Centered, bounded camera viewport (`8.5:11` US Letter portrait aspect ratio) with corner reticles and guidance banner (*"Place corners of the viewfinder just within the paper's borders."*). Non-fullscreen interface with centered circular shutter and adjacent upload action.
+  * **Interactive Touch Pan & Pinch-to-Zoom Adjuster:** Direct tactile framing controls on uploaded/captured images (`initAdjuster`). Supports single-finger panning, calibrated non-compounding pinch-to-zoom (`0.5x`–`4.0x`), slider-controlled rotation (`-45°` to `+45°`), and 100% natural-resolution 8.5:11 Letter slice extraction (`captureAdjustedFrame`).
   * **Immediate Review Transition & Auto-Routing:** Tapping capture or selecting a file immediately stops the camera and routes to the Review view in an active analyzing state (`#review-loading-state`). Upon OCR completion, the parser automatically detects the carrier from the sheet header, selects that carrier's tab, commits the extracted items, and displays the staged rows for review.
   * **Multi-Page Append Engine:** LocalStorage append engine supporting up to 5 physical sheets per carrier with Model + Capacity + Color quantity summing as specified in Part III.2.
 
@@ -312,7 +321,7 @@ Replace with
 
 * **Active Sprint Roadmap (Planned & In-Progress):**
   * **Two-Factor Cryptographic Binding (2FA Key Derivation):** Mathematically bind the device Store Key with the employee PIN:
-    $$	ext{Key} = 	ext{PBKDF2}(	ext{Store Key} + 	ext{Store PIN})$$
+    $$\text{Key} = \text{PBKDF2}(\text{Store Key} + \text{Store PIN})$$
     Guarantees that a snooper with only the PIN cannot decrypt on GitHub, and a walk-up snooper on the WMPC cannot decrypt without the employee PIN.
   * **Module C (Stats Editor UI - `js/stats-editor.js`):** Mobile-first Admin CRUD interface for `stats.json`. Visual editing of monthly costs, carrier promotional credits (`BIC`), device aliases, and color code mappings with pre-commit JSON schema validation.
 * **Module E (Bill Estimator - `js/estimator.js`):** Multi-line quote sheet calculating net monthly payments (EDLP minus BIC promo credits) with text quote and customer contact export.
