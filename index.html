@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.0.9">
+  <link rel="stylesheet" href="styles.css?v=0.0.10">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -291,6 +291,39 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.0.13"></script>
+  <!-- STORE KEY / PAIRING MODAL -->
+  <div id="pairing-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card pairing-card">
+      <div class="manifest-header">
+        <h3 class="manifest-title">Device Pairing & Store Key</h3>
+        <span class="manifest-sub">Scan barcode or enter key to enroll station</span>
+      </div>
+
+      <div id="pairing-barcode-container" class="pairing-barcode-box"></div>
+
+      <div class="pairing-code-row">
+        <code id="pairing-code-text" class="pairing-code-pill"></code>
+        <button id="btn-copy-pairing-code" class="pill-btn btn-secondary" style="width: auto; padding: 6px 14px; font-size: 0.8rem;">Copy</button>
+      </div>
+
+      <div class="pairing-input-section">
+        <label class="pairing-input-label">
+          Pair this Terminal (Scan with handheld scanner or paste key):
+        </label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="input-pairing-manual" class="pairing-input" placeholder="Scan barcode or paste key...">
+          <button id="btn-save-pairing-manual" class="pill-btn btn-primary" style="width: auto; padding: 8px 18px;">Save</button>
+        </div>
+        <p id="pairing-status-msg" class="pairing-status-msg" style="display: none;"></p>
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <button id="btn-generate-new-key" class="pill-btn btn-logout" style="font-size: 0.78rem; padding: 8px 14px;">Generate New Key</button>
+        <button id="btn-close-pairing-modal" class="pill-btn btn-secondary" style="width: auto; padding: 8px 18px;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js?v=0.0.19"></script>
 </body>
 </html>
