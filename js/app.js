@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.21";
+export const APP_VERSION = "v0.0.22";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -55,7 +55,7 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
-  "styles.css": "v0.0.10",
+  "styles.css": "v0.0.11",
   "index.html": "v0.0.11"
 };
 
@@ -779,10 +779,44 @@ function initPairingModal() {
   }
   modalEl.dataset.bound = 'true';
 
-  // Backdrop click dismissal
-  modalEl.addEventListener('click', (e) => {
-    if (e.target === modalEl) closeModal(modalEl);
+  // Backdrop click & touch dismissal
+  const handleBackdropDismiss = (e) => {
+    if (e.target === modalEl) {
+      e.preventDefault();
+      closeModal(modalEl);
+    }
+  };
+  modalEl.addEventListener('click', handleBackdropDismiss);
+  modalEl.addEventListener('touchend', (e) => {
+    if (e.target === modalEl) {
+      e.preventDefault();
+      closeModal(modalEl);
+    }
   });
+
+  // Mobile downward swipe-to-dismiss gesture on pairing card
+  const cardEl = modalEl.querySelector('.modal-card') || modalEl.querySelector('.pairing-card');
+  if (cardEl) {
+    let touchStartY = 0;
+    let touchStartX = 0;
+    cardEl.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+      }
+    }, { passive: true });
+
+    cardEl.addEventListener('touchend', (e) => {
+      if (e.changedTouches && e.changedTouches.length === 1) {
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+        // Swiped down >= 80px, predominantly vertical, and card not scrolled
+        if (deltaY >= 80 && deltaX <= 100 && cardEl.scrollTop <= 5) {
+          closeModal(modalEl);
+        }
+      }
+    }, { passive: true });
+  }
 
   // Close button
   const btnClose = modalEl.querySelector('#btn-close-pairing-modal')
@@ -790,16 +824,18 @@ function initPairingModal() {
     || modalEl.querySelector('.btn-close-modal')
     || modalEl.querySelector('.close');
   if (btnClose) {
-    btnClose.addEventListener('click', (e) => {
+    const handleClose = (e) => {
       e.preventDefault();
       closeModal(modalEl);
-    });
+    };
+    btnClose.addEventListener('click', handleClose);
+    btnClose.addEventListener('touchend', handleClose);
   }
 
   // Copy button
   const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
   if (btnCopy) {
-    btnCopy.addEventListener('click', async (e) => {
+    const handleCopy = async (e) => {
       e.preventDefault();
       const textEl = modalEl.querySelector('#pairing-code-text');
       const code = textEl ? textEl.textContent.trim() : '';
@@ -821,6 +857,11 @@ function initPairingModal() {
           alert('Failed to copy code');
         }
       }
+    };
+    btnCopy.addEventListener('click', handleCopy);
+    btnCopy.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleCopy(e);
     });
   }
 
@@ -853,6 +894,10 @@ function initPairingModal() {
       e.preventDefault();
       handleSaveKey();
     });
+    btnSave.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleSaveKey();
+    });
   }
   if (manualInput) {
     manualInput.addEventListener('keydown', (e) => {
@@ -866,13 +911,18 @@ function initPairingModal() {
   // Generate New Key button
   const btnGen = modalEl.querySelector('#btn-generate-new-key');
   if (btnGen) {
-    btnGen.addEventListener('click', (e) => {
+    const handleGen = (e) => {
       e.preventDefault();
       if (confirm(`Generate a brand new Store Key for Store ${currentStore || '--'}?\n\nWarning: All other devices at this store will need to scan this new barcode to decrypt future reports.`)) {
         const freshKey = generateStoreKey();
         setStoreKey(currentStore, freshKey);
         refreshPairingDisplay();
       }
+    };
+    btnGen.addEventListener('click', handleGen);
+    btnGen.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleGen(e);
     });
   }
 
@@ -924,7 +974,11 @@ export function openPairingModal() {
   const modalEl = document.getElementById('pairing-modal');
   openModal(modalEl);
   const input = modalEl.querySelector('#input-pairing-manual');
-  if (input) setTimeout(() => input.focus(), 150);
+  // Only auto-focus on physical desktop/laptop keyboards to prevent virtual keyboard from squishing mobile layout
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (input && !isTouchDevice) {
+    setTimeout(() => input.focus(), 150);
+  }
 }
 
 // GitHub REST API Publish Engine (stocks.json with AES-GCM Encryption)
