@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.11)
+// Workflow Optimizer - js/ocr.js (v0.0.12)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.11";
+export const OCR_VERSION = "v0.0.12";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -35,6 +35,105 @@ export function getLevenshtein(a, b) {
     }
   }
   return m[bl][al];
+}
+
+/**
+ * Preprocesses a canvas using illumination-leveling flat-field correction.
+ * Eliminates soft gradients, hand shadows, and lighting falloff across document.
+ * @param {HTMLCanvasElement} srcCanvas 
+ * @returns {HTMLCanvasElement}
+ */
+export function preprocessCanvasForOcr(srcCanvas) {
+  const w = srcCanvas.width;
+  const h = srcCanvas.height;
+  if (!w || !h) return srcCanvas;
+
+  const outCanvas = document.createElement("canvas");
+  outCanvas.width = w;
+  outCanvas.height = h;
+  const outCtx = outCanvas.getContext("2d");
+  outCtx.drawImage(srcCanvas, 0, 0);
+
+  const imgData = outCtx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  // Grayscale buffer
+  const gray = new Uint8Array(w * h);
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    gray[j] = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+  }
+
+  // Estimate local background illumination using a downscaled grid (~32px blocks)
+  const blockSize = Math.max(16, Math.round(w / 40));
+  const gw = Math.ceil(w / blockSize);
+  const gh = Math.ceil(h / blockSize);
+  const bgGrid = new Float32Array(gw * gh);
+
+  for (let gy = 0; gy < gh; gy++) {
+    const y0 = gy * blockSize;
+    const y1 = Math.min(h, y0 + blockSize);
+    for (let gx = 0; gx < gw; gx++) {
+      const x0 = gx * blockSize;
+      const x1 = Math.min(w, x0 + blockSize);
+      let sum = 0;
+      let count = 0;
+      let maxVal = 0;
+      for (let y = y0; y < y1; y += 2) {
+        const rowOff = y * w;
+        for (let x = x0; x < x1; x += 2) {
+          const val = gray[rowOff + x];
+          if (val > maxVal) maxVal = val;
+          sum += val;
+          count++;
+        }
+      }
+      const avg = count ? sum / count : 200;
+      bgGrid[gy * gw + gx] = Math.max(50, (maxVal * 0.7) + (avg * 0.3));
+    }
+  }
+
+  // Flat-field correction against bilinearly interpolated background
+  for (let y = 0; y < h; y++) {
+    const gy = (y / blockSize) - 0.5;
+    const gy0 = Math.max(0, Math.min(gh - 1, Math.floor(gy)));
+    const gy1 = Math.max(0, Math.min(gh - 1, gy0 + 1));
+    const yf = Math.max(0, Math.min(1, gy - gy0));
+    const rowOff = y * w;
+
+    for (let x = 0; x < w; x++) {
+      const gx = (x / blockSize) - 0.5;
+      const gx0 = Math.max(0, Math.min(gw - 1, Math.floor(gx)));
+      const gx1 = Math.max(0, Math.min(gw - 1, gx0 + 1));
+      const xf = Math.max(0, Math.min(1, gx - gx0));
+
+      const b00 = bgGrid[gy0 * gw + gx0];
+      const b10 = bgGrid[gy0 * gw + gx1];
+      const b01 = bgGrid[gy1 * gw + gx0];
+      const b11 = bgGrid[gy1 * gw + gx1];
+
+      const bgTop = b00 + xf * (b10 - b00);
+      const bgBot = b01 + xf * (b11 - b01);
+      const bg = bgTop + yf * (bgBot - bgTop);
+
+      const pIdx = rowOff + x;
+      const val = gray[pIdx];
+
+      let normalized = (val / bg) * 235;
+      if (normalized < 140) {
+        normalized = Math.max(0, normalized * 0.7);
+      } else {
+        normalized = Math.min(255, 140 + (normalized - 140) * 1.4);
+      }
+
+      const dIdx = pIdx * 4;
+      data[dIdx] = normalized;
+      data[dIdx + 1] = normalized;
+      data[dIdx + 2] = normalized;
+    }
+  }
+
+  outCtx.putImageData(imgData, 0, 0);
+  return outCanvas;
 }
 
 /**
@@ -105,7 +204,8 @@ export function parseReportRows(text, statsData = {}) {
     const qty = parseInt(qtyStr, 10) || 1;
     const leftover = line.replace(/([0-9SOlIB|]+)\s*Available.*/i, "").trim();
 
-    const capMatch = leftover.match(/\b(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08)|(?:68|08|G8|6B))\b/i);
+    // Resilient capacity matching including common OCR misreads (CB, C8, OB, 6B, G8, 68)
+    const capMatch = leftover.match(/\b(8|16|32|64|128|256|512|1024|1|2)(?:\s*(?:GB|TB|Gb|Tb|G8|68|6B|08|CB|C8|OB|8B)|(?:68|08|G8|6B|CB|C8|OB|8B))\b/i);
     if (!capMatch) {
       lastOcrTelemetry.lineLogs.push({
         line,
@@ -125,63 +225,82 @@ export function parseReportRows(text, statsData = {}) {
     // Model name cleanup and OCR spacing repair
     modelRaw = modelRaw.replace(/^[\[\]{}()|~:;\-_.\s]+|[\[\]{}()|~:;\-_.\s]+$/g, "").trim();
     modelRaw = modelRaw.replace(/^(?:ge|ps|at|en|ek|he)\s*[|~:\-_.]*\s*/i, "").trim();
-    modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
+    modelRaw = modelRaw.replace(/\b(?:ot\s*)?Phone\b/gi, "iPhone");
     modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
-    modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
-    modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
+    modelRaw = modelRaw.replace(/\bAira\b/gi, "Air");
+    modelRaw = modelRaw.replace(/\bG\s*P\s*ower/gi, "G Power");
     modelRaw = modelRaw.replace(/\b(?:Mo\s*0?G|oto\s*G|[Ee]oio\s*G[iI]?R?I?ay?)\b/gi, "Moto G");
+    modelRaw = modelRaw.replace(/\bMote\b/gi, "Moto");
     modelRaw = modelRaw.replace(/\b(?:ooze|20268)\b/gi, "2026");
     modelRaw = modelRaw.replace(/(Moto)(G)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/\b([a-zA-Z]+)(\d{4})\b/g, "$1 $2");
     modelRaw = modelRaw.replace(/\boto\b/gi, "Moto");
+    modelRaw = modelRaw.replace(/\bICL\b/gi, "TCL");
+    modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
+    modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
+    modelRaw = modelRaw.replace(/\s+[0-9~|:_.\-]$/, "").trim();
     modelRaw = modelRaw.replace(/^[\[\]{}()|~:;\-_.\s]+|[\[\]{}()|~:;\-_.\s]+$/g, "").trim();
 
-    // Safe tiered matching against canonical devices
-    const calcCandidateDist = (raw, target) => {
-      if (!raw || !target) return { dist: Infinity, matchLen: 0 };
-      const r = raw.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-      const t = target.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-      if (r === t) return { dist: 0, matchLen: t.length };
-      if (r.startsWith(t)) return { dist: 0, matchLen: t.length };
-
-      // Whole-phrase word inclusion check for noisy line buffers
-      const escapedT = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (new RegExp("(?:^|\\s)" + escapedT + "(?:$|\\s)", "i").test(r)) {
-        return { dist: 0, matchLen: t.length };
-      }
-
-      // Multi-token containment check (e.g., Moto G Play 2026)
-      const tTokens = t.split(" ").filter(Boolean);
-      if (tTokens.length >= 2 && tTokens.every(tok => r.includes(tok))) {
-        return { dist: 0, matchLen: t.length };
-      }
-
-      const fullDist = getLevenshtein(r, t);
-      // Dynamic ceiling: short names (<6) require exact match; 6-10 allow 1; >10 allow 2
-      const maxAllowed = t.length < 6 ? 0 : (t.length <= 10 ? 1 : 2);
-      if (fullDist <= maxAllowed) {
-        return { dist: fullDist, matchLen: t.length };
-      }
-      return { dist: Infinity, matchLen: 0 };
-    };
+    // Multi-tier token-based fuzzy matching prioritizing longest candidates
+    const rNorm = modelRaw.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const rTokens = rNorm.split(" ").filter(Boolean);
 
     let model = modelRaw;
     let lowestDist = Infinity;
     let bestMatch = null;
+    const candidates = [];
 
-    const candidateDistances = Object.values(devices).map(dev => {
-      const scoreName = calcCandidateDist(modelRaw, dev.name);
-      const scoreAbbr = dev.abbr ? calcCandidateDist(modelRaw, dev.abbr) : { dist: Infinity, matchLen: 0 };
-      const best = scoreName.dist <= scoreAbbr.dist ? scoreName : scoreAbbr;
-      return { name: dev.name, dist: best.dist, matchLen: best.matchLen };
-    }).filter(c => c.dist !== Infinity).sort((a, b) => {
-      if (a.dist !== b.dist) return a.dist - b.dist;
-      return b.matchLen - a.matchLen;
-    });
+    for (const dev of Object.values(devices)) {
+      for (const targetStr of [dev.name, dev.abbr]) {
+        if (!targetStr) continue;
+        const tNorm = targetStr.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+        const tTokens = tNorm.split(" ").filter(Boolean);
 
-    if (candidateDistances.length > 0) {
-      lowestDist = candidateDistances[0].dist;
-      bestMatch = candidateDistances[0].name;
+        // Exact match or prefix match
+        if (rNorm === tNorm || rNorm.startsWith(tNorm)) {
+          candidates.push({ dist: 0, tokenCount: tTokens.length, matchLen: tNorm.length, name: dev.name });
+          continue;
+        }
+
+        // Token match with tolerance (e.g. Mote -> Moto, Aira -> Air)
+        let matchedCount = 0;
+        let totalTokenDist = 0;
+        for (const tt of tTokens) {
+          let bestDist = Infinity;
+          for (const rt of rTokens) {
+            const d = getLevenshtein(tt, rt);
+            if (d < bestDist) bestDist = d;
+          }
+          const maxAllowed = tt.length <= 2 ? 0 : 1;
+          if (bestDist <= maxAllowed) {
+            matchedCount++;
+            totalTokenDist += bestDist;
+          }
+        }
+
+        if (matchedCount === tTokens.length) {
+          candidates.push({ dist: totalTokenDist, tokenCount: tTokens.length, matchLen: tNorm.length, name: dev.name });
+          continue;
+        }
+
+        // Full string Levenshtein fallback
+        const fullDist = getLevenshtein(rNorm, tNorm);
+        const maxFullAllowed = tNorm.length < 6 ? 0 : (tNorm.length <= 10 ? 1 : 2);
+        if (fullDist <= maxFullAllowed) {
+          candidates.push({ dist: fullDist, tokenCount: tTokens.length, matchLen: tNorm.length, name: dev.name });
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      // Sort: lowest edit distance first, then HIGHEST token count, then HIGHEST match length
+      candidates.sort((a, b) => {
+        if (a.dist !== b.dist) return a.dist - b.dist;
+        if (a.tokenCount !== b.tokenCount) return b.tokenCount - a.tokenCount;
+        return b.matchLen - a.matchLen;
+      });
+      lowestDist = candidates[0].dist;
+      bestMatch = candidates[0].name;
       model = bestMatch;
     }
 
@@ -236,7 +355,7 @@ export function parseReportRows(text, statsData = {}) {
       colorRaw: cleanColorRaw,
       lowestDist,
       matchedCanonical: !!bestMatch,
-      topCandidates: candidateDistances.slice(0, 3)
+      topCandidates: candidates.slice(0, 3)
     });
   }
 
@@ -244,8 +363,8 @@ export function parseReportRows(text, statsData = {}) {
 }
 
 /**
- * Executes client-side OCR on raw unmanipulated image source.
- * Passes clean camera/file intake directly into Tesseract.js native engine.
+ * Executes client-side OCR on preprocessed image source.
+ * Passes illumination-normalized canvas into Tesseract.js engine.
  * @param {HTMLCanvasElement|string} imageSource 
  * @param {Object} statsData 
  * @param {Function} onProgress 
@@ -261,16 +380,18 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
   try {
     const srcW = imageSource.naturalWidth || imageSource.width;
     const srcH = imageSource.naturalHeight || imageSource.height;
-    if (srcW && srcW > 2048) {
-      const scale = 2048 / srcW;
+    if (srcW && srcH) {
+      const scale = srcW > 2048 ? (2048 / srcW) : 1;
       const normCanvas = document.createElement("canvas");
-      normCanvas.width = 2048;
+      normCanvas.width = Math.round(srcW * scale);
       normCanvas.height = Math.round(srcH * scale);
       const nCtx = normCanvas.getContext("2d");
       nCtx.imageSmoothingEnabled = true;
       nCtx.imageSmoothingQuality = "high";
       nCtx.drawImage(imageSource, 0, 0, normCanvas.width, normCanvas.height);
-      processedSource = normCanvas;
+      
+      // Apply illumination leveling to remove shadows before Tesseract
+      processedSource = preprocessCanvasForOcr(normCanvas);
     }
   } catch (_) {}
 

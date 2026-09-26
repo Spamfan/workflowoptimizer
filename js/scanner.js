@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.11)
-// Mobile Camera Hardware Sensor Photo Capture & Touch Pan/Zoom Adjuster
+// Workflow Optimizer - js/scanner.js (v0.0.12)
+// Mobile Camera Hardware Sensor Photo Capture, Touch Pan/Zoom Adjuster & Test Ingestion
 
-export const SCANNER_VERSION = "v0.0.11";
+export const SCANNER_VERSION = "v0.0.12";
 
 let activeStream = null;
 
@@ -19,6 +19,7 @@ export function triggerHaptic(ms = 20) {
 
 /**
  * Initializes and starts the camera stream on the target video element with autofocus.
+ * Mounts 1-tap test preset bar for rapid testing if not already present.
  * @param {HTMLVideoElement} videoEl 
  * @returns {Promise<MediaStream>}
  */
@@ -49,6 +50,9 @@ export async function startCamera(videoEl) {
         });
       } catch (_) {}
     }
+
+    // Auto-mount test presets bar in scanner controls
+    mountTestBar();
 
     return activeStream;
   } catch (err) {
@@ -187,6 +191,121 @@ export async function takePhotoFromCamera(videoEl, rotationAngle = 0) {
     };
     img.src = url;
   });
+}
+
+/**
+ * Loads a test image directly from a URL or repository path and crops to Letter format.
+ * Enables rapid 1-tap testing without repeated mobile file picker uploads.
+ * @param {string} url Relative or absolute URL to test image (e.g. "./vzw.jpeg")
+ * @param {number} rotationAngle 
+ * @returns {Promise<{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }>}
+ */
+export async function loadTestImage(url, rotationAngle = 0) {
+  triggerHaptic(25);
+  const bust = url.includes("?") ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+  const resp = await fetch(bust);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch test image (${resp.status} ${resp.statusText})`);
+  }
+  const blob = await resp.blob();
+
+  return new Promise((resolve, reject) => {
+    const objUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      try {
+        resolve(cropImageToLetter(img, rotationAngle));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objUrl);
+      reject(new Error("Failed to load test image"));
+    };
+    img.src = objUrl;
+  });
+}
+
+/**
+ * Mounts 1-tap test preset buttons into the scanner view interface.
+ * Presets target att.jpeg, vzw.jpeg, and tmo.jpeg in repository root.
+ * @param {Function} [onSelectTestImage] Optional callback receiving processed capture
+ */
+export function mountTestBar(onSelectTestImage) {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("scanner-test-bar")) return;
+
+  const targetContainer = document.querySelector("#scanner-view .scanner-controls")
+    || document.querySelector("#scanner-view .viewfinder-box")
+    || document.getElementById("scanner-view");
+  if (!targetContainer) return;
+
+  const testBar = document.createElement("div");
+  testBar.id = "scanner-test-bar";
+  testBar.className = "test-presets-bar";
+  testBar.style.cssText = "display: flex; gap: 8px; justify-content: center; align-items: center; margin: 8px 0; z-index: 10; flex-wrap: wrap;";
+
+  const presets = [
+    { label: "VZW Test", path: "./vzw.jpeg" },
+    { label: "ATT Test", path: "./att.jpeg" },
+    { label: "TMO Test", path: "./tmo.jpeg" }
+  ];
+
+  presets.forEach(p => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pill-btn btn-secondary btn-test-preset";
+    btn.style.cssText = "font-size: 12px; padding: 6px 14px; border-radius: 9999px; cursor: pointer; background: #e0e4ec; border: 1px solid #c0c6d4; color: #1e293b;";
+    btn.textContent = p.label;
+
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const origText = btn.textContent;
+      try {
+        btn.textContent = "Loading...";
+        btn.disabled = true;
+        const result = await loadTestImage(p.path);
+        btn.textContent = origText;
+        btn.disabled = false;
+
+        if (typeof onSelectTestImage === "function") {
+          onSelectTestImage(result);
+        } else if (typeof window.wfoHandleCapturedImage === "function") {
+          window.wfoHandleCapturedImage(result);
+        } else {
+          // Dispatch global custom event for app router
+          window.dispatchEvent(new CustomEvent("wfo:test_image_loaded", { detail: result }));
+
+          // Fallback: populate file input to drive standard file intake
+          const fileInput = document.getElementById("scanner-file-input");
+          if (fileInput && result.canvas && typeof result.canvas.toBlob === "function") {
+            result.canvas.toBlob(blob => {
+              if (blob) {
+                const file = new File([blob], p.path.replace(/^\.\//, ""), { type: "image/jpeg" });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+            }, "image/jpeg", 0.95);
+          }
+        }
+      } catch (err) {
+        console.error("Test preset load failed:", err);
+        btn.textContent = "Not Found";
+        setTimeout(() => {
+          btn.textContent = origText;
+          btn.disabled = false;
+        }, 2500);
+      }
+    };
+    testBar.appendChild(btn);
+  });
+
+  targetContainer.appendChild(testBar);
 }
 
 /**
