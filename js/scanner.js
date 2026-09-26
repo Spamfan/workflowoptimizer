@@ -196,7 +196,7 @@ export async function takePhotoFromCamera(videoEl, rotationAngle = 0) {
 /**
  * Loads a test image directly from a URL or repository path and crops to Letter format.
  * Enables rapid 1-tap testing without repeated mobile file picker uploads.
- * @param {string} url Relative or absolute URL to test image (e.g. "./vzw.jpeg")
+ * @param {string} url Relative or absolute URL to test image (e.g. "./vzw.jpg")
  * @param {number} rotationAngle 
  * @returns {Promise<{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }>}
  */
@@ -248,9 +248,9 @@ export function mountTestBar(onSelectTestImage) {
   testBar.style.cssText = "display: flex; gap: 8px; justify-content: center; align-items: center; margin: 8px 0; z-index: 10; flex-wrap: wrap;";
 
   const presets = [
-    { label: "VZW Test", path: "./vzw.jpeg" },
-    { label: "ATT Test", path: "./att.jpeg" },
-    { label: "TMO Test", path: "./tmo.jpeg" }
+    { label: "VZW Test", path: "./vzw.jpg", fallback: "./vzw.jpg" },
+    { label: "ATT Test", path: "./att.jpg", fallback: "./att.jpg" },
+    { label: "TMO Test", path: "./tmo.jpg", fallback: "./tmo.jpg" }
   ];
 
   presets.forEach(p => {
@@ -267,7 +267,7 @@ export function mountTestBar(onSelectTestImage) {
       try {
         btn.textContent = "Loading...";
         btn.disabled = true;
-        const result = await loadTestImage(p.path);
+        const result = await loadTestImage(p.path, 0, p.fallback);
         btn.textContent = origText;
         btn.disabled = false;
 
