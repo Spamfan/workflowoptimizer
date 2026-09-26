@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.10)
+// Workflow Optimizer - js/scanner.js (v0.0.11)
 // Mobile Camera Hardware Sensor Photo Capture & Touch Pan/Zoom Adjuster
 
-export const SCANNER_VERSION = "v0.0.10";
+export const SCANNER_VERSION = "v0.0.11";
 
 let activeStream = null;
 
@@ -99,11 +99,18 @@ export function cropImageToLetter(img, rotationAngle = 0) {
   const sx = (sw - cropW) / 2;
   const sy = (sh - cropH) / 2;
 
-  // Offscreen unrotated canvas at full 100% natural photo resolution
+  // Clamp to 300 DPI target scale (~2048px width) for OCR neural net optimization
+  const maxTargetW = 2048;
+  const outW = Math.round(Math.min(cropW, maxTargetW));
+  const outH = Math.round(outW / targetRatio);
+
+  // Offscreen unrotated canvas at target photo resolution
   const offCanvas = document.createElement("canvas");
-  offCanvas.width = Math.round(cropW);
-  offCanvas.height = Math.round(cropH);
+  offCanvas.width = outW;
+  offCanvas.height = outH;
   const offCtx = offCanvas.getContext("2d");
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = "high";
   offCtx.drawImage(img, sx, sy, cropW, cropH, 0, 0, offCanvas.width, offCanvas.height);
 
   // Handle optional rotation
@@ -361,8 +368,8 @@ export function captureAdjustedFrame(imgEl, containerEl) {
     throw new Error("Invalid framing dimensions");
   }
 
-  // Preserve natural image dimensions for 8.5:11 target crop
-  const targetW = Math.round(imgEl.naturalWidth);
+  // Clamp to 300 DPI target scale (~2048px width) for OCR neural net optimization
+  const targetW = Math.round(Math.min(2048, imgEl.naturalWidth));
   const targetH = Math.round(targetW / (8.5 / 11));
   const finalCanvas = document.createElement("canvas");
   finalCanvas.width = targetW;

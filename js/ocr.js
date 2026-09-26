@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.10)
+// Workflow Optimizer - js/ocr.js (v0.0.11)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.10";
+export const OCR_VERSION = "v0.0.11";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -123,29 +123,36 @@ export function parseReportRows(text, statsData = {}) {
     let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
 
     // Model name cleanup and OCR spacing repair
-    modelRaw = modelRaw.replace(/^[|~:;\-_.\s]+|[|~:;\-_.\s]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/^[\[\]{}()|~:;\-_.\s]+|[\[\]{}()|~:;\-_.\s]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/^(?:ge|ps|at|en|ek|he)\s*[|~:\-_.]*\s*/i, "").trim();
     modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
     modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
-    modelRaw = modelRaw.replace(/\bMo\s*0?G\b/gi, "Moto G");
+    modelRaw = modelRaw.replace(/\b(?:Mo\s*0?G|oto\s*G|[Ee]oio\s*G[iI]?R?I?ay?)\b/gi, "Moto G");
+    modelRaw = modelRaw.replace(/\b(?:ooze|20268)\b/gi, "2026");
     modelRaw = modelRaw.replace(/(Moto)(G)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/\b([a-zA-Z]+)(\d{4})\b/g, "$1 $2");
     modelRaw = modelRaw.replace(/\boto\b/gi, "Moto");
-    modelRaw = modelRaw.replace(/^[|~:;\-_.\s]+|[|~:;\-_.\s]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/^[\[\]{}()|~:;\-_.\s]+|[\[\]{}()|~:;\-_.\s]+$/g, "").trim();
 
     // Safe tiered matching against canonical devices
     const calcCandidateDist = (raw, target) => {
       if (!raw || !target) return { dist: Infinity, matchLen: 0 };
-      const r = raw.toLowerCase().trim();
-      const t = target.toLowerCase().trim();
+      const r = raw.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+      const t = target.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
       if (r === t) return { dist: 0, matchLen: t.length };
-      const isPrefix = r.startsWith(t) && (r.length === t.length || /[\s:|\-_]/.test(r.charAt(t.length)));
-      if (isPrefix) return { dist: 0, matchLen: t.length };
+      if (r.startsWith(t)) return { dist: 0, matchLen: t.length };
 
       // Whole-phrase word inclusion check for noisy line buffers
       const escapedT = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (new RegExp("(?:^|[^a-z0-9])" + escapedT + "(?:$|[^a-z0-9])", "i").test(r)) {
+      if (new RegExp("(?:^|\\s)" + escapedT + "(?:$|\\s)", "i").test(r)) {
+        return { dist: 0, matchLen: t.length };
+      }
+
+      // Multi-token containment check (e.g., Moto G Play 2026)
+      const tTokens = t.split(" ").filter(Boolean);
+      if (tTokens.length >= 2 && tTokens.every(tok => r.includes(tok))) {
         return { dist: 0, matchLen: t.length };
       }
 
@@ -249,8 +256,26 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
     throw new Error("Tesseract.js is not loaded");
   }
 
-  const result = await Tesseract.recognize(imageSource, "eng", {
-    tessedit_pageseg_mode: "6",
+  // Normalize oversized image inputs to ~300 DPI sweet spot (max width 2048px)
+  let processedSource = imageSource;
+  try {
+    const srcW = imageSource.naturalWidth || imageSource.width;
+    const srcH = imageSource.naturalHeight || imageSource.height;
+    if (srcW && srcW > 2048) {
+      const scale = 2048 / srcW;
+      const normCanvas = document.createElement("canvas");
+      normCanvas.width = 2048;
+      normCanvas.height = Math.round(srcH * scale);
+      const nCtx = normCanvas.getContext("2d");
+      nCtx.imageSmoothingEnabled = true;
+      nCtx.imageSmoothingQuality = "high";
+      nCtx.drawImage(imageSource, 0, 0, normCanvas.width, normCanvas.height);
+      processedSource = normCanvas;
+    }
+  } catch (_) {}
+
+  const result = await Tesseract.recognize(processedSource, "eng", {
+    tessedit_pageseg_mode: "4",
     preserve_interword_spaces: "1",
     logger: m => {
       if (m.status === "recognizing text" && m.progress) {
