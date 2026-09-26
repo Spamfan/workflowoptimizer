@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.8)
+// Workflow Optimizer - js/ocr.js (v0.0.9)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.8";
+export const OCR_VERSION = "v0.0.9";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -22,17 +22,19 @@ export function getOcrTelemetry() {
  * Standard Levenshtein Distance metric for typo tolerance.
  */
 export function getLevenshtein(a, b) {
-  const m = [];
-  for (let i = 0; i <= b.length; i++) m[i] = [i];
-  for (let j = 0; j <= a.length; j++) m[0][j] = j;
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      m[i][j] = a.charAt(i - 1).toLowerCase() === b.charAt(j - 1).toLowerCase()
+  if (!a || !b) return (a || b || "").length;
+  const al = a.length;
+  const bl = b.length;
+  const m = Array.from({ length: bl + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= al; j++) m[0][j] = j;
+  for (let i = 1; i <= bl; i++) {
+    for (let j = 1; j <= al; j++) {
+      m[i][j] = b.charAt(i - 1).toLowerCase() === a.charAt(j - 1).toLowerCase()
         ? m[i - 1][j - 1]
         : Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
     }
   }
-  return m[b.length][a.length];
+  return m[bl][al];
 }
 
 /**
@@ -121,12 +123,15 @@ export function parseReportRows(text, statsData = {}) {
     let colorRaw = leftover.substring(capMatch.index + capMatch[0].length).trim();
 
     // Model name cleanup and OCR spacing repair
-    modelRaw = modelRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/^[|~:;\-_.\s]+|[|~:;\-_.\s]+$/g, "").trim();
     modelRaw = modelRaw.replace(/^Phone\b/i, "iPhone");
     modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
-    modelRaw = modelRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
+    modelRaw = modelRaw.replace(/(Moto)(G)/gi, "$1 $2");
+    modelRaw = modelRaw.replace(/\b([a-zA-Z]+)(\d{4})\b/g, "$1 $2");
+    modelRaw = modelRaw.replace(/\boto\b/gi, "Moto");
+    modelRaw = modelRaw.replace(/^[|~:;\-_.\s]+|[|~:;\-_.\s]+$/g, "").trim();
 
     // Safe tiered matching against canonical devices
     const calcCandidateDist = (raw, target) => {
@@ -136,6 +141,12 @@ export function parseReportRows(text, statsData = {}) {
       if (r === t) return { dist: 0, matchLen: t.length };
       const isPrefix = r.startsWith(t) && (r.length === t.length || /[\s:|\-_]/.test(r.charAt(t.length)));
       if (isPrefix) return { dist: 0, matchLen: t.length };
+
+      // Whole-phrase word inclusion check for noisy line buffers
+      const escapedT = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp("(?:^|[^a-z0-9])" + escapedT + "(?:$|[^a-z0-9])", "i").test(r)) {
+        return { dist: 0, matchLen: t.length };
+      }
 
       const fullDist = getLevenshtein(r, t);
       // Dynamic ceiling: short names (<6) require exact match; 6-10 allow 1; >10 allow 2
@@ -167,21 +178,29 @@ export function parseReportRows(text, statsData = {}) {
     }
 
     // Color name cleaning and mapping
-    let cleanColorRaw = colorRaw.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
+    let cleanColorRaw = colorRaw.replace(/^[|~:;\-_.\s]+|[|~:;\-_.\s]+$/g, "").trim();
+    cleanColorRaw = cleanColorRaw.replace(/([a-z])([A-Z])/g, "$1 $2");
     if (/^siver$/i.test(cleanColorRaw)) {
       cleanColorRaw = "Silver";
     }
 
     let color = cleanColorRaw || "BLK";
     let matchedColorCode = null;
-    for (const [name, code] of Object.entries(colorsMap)) {
-      if (name.toLowerCase() === cleanColorRaw.toLowerCase()) {
+
+    // Direct match or embedded canonical color phrase check (longest color first)
+    const sortedColorEntries = Object.entries(colorsMap).sort((a, b) => b[0].length - a[0].length);
+    for (const [name, code] of sortedColorEntries) {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const phraseRegex = new RegExp("(?:^|[^a-z0-9])" + escapedName + "(?:$|[^a-z0-9])", "i");
+      if (phraseRegex.test(cleanColorRaw)) {
         matchedColorCode = code;
         break;
       }
     }
+
+    // Levenshtein fallback for minor typos on isolated tokens
     if (!matchedColorCode && cleanColorRaw) {
-      for (const [name, code] of Object.entries(colorsMap)) {
+      for (const [name, code] of sortedColorEntries) {
         if (cleanColorRaw.length > 4 && getLevenshtein(cleanColorRaw, name) <= 1) {
           matchedColorCode = code;
           break;
