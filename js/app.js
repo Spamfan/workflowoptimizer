@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.18)
+// Prototype Blue - js/app.js (v0.0.21)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
@@ -55,8 +55,8 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
-  "styles.css": "v0.0.9",
-  "index.html": "v0.0.10"
+  "styles.css": "v0.0.10",
+  "index.html": "v0.0.11"
 };
 
 const loginView = document.getElementById('login-view');
