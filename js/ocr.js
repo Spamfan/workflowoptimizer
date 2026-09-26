@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/ocr.js (v0.0.9)
+// Workflow Optimizer - js/ocr.js (v0.0.10)
 // Optical Character Recognition & Resilient Token Parsing Engine
 
-export const OCR_VERSION = "v0.0.9";
+export const OCR_VERSION = "v0.0.10";
 
 let lastOcrTelemetry = {
   timestamp: null,
@@ -128,6 +128,7 @@ export function parseReportRows(text, statsData = {}) {
     modelRaw = modelRaw.replace(/\b(iPhone)(\d)/i, "$1 $2");
     modelRaw = modelRaw.replace(/(\d+)(Pro|Plus|Max|Air|FE|Mini)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/(Pro)(Max)/gi, "$1 $2");
+    modelRaw = modelRaw.replace(/\bMo\s*0?G\b/gi, "Moto G");
     modelRaw = modelRaw.replace(/(Moto)(G)/gi, "$1 $2");
     modelRaw = modelRaw.replace(/\b([a-zA-Z]+)(\d{4})\b/g, "$1 $2");
     modelRaw = modelRaw.replace(/\boto\b/gi, "Moto");
@@ -249,6 +250,8 @@ export async function runOcrPipeline(imageSource, statsData = {}, onProgress = (
   }
 
   const result = await Tesseract.recognize(imageSource, "eng", {
+    tessedit_pageseg_mode: "6",
+    preserve_interword_spaces: "1",
     logger: m => {
       if (m.status === "recognizing text" && m.progress) {
         onProgress(Math.round(m.progress * 100));
