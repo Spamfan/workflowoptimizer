@@ -1,4 +1,4 @@
-// Prototype Blue - js/app.js (v0.0.19)
+// Prototype Blue - js/app.js (v0.0.20)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
@@ -13,8 +13,8 @@ import {
   setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.9';
-import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.8';
+} from './scanner.js?v=0.0.11';
+import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.11';
 import {
   getStagedData,
   getStagedInventoryPayload,
@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
 
-export const APP_VERSION = "v0.0.19";
+export const APP_VERSION = "v0.0.20";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
