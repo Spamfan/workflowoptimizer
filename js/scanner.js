@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.9)
+// Workflow Optimizer - js/scanner.js (v0.0.8)
 // Mobile Camera Hardware Sensor Photo Capture & Touch Pan/Zoom Adjuster
 
-export const SCANNER_VERSION = "v0.0.9";
+export const SCANNER_VERSION = "v0.0.8";
 
 let activeStream = null;
 
@@ -250,7 +250,6 @@ export function resetAdjuster(imgEl) {
   adjusterState.rotation = 0;
   adjusterState.isDragging = false;
   adjusterState.initialPinchDist = 0;
-  adjusterState.initialScale = 1;
   if (imgEl) {
     imgEl.style.transform = "translate(0px, 0px) scale(1) rotate(0deg)";
   }
@@ -317,9 +316,9 @@ export function initAdjuster(imgEl, containerEl) {
     } else if (activeTouches.size === 2) {
       const pts = Array.from(activeTouches.values());
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (adjusterState.initialPinchDist > 10) {
+      if (adjusterState.initialPinchDist > 0) {
         const factor = dist / adjusterState.initialPinchDist;
-        adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.initialScale * factor));
+        adjusterState.scale = Math.max(0.5, Math.min(4.0, adjusterState.scale * factor));
         imgEl.style.transform = `translate(${adjusterState.curX}px, ${adjusterState.curY}px) scale(${adjusterState.scale}) rotate(${adjusterState.rotation}deg)`;
       }
     }
