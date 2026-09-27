@@ -1,10 +1,11 @@
-// Prototype Blue - js/print.js (v0.0.4)
+// Prototype Blue - js/print.js (v0.0.5)
 // Print Inventory Engine & Store-Key Decryption Integration
 
 import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.3';
-import { getStoreKey, hasStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
+import { getStoreKey, hasStoreKey, setStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
+import { openPairingModal } from './app.js?v=0.0.23';
 
-export const PRINT_VERSION = "v0.0.4";
+export const PRINT_VERSION = "v0.0.5";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
@@ -211,7 +212,7 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
 
   const sheetContainer = document.getElementById('print-preview-sheet');
   if (sheetContainer) {
-    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #606770;">Loading catalog and decrypting inventory...</div>';
+    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-sub, #606770);">Loading catalog and decrypting inventory...</div>';
   }
 
   const effectiveSecret = storeSecret || getStoreKey(storeNum);
@@ -227,25 +228,85 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   } catch (err) {
     console.error("Failed to load print preview data:", err);
     if (sheetContainer) {
-      sheetContainer.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">
-          <p style="font-weight: 700; margin-bottom: 8px;">Error loading inventory:</p>
-          <p style="margin-bottom: 16px;">${err.message}</p>
-          <button id="btn-print-pair-prompt" class="btn-pill secondary" style="margin: 0 auto; display: inline-flex;">Pair Device / Enter Store Key</button>
-        </div>
-      `;
-      const btnPair = document.getElementById('btn-print-pair-prompt');
-      if (btnPair) {
-        btnPair.addEventListener('click', () => {
-          const pairModal = document.getElementById('pairing-modal');
-          if (pairModal) pairModal.style.display = 'flex';
-        });
-      }
+      renderPrintUnpairedCard(sheetContainer, storeNum, err.message);
     }
     return;
   }
 
   renderPrintDocument();
+}
+
+/**
+ * Renders the clean Material 3 setup card when a station needs an Optimizer Key to print.
+ */
+function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
+  container.innerHTML = `
+    <div class="print-setup-card">
+      <div style="font-size: 2.2rem; line-height: 1;">🔑</div>
+      <h3 class="print-setup-title">Store ${storeNum || '--'} Optimizer Key Required</h3>
+      <p class="print-setup-desc">
+        Workflow Optimizer encrypts daily stock counts locally for Store ${storeNum || '--'}.
+        If an OSL associate has already set up a key, scan the barcode off their phone with the handheld scanner or enter it below to unlock this report.
+      </p>
+      <div style="display: flex; gap: 8px; width: 100%; max-width: 360px; margin: 6px 0 10px;">
+        <input type="text" id="print-setup-scanner-input" class="pairing-input scanner-input-pulse" placeholder="Scan barcode or enter key..." style="flex: 1;">
+        <button id="btn-print-setup-save" class="pill-btn btn-primary" style="width: auto; padding: 8px 18px;">Unlock</button>
+      </div>
+      <p id="print-setup-status-msg" class="pairing-status-msg" style="display: none;"></p>
+      <div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 6px;">
+        <button id="btn-print-open-hub" class="pill-btn btn-secondary" style="width: auto; font-size: 0.85rem; padding: 8px 16px;">Open Pairing Hub</button>
+      </div>
+    </div>
+  `;
+
+  const input = container.querySelector('#print-setup-scanner-input');
+  const btnSave = container.querySelector('#btn-print-setup-save');
+  const btnOpenHub = container.querySelector('#btn-print-open-hub');
+  const statusMsg = container.querySelector('#print-setup-status-msg');
+
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (input && !isTouchDevice) {
+    setTimeout(() => input.focus(), 100);
+  }
+
+  const handleUnlock = () => {
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+
+    setStoreKey(storeNum, val);
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.color = '#10b981';
+      statusMsg.textContent = '✓ Key saved! Decrypting inventory...';
+    }
+    setTimeout(() => {
+      openPrintPreview(storeNum, val);
+    }, 600);
+  };
+
+  if (btnSave) {
+    btnSave.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleUnlock();
+    });
+  }
+
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleUnlock();
+      }
+    });
+  }
+
+  if (btnOpenHub) {
+    btnOpenHub.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPairingModal();
+    });
+  }
 }
 
 export function renderPrintDocument() {
@@ -553,7 +614,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Inventory Report</title>
-        <link rel="stylesheet" href="styles.css?v=0.0.9">
+        <link rel="stylesheet" href="styles.css?v=0.0.12">
       </head>
       <body>
         <div id="print-preview-sheet" style="border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important;">

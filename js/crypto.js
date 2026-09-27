@@ -54,7 +54,11 @@ export function hasStoreKey(storeNum = "") {
 export function generateStoreKey() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const bytes = new Uint8Array(16);
-  window.crypto.getRandomValues(bytes);
+  if (typeof window !== "undefined" && window.crypto) {
+    window.crypto.getRandomValues(bytes);
+  } else if (typeof crypto !== "undefined") {
+    crypto.getRandomValues(bytes);
+  }
   let raw = "";
   for (let i = 0; i < bytes.length; i++) {
     raw += chars[bytes[i] % chars.length];
@@ -98,7 +102,8 @@ export function base64ToBuffer(base64) {
  * @returns {Promise<CryptoKey>}
  */
 export async function deriveStoreKey(storeNum, secret, salt) {
-  if (!window.crypto || !window.crypto.subtle) {
+  const cryptoObj = (typeof window !== "undefined" && window.crypto) ? window.crypto : crypto;
+  if (!cryptoObj || !cryptoObj.subtle) {
     throw new Error("Web Crypto API (crypto.subtle) is not supported in this browser environment.");
   }
 
@@ -110,7 +115,7 @@ export async function deriveStoreKey(storeNum, secret, salt) {
   const encoder = new TextEncoder();
   const rawKeyData = encoder.encode(`wfo-store:${storeNum || 'default'}:${effectiveSecret}`);
 
-  const baseKey = await window.crypto.subtle.importKey(
+  const baseKey = await cryptoObj.subtle.importKey(
     "raw",
     rawKeyData,
     { name: "PBKDF2" },
@@ -118,7 +123,7 @@ export async function deriveStoreKey(storeNum, secret, salt) {
     ["deriveKey"]
   );
 
-  return window.crypto.subtle.deriveKey(
+  return cryptoObj.subtle.deriveKey(
     {
       name: "PBKDF2",
       salt: salt,
@@ -140,7 +145,8 @@ export async function deriveStoreKey(storeNum, secret, salt) {
  * @returns {Promise<{ encrypted: true, lastUpdated: string, salt: string, iv: string, data: string }>}
  */
 export async function encryptStoreData(inventoryObj, storeNum, secret = '') {
-  if (!window.crypto || !window.crypto.subtle) {
+  const cryptoObj = (typeof window !== "undefined" && window.crypto) ? window.crypto : crypto;
+  if (!cryptoObj || !cryptoObj.subtle) {
     console.warn("Crypto not supported; falling back to unencrypted record");
     return {
       encrypted: false,
@@ -149,14 +155,14 @@ export async function encryptStoreData(inventoryObj, storeNum, secret = '') {
     };
   }
 
-  const salt = window.crypto.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
-  const iv = window.crypto.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
+  const salt = cryptoObj.getRandomValues(new Uint8Array(SALT_LENGTH_BYTES));
+  const iv = cryptoObj.getRandomValues(new Uint8Array(IV_LENGTH_BYTES));
   const key = await deriveStoreKey(storeNum, secret, salt);
 
   const encoder = new TextEncoder();
   const plaintextBytes = encoder.encode(JSON.stringify(inventoryObj));
 
-  const cipherBuffer = await window.crypto.subtle.encrypt(
+  const cipherBuffer = await cryptoObj.subtle.encrypt(
     { name: "AES-GCM", iv: iv },
     key,
     plaintextBytes
@@ -181,7 +187,6 @@ export async function encryptStoreData(inventoryObj, storeNum, secret = '') {
 export async function decryptStoreData(storeRecord, storeNum, secret = '') {
   if (!storeRecord) return null;
 
-  // Transparent passthrough for legacy or unencrypted store records
   if (!storeRecord.encrypted || !storeRecord.data) {
     return {
       lastUpdated: storeRecord.lastUpdated || '',
@@ -189,7 +194,8 @@ export async function decryptStoreData(storeRecord, storeNum, secret = '') {
     };
   }
 
-  if (!window.crypto || !window.crypto.subtle) {
+  const cryptoObj = (typeof window !== "undefined" && window.crypto) ? window.crypto : crypto;
+  if (!cryptoObj || !cryptoObj.subtle) {
     throw new Error("Cannot decrypt store data: Web Crypto API not available.");
   }
 
@@ -200,7 +206,7 @@ export async function decryptStoreData(storeRecord, storeNum, secret = '') {
 
     const key = await deriveStoreKey(storeNum, secret, salt);
 
-    const decryptedBuffer = await window.crypto.subtle.decrypt(
+    const decryptedBuffer = await cryptoObj.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
       key,
       cipherBytes

@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.21)
+// Prototype Blue - js/app.js (v0.0.23)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.4';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.5';
 import {
   startCamera,
   stopCamera,
@@ -41,9 +41,9 @@ import {
   hasStoreKey,
   CRYPTO_VERSION
 } from './crypto.js?v=0.0.2';
-import { renderCode128Svg, BARCODE_VERSION } from './barcode.js?v=0.0.1';
+import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
-export const APP_VERSION = "v0.0.22";
+export const APP_VERSION = "v0.0.23";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -55,8 +55,8 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
-  "styles.css": "v0.0.11",
-  "index.html": "v0.0.11"
+  "styles.css": "v0.0.12",
+  "index.html": "v0.0.12"
 };
 
 const loginView = document.getElementById('login-view');
@@ -82,6 +82,30 @@ let cachedStats = null;
 let scannerRotation = 0;
 let latestFullCaptureUrl = null;
 
+let privacyTimerInterval = null;
+let mobileShowQrToggle = false;
+
+// --- URL DEEP LINK AUTO-ENROLLMENT ---
+function handleUrlDeepLink() {
+  try {
+    if (typeof window === 'undefined' || !window.location) return;
+    const params = new URLSearchParams(window.location.search);
+    const storeParam = params.get('store');
+    const keyParam = params.get('key');
+    if (storeParam && keyParam) {
+      const cleanStore = storeParam.trim();
+      const cleanKey = keyParam.trim();
+      setStoreKey(cleanStore, cleanKey);
+      localStorage.setItem('wfo_store', cleanStore);
+      const storeInput = document.getElementById('store-input');
+      if (storeInput) storeInput.value = cleanStore;
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+      alert(`✓ Store ${cleanStore} Optimizer Key successfully enrolled on this device!`);
+    }
+  } catch (_) {}
+}
+
 export function openModal(modalEl) {
   if (!modalEl) return;
   modalEl.style.display = 'flex';
@@ -91,6 +115,10 @@ export function openModal(modalEl) {
 export function closeModal(modalEl) {
   if (!modalEl || modalEl.style.display !== 'flex') return;
   modalEl.style.display = 'none';
+  if (privacyTimerInterval) {
+    clearInterval(privacyTimerInterval);
+    privacyTimerInterval = null;
+  }
   if (history.state && history.state.modalId === modalEl.id) {
     history.back();
   }
@@ -114,7 +142,6 @@ function updateDashboardStagedButton() {
   }
 }
 
-// Add Pair Device Button to Dashboard Card Actions Row
 function ensurePairingButtonOnDashboard() {
   if (document.getElementById('btn-pair-device')) return;
   const targetContainer = document.querySelector('#dashboard-view .card-actions-row')
@@ -126,7 +153,7 @@ function ensurePairingButtonOnDashboard() {
     btnPair.id = 'btn-pair-device';
     btnPair.className = 'pill-btn btn-action-pair';
     btnPair.style.display = 'inline-flex';
-    btnPair.textContent = '🔑 Store Key / Pair';
+    btnPair.textContent = '🔑 Optimizer Key';
     btnPair.addEventListener('click', openPairingModal);
     targetContainer.appendChild(btnPair);
   }
@@ -167,12 +194,15 @@ export function switchView(targetViewId, pushState = true) {
   }
 }
 
-// History Navigation (Universal Modal & View router)
 window.addEventListener('popstate', (e) => {
   const openModals = document.querySelectorAll('.modal-overlay');
   for (const modal of openModals) {
     if (modal.style.display === 'flex') {
       modal.style.display = 'none';
+      if (privacyTimerInterval) {
+        clearInterval(privacyTimerInterval);
+        privacyTimerInterval = null;
+      }
       return;
     }
   }
@@ -384,7 +414,6 @@ const btnAddItem = document.getElementById('btn-add-item');
 const btnScanNext = document.getElementById('btn-scan-next');
 const btnPublishAll = document.getElementById('btn-publish-all');
 
-// Review View Renderer
 function renderReview(carrierKey) {
   activeCarrier = carrierKey;
   carrierTabs.forEach(t => t.classList.toggle('active', t.dataset.carrier === carrierKey));
@@ -496,12 +525,10 @@ function renderReview(carrierKey) {
   });
 }
 
-// Carrier switcher tabs
 carrierTabs.forEach(tab => {
   tab.addEventListener('click', () => renderReview(tab.dataset.carrier));
 });
 
-// Add item manually
 if (btnAddItem) {
   btnAddItem.addEventListener('click', () => {
     addStagedItem(currentStore, activeCarrier);
@@ -523,7 +550,6 @@ if (btnClearStaged) {
   });
 }
 
-// Lightbox preview on thumbnail tap
 if (reviewMetaThumb) {
   reviewMetaThumb.addEventListener('click', () => {
     const src = latestFullCaptureUrl || reviewMetaThumb.src;
@@ -534,9 +560,6 @@ if (reviewMetaThumb) {
   });
 }
 
-// Process captured frame through OCR and Staging
-
-// Global hook for test presets and headless triggers
 window.wfoHandleCapturedImage = handleCapturedImage;
 window.addEventListener('wfo:test_image_loaded', (e) => {
   if (e.detail) {
@@ -584,7 +607,6 @@ async function handleCapturedImage(captureResult) {
   }
 }
 
-// Direct staged view navigation from dashboard
 const btnViewStaged = document.getElementById('btn-view-staged');
 if (btnViewStaged) {
   btnViewStaged.addEventListener('click', () => {
@@ -769,7 +791,7 @@ if (ocrDebugModal) {
   });
 }
 
-// Store Key Pairing Modal & Code 128 Barcode Engine
+// --- OPTIMIZER KEY & PAIRING CONTROLLER ---
 function initPairingModal() {
   const modalEl = document.getElementById('pairing-modal');
   if (!modalEl) return null;
@@ -779,7 +801,7 @@ function initPairingModal() {
   }
   modalEl.dataset.bound = 'true';
 
-  // Backdrop click & touch dismissal
+  // Backdrop dismiss
   const handleBackdropDismiss = (e) => {
     if (e.target === modalEl) {
       e.preventDefault();
@@ -810,7 +832,6 @@ function initPairingModal() {
       if (e.changedTouches && e.changedTouches.length === 1) {
         const deltaY = e.changedTouches[0].clientY - touchStartY;
         const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
-        // Swiped down >= 80px, predominantly vertical, and card not scrolled
         if (deltaY >= 80 && deltaX <= 100 && cardEl.scrollTop <= 5) {
           closeModal(modalEl);
         }
@@ -819,23 +840,18 @@ function initPairingModal() {
   }
 
   // Close button
-  const btnClose = modalEl.querySelector('#btn-close-pairing-modal')
-    || modalEl.querySelector('#btn-pairing-close')
-    || modalEl.querySelector('.btn-close-modal')
-    || modalEl.querySelector('.close');
+  const btnClose = modalEl.querySelector('#btn-close-pairing-modal');
   if (btnClose) {
-    const handleClose = (e) => {
+    btnClose.addEventListener('click', (e) => {
       e.preventDefault();
       closeModal(modalEl);
-    };
-    btnClose.addEventListener('click', handleClose);
-    btnClose.addEventListener('touchend', handleClose);
+    });
   }
 
   // Copy button
   const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
   if (btnCopy) {
-    const handleCopy = async (e) => {
+    btnCopy.addEventListener('click', async (e) => {
       e.preventDefault();
       const textEl = modalEl.querySelector('#pairing-code-text');
       const code = textEl ? textEl.textContent.trim() : '';
@@ -857,19 +873,12 @@ function initPairingModal() {
           alert('Failed to copy code');
         }
       }
-    };
-    btnCopy.addEventListener('click', handleCopy);
-    btnCopy.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      handleCopy(e);
     });
   }
 
-  // Save button & manual input
-  const manualInput = modalEl.querySelector('#input-pairing-manual') || modalEl.querySelector('#pairing-input');
-  const btnSave = modalEl.querySelector('#btn-save-pairing-manual')
-    || modalEl.querySelector('#btn-save-pairing-key')
-    || modalEl.querySelector('#btn-pairing-save');
+  // Save manual key input
+  const manualInput = modalEl.querySelector('#input-pairing-manual');
+  const btnSave = modalEl.querySelector('#btn-save-pairing-manual');
   const statusMsg = modalEl.querySelector('#pairing-status-msg');
 
   const handleSaveKey = () => {
@@ -880,21 +889,20 @@ function initPairingModal() {
     if (statusMsg) {
       statusMsg.style.display = 'block';
       statusMsg.style.color = '#10b981';
-      statusMsg.textContent = '✓ Store Key saved successfully!';
-      setTimeout(() => {
-        closeModal(modalEl);
-        statusMsg.style.display = 'none';
-      }, 1200);
+      statusMsg.textContent = '✓ Optimizer Key saved successfully!';
     }
-    refreshPairingDisplay();
+    setTimeout(() => {
+      if (currentView === 'print-view') {
+        openPrintPreview(currentStore, val);
+      }
+      closeModal(modalEl);
+      if (statusMsg) statusMsg.style.display = 'none';
+      refreshPairingDisplay();
+    }, 1000);
   };
 
   if (btnSave) {
     btnSave.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleSaveKey();
-    });
-    btnSave.addEventListener('touchend', (e) => {
       e.preventDefault();
       handleSaveKey();
     });
@@ -908,63 +916,246 @@ function initPairingModal() {
     });
   }
 
-  // Generate New Key button
-  const btnGen = modalEl.querySelector('#btn-generate-new-key');
-  if (btnGen) {
-    const handleGen = (e) => {
+  // Privacy Shield Reveal Button
+  const btnReveal = modalEl.querySelector('#btn-reveal-pairing');
+  if (btnReveal) {
+    btnReveal.addEventListener('click', (e) => {
       e.preventDefault();
-      if (confirm(`Generate a brand new Store Key for Store ${currentStore || '--'}?\n\nWarning: All other devices at this store will need to scan this new barcode to decrypt future reports.`)) {
-        const freshKey = generateStoreKey();
-        setStoreKey(currentStore, freshKey);
+      revealPairingCode(modalEl);
+    });
+  }
+
+  // Mobile Toggle QR / Barcode
+  const btnToggleQr = modalEl.querySelector('#btn-toggle-qr-view');
+  if (btnToggleQr) {
+    btnToggleQr.addEventListener('click', (e) => {
+      e.preventDefault();
+      mobileShowQrToggle = !mobileShowQrToggle;
+      refreshPairingDisplay();
+    });
+  }
+
+  // Camera scan trigger (Mobile)
+  const btnCameraScan = modalEl.querySelector('#btn-scan-camera-pair');
+  if (btnCameraScan) {
+    btnCameraScan.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeModal(modalEl);
+      openScanner();
+    });
+  }
+
+  // Accordion toggle
+  const btnAccordion = modalEl.querySelector('#btn-toggle-accordion');
+  const accordionBody = modalEl.querySelector('#pairing-accordion-body');
+  if (btnAccordion && accordionBody) {
+    btnAccordion.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isOpen = accordionBody.style.display === 'block';
+      accordionBody.style.display = isOpen ? 'none' : 'block';
+      btnAccordion.classList.toggle('open', !isOpen);
+    });
+  }
+
+  // Initialize key prompt & confirmation card
+  const btnInitPrompt = modalEl.querySelector('#btn-init-key-prompt');
+  const confirmCard = modalEl.querySelector('#pairing-confirm-card');
+  const btnCancelInit = modalEl.querySelector('#btn-cancel-init-key');
+  const btnConfirmInit = modalEl.querySelector('#btn-confirm-init-key');
+
+  if (btnInitPrompt && confirmCard) {
+    btnInitPrompt.addEventListener('click', (e) => {
+      e.preventDefault();
+      confirmCard.style.display = 'block';
+    });
+  }
+  if (btnCancelInit && confirmCard) {
+    btnCancelInit.addEventListener('click', (e) => {
+      e.preventDefault();
+      confirmCard.style.display = 'none';
+    });
+  }
+  if (btnConfirmInit) {
+    btnConfirmInit.addEventListener('click', (e) => {
+      e.preventDefault();
+      const freshKey = generateStoreKey();
+      setStoreKey(currentStore, freshKey);
+      if (confirmCard) confirmCard.style.display = 'none';
+      if (accordionBody) accordionBody.style.display = 'none';
+      if (btnAccordion) btnAccordion.classList.remove('open');
+      refreshPairingDisplay();
+    });
+  }
+
+  // Reset key link
+  const btnResetLink = modalEl.querySelector('#btn-reset-key-link');
+  if (btnResetLink) {
+    btnResetLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm(`Reset and unlink the current Optimizer Key for Store ${currentStore || '--'}?\n\nWarning: This terminal will no longer be able to decrypt inventory reports until re-paired.`)) {
+        setStoreKey(currentStore, '');
         refreshPairingDisplay();
       }
-    };
-    btnGen.addEventListener('click', handleGen);
-    btnGen.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      handleGen(e);
     });
   }
 
   return modalEl;
 }
 
+function revealPairingCode(modalEl) {
+  const shield = modalEl.querySelector('#pairing-privacy-shield');
+  const timerBadge = modalEl.querySelector('#pairing-timer-badge');
+  const timerText = modalEl.querySelector('#pairing-timer-text');
+
+  if (shield) shield.style.display = 'none';
+  if (timerBadge) timerBadge.style.display = 'inline-block';
+
+  if (privacyTimerInterval) clearInterval(privacyTimerInterval);
+
+  let secondsLeft = 30;
+  if (timerText) timerText.textContent = `Auto-concealing in ${secondsLeft}s`;
+
+  privacyTimerInterval = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(privacyTimerInterval);
+      privacyTimerInterval = null;
+      if (shield) shield.style.display = 'flex';
+      if (timerBadge) timerBadge.style.display = 'none';
+    } else {
+      if (timerText) timerText.textContent = `Auto-concealing in ${secondsLeft}s`;
+    }
+  }, 1000);
+}
+
 function refreshPairingDisplay() {
   const modalEl = initPairingModal();
+  if (!modalEl) return;
+
   const key = getStoreKey(currentStore);
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
+  const titleEl = modalEl.querySelector('#pairing-modal-title');
+  const subEl = modalEl.querySelector('#pairing-modal-sub');
+  const visualBox = modalEl.querySelector('#pairing-visual-box');
+  const shield = modalEl.querySelector('#pairing-privacy-shield');
   const barcodeContainer = modalEl.querySelector('#pairing-barcode-container');
+  const timerBadge = modalEl.querySelector('#pairing-timer-badge');
   const codeText = modalEl.querySelector('#pairing-code-text');
-  const manualInput = modalEl.querySelector('#input-pairing-manual');
   const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
+  const btnToggleQr = modalEl.querySelector('#btn-toggle-qr-view');
+  const inputSection = modalEl.querySelector('#pairing-input-section');
+  const manualInput = modalEl.querySelector('#input-pairing-manual');
+  const btnCameraScan = modalEl.querySelector('#btn-scan-camera-pair');
+  const accordion = modalEl.querySelector('#pairing-accordion');
+  const accordionToggleLabel = modalEl.querySelector('#accordion-toggle-label');
+  const btnResetLink = modalEl.querySelector('#btn-reset-key-link');
 
+  if (privacyTimerInterval) {
+    clearInterval(privacyTimerInterval);
+    privacyTimerInterval = null;
+  }
+  if (timerBadge) timerBadge.style.display = 'none';
   if (manualInput) manualInput.value = '';
 
+  const deepLinkUrl = `https://spamfan.github.io/workflowoptimizer/?store=${encodeURIComponent(currentStore || '')}&key=${encodeURIComponent(key || '')}`;
+
   if (key) {
+    // --- PAIRED STATE ---
     if (codeText) {
       codeText.textContent = key;
       codeText.style.color = '#111827';
     }
     if (btnCopy) btnCopy.disabled = false;
-    if (barcodeContainer) {
-      barcodeContainer.innerHTML = renderCode128Svg(key, { barWidth: 2.2, height: 80, quietZone: 25 });
+    if (btnResetLink) btnResetLink.style.display = 'inline-block';
+    if (accordion) accordion.style.display = 'none';
+
+    if (isTouchDevice) {
+      // Mobile Paired
+      if (titleEl) titleEl.textContent = `Store ${currentStore || '--'} Optimizer Key`;
+      if (subEl) subEl.textContent = mobileShowQrToggle
+        ? 'Scan this QR code with a coworker phone camera to pair.'
+        : 'Point the Walmart handheld scanner at this barcode to pair the computer.';
+      if (shield) shield.style.display = 'none';
+      if (btnCameraScan) btnCameraScan.style.display = 'none';
+      if (inputSection) inputSection.style.display = 'none';
+      if (btnToggleQr) {
+        btnToggleQr.style.display = 'inline-flex';
+        btnToggleQr.textContent = mobileShowQrToggle ? 'Show Barcode' : 'Show Coworker QR';
+      }
+
+      if (barcodeContainer) {
+        if (mobileShowQrToggle) {
+          barcodeContainer.innerHTML = renderQrSvg(deepLinkUrl, { maxWidth: '200px' });
+        } else {
+          barcodeContainer.innerHTML = renderCode128Svg(key, { barWidth: 2.2, height: 80, quietZone: 25 });
+        }
+      }
+    } else {
+      // Desktop / WMPC Paired (Privacy Shield Active)
+      if (titleEl) titleEl.textContent = `Store ${currentStore || '--'} Optimizer Key`;
+      if (subEl) subEl.textContent = 'This computer is paired and can view and decrypt reports. Have coworkers scan with their phone camera to pair.';
+      if (btnToggleQr) btnToggleQr.style.display = 'none';
+      if (btnCameraScan) btnCameraScan.style.display = 'none';
+      if (inputSection) inputSection.style.display = 'none';
+      if (shield) shield.style.display = 'flex';
+
+      if (barcodeContainer) {
+        barcodeContainer.innerHTML = renderQrSvg(deepLinkUrl, { maxWidth: '210px' });
+      }
     }
   } else {
+    // --- UNPAIRED STATE ---
     if (codeText) {
       codeText.textContent = 'UNPAIRED';
       codeText.style.color = '#dc2626';
     }
     if (btnCopy) btnCopy.disabled = true;
-    if (barcodeContainer) {
-      barcodeContainer.innerHTML = `
-        <div style="padding: 20px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
-          <strong>⚠️ Terminal Not Paired</strong><br>
-          <span style="color: #6b7280; font-size: 0.78rem;">
-            No Store Key enrolled for Store ${currentStore || '--'}.<br>
-            Scan barcode from your paired mobile phone or enter key below.
-          </span>
-        </div>
-      `;
+    if (btnResetLink) btnResetLink.style.display = 'none';
+    if (accordion) accordion.style.display = 'block';
+    if (btnToggleQr) btnToggleQr.style.display = 'none';
+    if (shield) shield.style.display = 'none';
+    if (accordionToggleLabel) {
+      accordionToggleLabel.textContent = `First person setting up Store ${currentStore || '--'}?`;
+    }
+
+    if (isTouchDevice) {
+      // Mobile Unpaired
+      if (titleEl) titleEl.textContent = 'Pair this Phone';
+      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. If an OSL associate has already made a key for Store ${currentStore || '--'}, scan or enter it below.`;
+      if (barcodeContainer) {
+        barcodeContainer.innerHTML = `
+          <div style="padding: 18px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
+            <strong>⚠️ Phone Not Paired</strong><br>
+            <span style="color: #6b7280; font-size: 0.78rem;">
+              Scan the computer screen or a coworker's phone to pair.
+            </span>
+          </div>
+        `;
+      }
+      if (inputSection) inputSection.style.display = 'block';
+      if (btnCameraScan) btnCameraScan.style.display = 'block';
+    } else {
+      // Desktop / WMPC Unpaired
+      if (titleEl) titleEl.textContent = 'Pair this Computer';
+      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. If an OSL associate has already made a key for Store ${currentStore || '--'}, enter or scan it below. If you're the first person at Store ${currentStore || '--'} using this tool, you can create one now.`;
+      if (barcodeContainer) {
+        barcodeContainer.innerHTML = `
+          <div style="padding: 18px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
+            <strong>⚠️ Station Not Paired</strong><br>
+            <span style="color: #6b7280; font-size: 0.78rem;">
+              Aim the handheld scanner at your phone's barcode to pair.
+            </span>
+          </div>
+        `;
+      }
+      if (inputSection) inputSection.style.display = 'block';
+      if (btnCameraScan) btnCameraScan.style.display = 'none';
+
+      // Auto-focus scanner input on non-touch terminal
+      if (manualInput) {
+        setTimeout(() => manualInput.focus(), 150);
+      }
     }
   }
 }
@@ -974,9 +1165,8 @@ export function openPairingModal() {
   const modalEl = document.getElementById('pairing-modal');
   openModal(modalEl);
   const input = modalEl.querySelector('#input-pairing-manual');
-  // Only auto-focus on physical desktop/laptop keyboards to prevent virtual keyboard from squishing mobile layout
   const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  if (input && !isTouchDevice) {
+  if (input && !isTouchDevice && !hasStoreKey(currentStore)) {
     setTimeout(() => input.focus(), 150);
   }
 }
@@ -1077,6 +1267,9 @@ window.addEventListener('keydown', (e) => {
     if (pairModal) closeModal(pairModal);
   }
 });
+
+// Deep-link check on startup
+handleUrlDeepLink();
 
 // Bootstrap
 initAuth({
