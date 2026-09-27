@@ -1,4 +1,4 @@
-/* Prototype Blue - styles.css v0.0.11 */
+/* Prototype Blue - styles.css v0.0.12 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -16,7 +16,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 body {
@@ -490,6 +490,9 @@ body {
 .manifest-sub {
   font-size: 0.8rem;
   color: var(--text-sub);
+  display: block;
+  margin-top: 2px;
+  line-height: 1.35;
 }
 
 .manifest-table {
@@ -515,7 +518,7 @@ body {
   color: var(--primary);
 }
 
-/* --- PAIRING MODAL (M3) --- */
+/* --- PAIRING MODAL (M3 & ADAPTIVE) --- */
 .pairing-card {
   max-width: 480px;
   text-align: center;
@@ -525,18 +528,67 @@ body {
   max-height: 90dvh;
   overflow-y: auto;
   margin: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-.pairing-barcode-box {
-  margin: 14px 0;
+.pairing-visual-box {
+  margin: 14px 0 10px;
   background: #ffffff;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  min-height: 100px;
+  min-height: 120px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.privacy-shield {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(240, 242, 245, 0.85);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 10;
+  padding: 16px;
+}
+
+.privacy-shield-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.privacy-shield-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  max-width: 280px;
+  line-height: 1.35;
+}
+
+.pairing-timer-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  background: #eef1f4;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin-top: 6px;
+  display: inline-block;
+  user-select: none;
 }
 
 .pairing-code-row {
@@ -544,7 +596,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .pairing-code-pill {
@@ -558,39 +611,146 @@ body {
 }
 
 .pairing-input-section {
-  margin-top: 16px;
+  margin-top: 12px;
   border-top: 1px solid #f0f2f5;
   padding-top: 14px;
   text-align: left;
 }
 
 .pairing-input-label {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-sub);
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 
 .pairing-input {
   flex: 1;
-  padding: 8px 14px;
-  font-size: 0.9rem;
+  padding: 10px 16px;
+  font-size: 0.92rem;
   font-weight: 600;
   border: 1.5px solid var(--border);
   border-radius: 9999px;
   outline: none;
   background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .pairing-input:focus {
   border-color: var(--primary);
 }
 
+.scanner-input-pulse {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.15);
+  animation: scanPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(24, 119, 242, 0.45); }
+}
+
 .pairing-status-msg {
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-top: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* --- PROGRESSIVE ACCORDION --- */
+.accordion-toggle-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 12px 4px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  margin-top: 12px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.accordion-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+.accordion-toggle-btn .chevron {
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.accordion-toggle-btn.open .chevron {
+  transform: rotate(180deg);
+}
+
+.pairing-accordion-body {
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  line-height: 1.45;
+  padding: 8px 4px 12px;
+  text-align: left;
+}
+
+.pairing-confirm-card {
+  background: #fffbeb;
+  border: 1.5px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  color: #92400e;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.btn-text-danger {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.btn-text-danger:hover {
+  color: var(--danger-hover);
+}
+
+/* --- UNPAIRED PRINT SETUP CARD --- */
+.print-setup-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 36px 24px;
+  max-width: 480px;
+  margin: 40px auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.print-setup-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.2px;
+}
+
+.print-setup-desc {
+  font-size: 0.88rem;
+  color: var(--text-sub);
+  line-height: 1.5;
 }
 
 /* --- ANIMATIONS --- */
