@@ -1,8 +1,8 @@
-// Prototype Blue - js/app.js (v0.0.23)
+// Prototype Blue - js/app.js (v0.0.26)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.6';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.7';
 import {
   startCamera,
   stopCamera,
@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
-export const APP_VERSION = "v0.0.25";
+export const APP_VERSION = "v0.0.26";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -1129,7 +1129,9 @@ function initPairingModal() {
   if (btnResetLink) {
     btnResetLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (confirm(`Reset and unlink the current Optimizer Key for Store ${currentStore || '--'}?\n\nWarning: This terminal will no longer be able to decrypt inventory reports until re-paired.`)) {
+      if (confirm(`Reset and unlink the current Optimizer Key for Store ${currentStore || '--'}?
+
+Warning: This terminal will no longer be able to decrypt inventory reports until re-paired.`)) {
         setStoreKey(currentStore, '');
         refreshPairingDisplay();
       }
@@ -1300,6 +1302,8 @@ function refreshPairingDisplay() {
     }
   }
 }
+
+window.addEventListener('wfo:open-pairing-modal', () => openPairingModal());
 
 export function openPairingModal() {
   refreshPairingDisplay();

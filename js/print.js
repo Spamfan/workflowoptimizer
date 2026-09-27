@@ -1,11 +1,10 @@
-// Prototype Blue - js/print.js (v0.0.6)
+// Prototype Blue - js/print.js (v0.0.7)
 // Print Inventory Engine & Store-Key Decryption Integration
 
 import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.3';
 import { getStoreKey, hasStoreKey, setStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
-import { openPairingModal } from './app.js?v=0.0.24';
 
-export const PRINT_VERSION = "v0.0.6";
+export const PRINT_VERSION = "v0.0.7";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
@@ -339,9 +338,6 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   renderPrintDocument();
 }
 
-/**
- * Renders the clean Material 3 setup card when a station needs an Optimizer Key to print.
- */
 function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
   container.innerHTML = `
     <div class="print-setup-card">
@@ -407,7 +403,19 @@ function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
   if (btnOpenHub) {
     btnOpenHub.addEventListener('click', (e) => {
       e.preventDefault();
-      openPairingModal();
+      
+      import('./app.js?v=0.0.25').then(mod => {
+      const pairBtn = document.getElementById('btn-pair-device');
+      if (pairBtn) {
+        pairBtn.click();
+      } else {
+        window.dispatchEvent(new CustomEvent('wfo:open-pairing-modal'));
+        import('./app.js?v=0.0.26').then(mod => {
+          if (mod && mod.openPairingModal) mod.openPairingModal();
+        }).catch(() => {});
+      }
+      }).catch(err => console.error(err));
+
     });
   }
 }
@@ -662,10 +670,8 @@ export function renderPrintDocument(pushToHistory = true) {
     </div>
   `;
 
-  // Attach In-Doc Comments Rich Text Controller
   attachCommentEditorListeners();
 
-  // Attach WYSIWYG Cell Overrides
   sheet.querySelectorAll('.tap-qty').forEach(td => {
     td.addEventListener('click', (e) => {
       e.stopPropagation();
