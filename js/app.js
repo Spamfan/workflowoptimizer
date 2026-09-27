@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
-export const APP_VERSION = "v0.0.24";
+export const APP_VERSION = "v0.0.25";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -56,7 +56,7 @@ export const MODULE_VERSIONS = {
   "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
   "styles.css": "v0.0.13",
-  "index.html": "v0.0.13"
+  "index.html": "v0.0.14"
 };
 
 const loginView = document.getElementById('login-view');
@@ -81,6 +81,8 @@ let activeCarrier = 'tmo';
 let cachedStats = null;
 let scannerRotation = 0;
 let latestFullCaptureUrl = null;
+let isQrScanning = false;
+let qrScanAnimationId = null;
 
 let privacyTimerInterval = null;
 let mobileShowQrToggle = false;
@@ -160,8 +162,9 @@ function ensurePairingButtonOnDashboard() {
 }
 
 export function switchView(targetViewId, pushState = true) {
-  if (targetViewId !== 'scanner-view' && scannerVideo) {
-    stopCamera(scannerVideo);
+  if (targetViewId !== 'scanner-view') {
+    if (isQrScanning) stopKeyQrScanner();
+    if (scannerVideo) stopCamera(scannerVideo);
   }
   loginView.style.display = 'none';
   dashboardView.style.display = 'none';
@@ -244,6 +247,12 @@ btnRefresh.addEventListener('click', fetchPing);
 btnLogout.addEventListener('click', logout);
 
 btnBack.addEventListener('click', () => {
+  if (isQrScanning) {
+    stopKeyQrScanner();
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    openPairingModal();
+    return;
+  }
   if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
     switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
   } else {
@@ -262,11 +271,119 @@ if (btnPrintInv) {
 
 async function openScanner() {
   exitCropMode();
+  isQrScanning = false;
+  if (cameraControlsDeck) cameraControlsDeck.style.display = 'flex';
+  if (scannerInstructionBanner) {
+    scannerInstructionBanner.textContent = "Place corners of the viewfinder just within the paper borders.";
+  }
   switchView('scanner-view');
   try {
     await startCamera(scannerVideo);
   } catch (err) {
     alert('Unable to access camera: ' + err.message);
+  }
+}
+
+async function openKeyQrScanner() {
+  exitCropMode();
+  isQrScanning = true;
+  switchView('scanner-view');
+
+  if (scannerInstructionBanner) {
+    scannerInstructionBanner.textContent = "Point camera at coworker's QR code or screen to pair.";
+  }
+  if (cameraControlsDeck) {
+    cameraControlsDeck.style.display = 'none';
+  }
+
+  try {
+    await startCamera(scannerVideo);
+  } catch (err) {
+    alert('Unable to access camera: ' + err.message);
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    openPairingModal();
+    return;
+  }
+
+  if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+    try {
+      const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128'] });
+      const scanLoop = async () => {
+        if (!isQrScanning || currentView !== 'scanner-view') return;
+        try {
+          if (scannerVideo && scannerVideo.readyState >= 2) {
+            const barcodes = await detector.detect(scannerVideo);
+            if (barcodes && barcodes.length > 0) {
+              const raw = (barcodes[0].rawValue || '').trim();
+              if (raw) {
+                isQrScanning = false;
+                handleScannedKeyToken(raw);
+                return;
+              }
+            }
+          }
+        } catch (_) {}
+        if (isQrScanning && currentView === 'scanner-view') {
+          qrScanAnimationId = requestAnimationFrame(scanLoop);
+        }
+      };
+      qrScanAnimationId = requestAnimationFrame(scanLoop);
+    } catch (_) {}
+  } else {
+    alert("Live QR scanning requires a supported browser (Chrome on Android). You can also enter the key manually.");
+    stopKeyQrScanner();
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    openPairingModal();
+  }
+}
+
+function handleScannedKeyToken(raw) {
+  stopKeyQrScanner();
+  try {
+    if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+  } catch (_) {}
+
+  let matchedStore = currentStore;
+  let matchedKey = raw;
+
+  if (raw.includes('?') && (raw.includes('key=') || raw.includes('store='))) {
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+      const s = url.searchParams.get('store');
+      const k = url.searchParams.get('key');
+      if (s) matchedStore = s.trim();
+      if (k) matchedKey = k.trim();
+    } catch (_) {}
+  }
+
+  if (matchedKey) {
+    setStoreKey(matchedStore, matchedKey);
+    if (matchedStore) {
+      currentStore = matchedStore;
+      localStorage.setItem('wfo_store', matchedStore);
+      const storeInput = document.getElementById('store-input');
+      if (storeInput) storeInput.value = matchedStore;
+    }
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    openPairingModal();
+    alert(`✓ Successfully paired with Store ${matchedStore || '--'} Optimizer Key!`);
+  } else {
+    alert("Unrecognized code format. Please try again.");
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    openPairingModal();
+  }
+}
+
+function stopKeyQrScanner() {
+  isQrScanning = false;
+  if (qrScanAnimationId) {
+    cancelAnimationFrame(qrScanAnimationId);
+    qrScanAnimationId = null;
+  }
+  if (scannerVideo) stopCamera(scannerVideo);
+  if (cameraControlsDeck) cameraControlsDeck.style.display = 'flex';
+  if (scannerInstructionBanner) {
+    scannerInstructionBanner.textContent = "Place corners of the viewfinder just within the paper borders.";
   }
 }
 
@@ -940,8 +1057,12 @@ function initPairingModal() {
   if (btnCameraScan) {
     btnCameraScan.addEventListener('click', (e) => {
       e.preventDefault();
-      closeModal(modalEl);
-      openScanner();
+      modalEl.style.display = 'none';
+      if (privacyTimerInterval) {
+        clearInterval(privacyTimerInterval);
+        privacyTimerInterval = null;
+      }
+      openKeyQrScanner();
     });
   }
 
