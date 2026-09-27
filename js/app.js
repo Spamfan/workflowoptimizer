@@ -2,7 +2,7 @@
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.5';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.6';
 import {
   startCamera,
   stopCamera,
@@ -43,7 +43,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
-export const APP_VERSION = "v0.0.23";
+export const APP_VERSION = "v0.0.24";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
   "app.js": APP_VERSION,
@@ -55,8 +55,8 @@ export const MODULE_VERSIONS = {
   "ocr.js": OCR_VERSION,
   "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
-  "styles.css": "v0.0.12",
-  "index.html": "v0.0.12"
+  "styles.css": "v0.0.13",
+  "index.html": "v0.0.13"
 };
 
 const loginView = document.getElementById('login-view');
@@ -945,6 +945,22 @@ function initPairingModal() {
     });
   }
 
+  // Toggle manual entry on mobile
+  const btnToggleManual = modalEl.querySelector('#btn-toggle-manual-input');
+  const inputSectionEl = modalEl.querySelector('#pairing-input-section');
+  if (btnToggleManual && inputSectionEl) {
+    btnToggleManual.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isHidden = inputSectionEl.style.display === 'none';
+      inputSectionEl.style.display = isHidden ? 'block' : 'none';
+      btnToggleManual.textContent = isHidden ? 'hide manual entry' : 'or enter key manually...';
+      if (isHidden) {
+        const manualInput = modalEl.querySelector('#input-pairing-manual');
+        if (manualInput) setTimeout(() => manualInput.focus(), 100);
+      }
+    });
+  }
+
   // Accordion toggle
   const btnAccordion = modalEl.querySelector('#btn-toggle-accordion');
   const accordionBody = modalEl.querySelector('#pairing-accordion-body');
@@ -1033,7 +1049,7 @@ function refreshPairingDisplay() {
   if (!modalEl) return;
 
   const key = getStoreKey(currentStore);
-  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
   const titleEl = modalEl.querySelector('#pairing-modal-title');
   const subEl = modalEl.querySelector('#pairing-modal-sub');
@@ -1047,6 +1063,7 @@ function refreshPairingDisplay() {
   const inputSection = modalEl.querySelector('#pairing-input-section');
   const manualInput = modalEl.querySelector('#input-pairing-manual');
   const btnCameraScan = modalEl.querySelector('#btn-scan-camera-pair');
+  const btnToggleManual = modalEl.querySelector('#btn-toggle-manual-input');
   const accordion = modalEl.querySelector('#pairing-accordion');
   const accordionToggleLabel = modalEl.querySelector('#accordion-toggle-label');
   const btnResetLink = modalEl.querySelector('#btn-reset-key-link');
@@ -1069,16 +1086,17 @@ function refreshPairingDisplay() {
     if (btnCopy) btnCopy.disabled = false;
     if (btnResetLink) btnResetLink.style.display = 'inline-block';
     if (accordion) accordion.style.display = 'none';
+    if (btnCameraScan) btnCameraScan.style.display = 'none';
+    if (btnToggleManual) btnToggleManual.style.display = 'none';
+    if (inputSection) inputSection.style.display = 'none';
 
     if (isTouchDevice) {
-      // Mobile Paired
+      // Mobile Paired: Default is 1D Code 128 barcode; can toggle coworker QR
       if (titleEl) titleEl.textContent = `Store ${currentStore || '--'} Optimizer Key`;
       if (subEl) subEl.textContent = mobileShowQrToggle
         ? 'Scan this QR code with a coworker phone camera to pair.'
         : 'Point the Walmart handheld scanner at this barcode to pair the computer.';
       if (shield) shield.style.display = 'none';
-      if (btnCameraScan) btnCameraScan.style.display = 'none';
-      if (inputSection) inputSection.style.display = 'none';
       if (btnToggleQr) {
         btnToggleQr.style.display = 'inline-flex';
         btnToggleQr.textContent = mobileShowQrToggle ? 'Show Barcode' : 'Show Coworker QR';
@@ -1092,12 +1110,10 @@ function refreshPairingDisplay() {
         }
       }
     } else {
-      // Desktop / WMPC Paired (Privacy Shield Active)
+      // Desktop / WMPC Paired: 2D QR Code ONLY (Privacy Shield Active)
       if (titleEl) titleEl.textContent = `Store ${currentStore || '--'} Optimizer Key`;
       if (subEl) subEl.textContent = 'This computer is paired and can view and decrypt reports. Have coworkers scan with their phone camera to pair.';
       if (btnToggleQr) btnToggleQr.style.display = 'none';
-      if (btnCameraScan) btnCameraScan.style.display = 'none';
-      if (inputSection) inputSection.style.display = 'none';
       if (shield) shield.style.display = 'flex';
 
       if (barcodeContainer) {
@@ -1120,28 +1136,32 @@ function refreshPairingDisplay() {
     }
 
     if (isTouchDevice) {
-      // Mobile Unpaired
+      // Mobile Unpaired: Primary action is camera scan; manual entry is tucked
       if (titleEl) titleEl.textContent = 'Pair this Phone';
-      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. If an OSL associate has already made a key for Store ${currentStore || '--'}, scan or enter it below.`;
+      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. If a coworker has a paired phone or computer, scan their QR code to pair.`;
       if (barcodeContainer) {
         barcodeContainer.innerHTML = `
-          <div style="padding: 18px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
+          <div style="padding: 16px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
             <strong>⚠️ Phone Not Paired</strong><br>
             <span style="color: #6b7280; font-size: 0.78rem;">
-              Scan the computer screen or a coworker's phone to pair.
+              Scan a coworker's QR code or the computer screen to pair.
             </span>
           </div>
         `;
       }
-      if (inputSection) inputSection.style.display = 'block';
       if (btnCameraScan) btnCameraScan.style.display = 'block';
+      if (btnToggleManual) {
+        btnToggleManual.style.display = 'inline-block';
+        btnToggleManual.textContent = 'or enter key manually...';
+      }
+      if (inputSection) inputSection.style.display = 'none';
     } else {
-      // Desktop / WMPC Unpaired
+      // Desktop / WMPC Unpaired: Scanner pulse input is primary
       if (titleEl) titleEl.textContent = 'Pair this Computer';
-      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. If an OSL associate has already made a key for Store ${currentStore || '--'}, enter or scan it below. If you're the first person at Store ${currentStore || '--'} using this tool, you can create one now.`;
+      if (subEl) subEl.textContent = `Workflow Optimizer encrypts daily stock counts locally for Store ${currentStore || '--'}. Aim the station handheld scanner at your phone's barcode to pair.`;
       if (barcodeContainer) {
         barcodeContainer.innerHTML = `
-          <div style="padding: 18px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
+          <div style="padding: 16px; color: #dc2626; font-size: 0.85rem; line-height: 1.4;">
             <strong>⚠️ Station Not Paired</strong><br>
             <span style="color: #6b7280; font-size: 0.78rem;">
               Aim the handheld scanner at your phone's barcode to pair.
@@ -1149,10 +1169,10 @@ function refreshPairingDisplay() {
           </div>
         `;
       }
-      if (inputSection) inputSection.style.display = 'block';
       if (btnCameraScan) btnCameraScan.style.display = 'none';
+      if (btnToggleManual) btnToggleManual.style.display = 'none';
+      if (inputSection) inputSection.style.display = 'block';
 
-      // Auto-focus scanner input on non-touch terminal
       if (manualInput) {
         setTimeout(() => manualInput.focus(), 150);
       }

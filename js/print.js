@@ -1,15 +1,16 @@
-// Prototype Blue - js/print.js (v0.0.5)
+// Prototype Blue - js/print.js (v0.0.6)
 // Print Inventory Engine & Store-Key Decryption Integration
 
 import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.3';
 import { getStoreKey, hasStoreKey, setStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
-import { openPairingModal } from './app.js?v=0.0.23';
+import { openPairingModal } from './app.js?v=0.0.24';
 
-export const PRINT_VERSION = "v0.0.5";
+export const PRINT_VERSION = "v0.0.6";
 
 let activeStore = '';
 let currentMode = 'inventory'; // 'inventory' | 'pricing'
 let shiftComment = '';
+let isCarriedOver = false;
 let isDocumentEdited = false;
 let catalogData = null;
 let storeInventoryData = null;
@@ -17,7 +18,69 @@ let hiddenItemKeys = new Set();
 let manualHighlights = {}; // key -> 'partial' | 'full'
 let quantityOverrides = {}; // key -> qty
 
+// 10-Step In-Memory Undo / Redo History Stack
+let historyStack = [];
+let historyIndex = -1;
+const MAX_HISTORY = 10;
+
+function pushHistoryState() {
+  const state = {
+    hidden: Array.from(hiddenItemKeys),
+    highlights: { ...manualHighlights },
+    qtyOverrides: { ...quantityOverrides },
+    comment: shiftComment,
+    isEdited: isDocumentEdited,
+    isCarriedOver: isCarriedOver
+  };
+
+  if (historyIndex < historyStack.length - 1) {
+    historyStack = historyStack.slice(0, historyIndex + 1);
+  }
+
+  historyStack.push(JSON.stringify(state));
+  if (historyStack.length > MAX_HISTORY) {
+    historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  const btnUndo = document.getElementById('btn-print-undo');
+  const btnRedo = document.getElementById('btn-print-redo');
+  if (btnUndo) btnUndo.disabled = (historyIndex <= 0);
+  if (btnRedo) btnRedo.disabled = (historyIndex >= historyStack.length - 1);
+}
+
+export function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    applyHistoryState(JSON.parse(historyStack[historyIndex]));
+  }
+}
+
+export function redo() {
+  if (historyIndex < historyStack.length - 1) {
+    historyIndex++;
+    applyHistoryState(JSON.parse(historyStack[historyIndex]));
+  }
+}
+
+function applyHistoryState(state) {
+  hiddenItemKeys = new Set(state.hidden || []);
+  manualHighlights = state.highlights || {};
+  quantityOverrides = state.qtyOverrides || {};
+  shiftComment = state.comment || '';
+  isDocumentEdited = Boolean(state.isEdited);
+  isCarriedOver = Boolean(state.isCarriedOver);
+
+  saveSessionOverrides();
+  renderPrintDocument(false);
+  updateHistoryButtons();
+}
+
 const getSessionOverrideKey = (store) => `wfo_print_overrides_${store || 'default'}`;
+const getPersistentCommentKey = (store) => `wfo_saved_comment_${store || 'default'}`;
 
 function saveSessionOverrides() {
   if (!activeStore) return;
@@ -27,23 +90,39 @@ function saveSessionOverrides() {
       highlights: manualHighlights,
       qtyOverrides: quantityOverrides,
       comment: shiftComment,
-      isEdited: isDocumentEdited
+      isEdited: isDocumentEdited,
+      isCarriedOver: isCarriedOver
     };
     sessionStorage.setItem(getSessionOverrideKey(activeStore), JSON.stringify(payload));
+    if (shiftComment) {
+      localStorage.setItem(getPersistentCommentKey(activeStore), shiftComment);
+    } else {
+      localStorage.removeItem(getPersistentCommentKey(activeStore));
+    }
   } catch (_) {}
 }
 
 function loadSessionOverrides(store) {
   try {
     const raw = sessionStorage.getItem(getSessionOverrideKey(store));
-    if (!raw) return false;
-    const p = JSON.parse(raw);
-    hiddenItemKeys = new Set(p.hidden || []);
-    manualHighlights = p.highlights || {};
-    quantityOverrides = p.qtyOverrides || {};
-    shiftComment = p.comment || '';
-    isDocumentEdited = Boolean(p.isEdited);
-    return true;
+    if (raw) {
+      const p = JSON.parse(raw);
+      hiddenItemKeys = new Set(p.hidden || []);
+      manualHighlights = p.highlights || {};
+      quantityOverrides = p.qtyOverrides || {};
+      shiftComment = p.comment || '';
+      isDocumentEdited = Boolean(p.isEdited);
+      isCarriedOver = Boolean(p.isCarriedOver);
+      return true;
+    }
+    // Fallback: check persistent localStorage for comments
+    const savedComment = localStorage.getItem(getPersistentCommentKey(store));
+    if (savedComment) {
+      shiftComment = savedComment;
+      isCarriedOver = true;
+      return true;
+    }
+    return false;
   } catch (_) {
     return false;
   }
@@ -52,6 +131,7 @@ function loadSessionOverrides(store) {
 function clearSessionOverrides(store) {
   try {
     sessionStorage.removeItem(getSessionOverrideKey(store));
+    localStorage.removeItem(getPersistentCommentKey(store));
   } catch (_) {}
 }
 
@@ -74,7 +154,6 @@ function resolveDevice(modelName, catalogIndex) {
   const norm = (modelName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   if (catalogIndex[norm]) return catalogIndex[norm];
 
-  // Prefix fallback matching
   for (const key of Object.keys(catalogIndex)) {
     if (norm.startsWith(key) || key.startsWith(norm)) {
       return catalogIndex[key];
@@ -155,12 +234,36 @@ function formatClusteredTimestamps(timestampMap) {
   return `Sources: ${clusterStrings.join(', ')}`;
 }
 
+// Global Keydown Handler for Undo / Redo in Print View
+window.addEventListener('keydown', (e) => {
+  const printView = document.getElementById('print-view');
+  if (!printView || printView.style.display === 'none') return;
+
+  const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey;
+  const isRedo = (e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey));
+
+  if (isUndo) {
+    if (e.target && e.target.id === 'print-comment-editor') {
+      return; // allow contenteditable native undo
+    }
+    e.preventDefault();
+    undo();
+  } else if (isRedo) {
+    if (e.target && e.target.id === 'print-comment-editor') {
+      return;
+    }
+    e.preventDefault();
+    redo();
+  }
+});
+
 // View Initializer
 export function initPrintEngine() {
   const btnPrintModeToggle = document.getElementById('btn-print-mode-toggle');
   const btnPrintReset = document.getElementById('btn-print-reset');
   const btnPrintSheet = document.getElementById('btn-print-sheet');
-  const commentInput = document.getElementById('print-comment-input');
+  const btnPrintUndo = document.getElementById('btn-print-undo');
+  const btnPrintRedo = document.getElementById('btn-print-redo');
 
   if (btnPrintModeToggle) {
     btnPrintModeToggle.addEventListener('click', () => {
@@ -176,23 +279,24 @@ export function initPrintEngine() {
       manualHighlights = {};
       quantityOverrides = {};
       shiftComment = '';
+      isCarriedOver = false;
       isDocumentEdited = false;
       clearSessionOverrides(activeStore);
-      if (commentInput) commentInput.value = '';
+      pushHistoryState();
       renderPrintDocument();
     });
+  }
+
+  if (btnPrintUndo) {
+    btnPrintUndo.addEventListener('click', undo);
+  }
+
+  if (btnPrintRedo) {
+    btnPrintRedo.addEventListener('click', redo);
   }
 
   if (btnPrintSheet) {
     btnPrintSheet.addEventListener('click', triggerSilentPrint);
-  }
-
-  if (commentInput) {
-    commentInput.addEventListener('input', (e) => {
-      shiftComment = e.target.value;
-      saveSessionOverrides();
-      renderPrintDocument();
-    });
   }
 }
 
@@ -203,12 +307,10 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   hiddenItemKeys.clear();
   manualHighlights = {};
   quantityOverrides = {};
+  historyStack = [];
+  historyIndex = -1;
 
-  const hasSavedOverrides = loadSessionOverrides(storeNum);
-  const commentInput = document.getElementById('print-comment-input');
-  if (commentInput && hasSavedOverrides) {
-    commentInput.value = shiftComment;
-  }
+  loadSessionOverrides(storeNum);
 
   const sheetContainer = document.getElementById('print-preview-sheet');
   if (sheetContainer) {
@@ -233,6 +335,7 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
     return;
   }
 
+  pushHistoryState();
   renderPrintDocument();
 }
 
@@ -264,7 +367,7 @@ function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
   const btnOpenHub = container.querySelector('#btn-print-open-hub');
   const statusMsg = container.querySelector('#print-setup-status-msg');
 
-  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   if (input && !isTouchDevice) {
     setTimeout(() => input.focus(), 100);
   }
@@ -309,7 +412,7 @@ function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
   }
 }
 
-export function renderPrintDocument() {
+export function renderPrintDocument(pushToHistory = true) {
   const sheet = document.getElementById('print-preview-sheet');
   if (!sheet) return;
 
@@ -471,8 +574,23 @@ export function renderPrintDocument() {
     <div class="print-doc-header">
       <div class="print-doc-title">${titleLine}</div>
       <div class="print-doc-sources">${sourceClusterText}</div>
+
+      <!-- In-Document Comments Box (WYSIWYG between sources and banner) -->
+      <div class="print-comment-container" id="print-comment-container">
+        ${isCarriedOver && shiftComment ? `
+          <div class="comment-carryover-badge" id="comment-carryover-badge">
+            Previous report comments saved • <span class="comment-carryover-clear" id="btn-clear-comment">Clear</span>
+          </div>
+        ` : ''}
+        <div id="print-comment-editor" class="print-comment-editor" contenteditable="true" data-placeholder="You can type comments for today's report here...">${shiftComment || ''}</div>
+        <div id="rt-toolbar" class="rt-toolbar" style="display: none;">
+          <button type="button" class="rt-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="rt-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="rt-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        </div>
+      </div>
+
       <div class="print-doc-banner">${bannerText}</div>
-      ${shiftComment ? `<div class="print-doc-comment">${shiftComment}</div>` : ''}
     </div>
 
     <div class="print-doc-body">
@@ -523,7 +641,7 @@ export function renderPrintDocument() {
 
         <div class="print-section">
           <div class="print-section-header">Apple Devices</div>
-          <table class="print-table">
+          <table class="print-table apple-table">
             <thead>
               <tr>
                 <th class="col-item">ITEM</th>
@@ -544,6 +662,9 @@ export function renderPrintDocument() {
     </div>
   `;
 
+  // Attach In-Doc Comments Rich Text Controller
+  attachCommentEditorListeners();
+
   // Attach WYSIWYG Cell Overrides
   sheet.querySelectorAll('.tap-qty').forEach(td => {
     td.addEventListener('click', (e) => {
@@ -555,6 +676,7 @@ export function renderPrintDocument() {
         quantityOverrides[uid] = parseInt(newVal, 10);
         isDocumentEdited = true;
         saveSessionOverrides();
+        pushHistoryState();
         renderPrintDocument();
       }
     });
@@ -571,6 +693,7 @@ export function renderPrintDocument() {
       }
       isDocumentEdited = true;
       saveSessionOverrides();
+      pushHistoryState();
       renderPrintDocument();
     });
 
@@ -583,8 +706,142 @@ export function renderPrintDocument() {
       else delete manualHighlights[uid];
       isDocumentEdited = true;
       saveSessionOverrides();
+      pushHistoryState();
       renderPrintDocument();
     });
+  });
+
+  updateHistoryButtons();
+}
+
+function attachCommentEditorListeners() {
+  const container = document.getElementById('print-comment-container');
+  const editor = document.getElementById('print-comment-editor');
+  const toolbar = document.getElementById('rt-toolbar');
+  const btnClear = document.getElementById('btn-clear-comment');
+  const carryoverBadge = document.getElementById('comment-carryover-badge');
+
+  if (!editor || !toolbar) return;
+
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+  if (btnClear) {
+    btnClear.addEventListener('click', (e) => {
+      e.preventDefault();
+      editor.innerHTML = '';
+      shiftComment = '';
+      isCarriedOver = false;
+      if (carryoverBadge) carryoverBadge.style.display = 'none';
+      saveSessionOverrides();
+      pushHistoryState();
+    });
+  }
+
+  const updateToolbarPosition = () => {
+    if (isTouchDevice) {
+      toolbar.classList.add('mobile-docked');
+      toolbar.style.display = 'flex';
+      return;
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !editor.contains(sel.anchorNode)) {
+      toolbar.style.display = 'none';
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    toolbar.classList.remove('mobile-docked');
+    toolbar.style.display = 'flex';
+
+    const top = rect.top - containerRect.top - 38;
+    const left = Math.max(0, rect.left - containerRect.left + (rect.width / 2) - 60);
+
+    toolbar.style.top = `${top}px`;
+    toolbar.style.left = `${left}px`;
+  };
+
+  editor.addEventListener('focus', () => {
+    if (isTouchDevice) {
+      toolbar.classList.add('mobile-docked');
+      toolbar.style.display = 'flex';
+    }
+  });
+
+  editor.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!isTouchDevice) {
+        toolbar.style.display = 'none';
+      }
+    }, 250);
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (sel && sel.anchorNode && editor.contains(sel.anchorNode)) {
+      updateToolbarPosition();
+      updateButtonStates();
+    } else if (!isTouchDevice && toolbar.style.display !== 'none') {
+      toolbar.style.display = 'none';
+    }
+  });
+
+  function updateButtonStates() {
+    toolbar.querySelectorAll('.rt-btn').forEach(btn => {
+      const cmd = btn.dataset.cmd;
+      if (cmd && document.queryCommandState && document.queryCommandState(cmd)) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  toolbar.querySelectorAll('.rt-btn').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const cmd = btn.dataset.cmd;
+      if (cmd) {
+        document.execCommand(cmd, false, null);
+        shiftComment = editor.innerHTML;
+        isDocumentEdited = true;
+        isCarriedOver = false;
+        if (carryoverBadge) carryoverBadge.style.display = 'none';
+        saveSessionOverrides();
+        pushHistoryState();
+        updateButtonStates();
+      }
+    });
+  });
+
+  editor.addEventListener('input', () => {
+    shiftComment = editor.innerHTML;
+    isDocumentEdited = true;
+    isCarriedOver = false;
+    if (carryoverBadge) carryoverBadge.style.display = 'none';
+    saveSessionOverrides();
+  });
+
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        document.execCommand('bold', false, null);
+        updateButtonStates();
+      } else if (key === 'i') {
+        e.preventDefault();
+        document.execCommand('italic', false, null);
+        updateButtonStates();
+      } else if (key === 'u') {
+        e.preventDefault();
+        document.execCommand('underline', false, null);
+        updateButtonStates();
+      }
+    }
   });
 }
 
@@ -614,10 +871,10 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Inventory Report</title>
-        <link rel="stylesheet" href="styles.css?v=0.0.12">
+        <link rel="stylesheet" href="styles.css?v=0.0.13">
       </head>
       <body>
-        <div id="print-preview-sheet" style="border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important;">
+        <div id="print-preview-sheet" class="print-preview-sheet" style="border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important;">
           ${sheet.innerHTML}
         </div>
       </body>
