@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.0.13">
+  <link rel="stylesheet" href="styles.css?v=0.1.0">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -13,7 +13,7 @@
   <div id="top-left-controls">
     <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">BLUE v0.0.25</div>
+    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.0</div>
   </div>
 
   <div id="top-right-hub">
@@ -29,13 +29,12 @@
   <!-- GATEKEEPER / LOGIN VIEW -->
   <div id="login-view">
     <div class="login-card">
-      <h2 class="login-title">PROPRIETARY CONTENT</h2>
+      <h2 class="login-title">Please enter your optimizer passcode to proceed.</h2>
       <p class="login-desc">
-        Unauthorized access and/or sharing is forbidden. By entering your store number and passcode, you agree to the terms of use shown below.
+        By using this software you agree to it's terms of use as outlined below.
       </p>
-      <input type="tel" id="store-input" class="login-input" placeholder="Store number" maxlength="6" autofocus>
-      <input type="tel" id="pin-input" class="login-input" placeholder="Store passcode" style="-webkit-text-security: disc;">
-      <div id="pin-error">Incorrect Store # or PIN</div>
+      <input type="tel" id="pin-input" class="login-input" placeholder="Passcode" maxlength="6" autofocus style="-webkit-text-security: disc;">
+      <div id="pin-error">Incorrect Passcode</div>
       <div class="btn-group">
         <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
         <button id="btn-terms" class="pill-btn btn-secondary">Terms of Use</button>
@@ -51,10 +50,10 @@
     </div>
 
     <div class="dashboard-grid">
-      <!-- Card 1: Print inventory -->
+      <!-- Card 1: Print EDLPs -->
       <div class="dash-card">
         <div class="card-header">
-          <h2 id="card-print-title" class="card-title">Print inventory</h2>
+          <h2 id="card-print-title" class="card-title">Print EDLPs</h2>
           <div class="card-header-actions">
             <span id="ping-status" class="ping-status"></span>
             <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
@@ -66,9 +65,7 @@
         </div>
         <div class="card-body">
           <div class="card-actions-row">
-            <button id="btn-upload-inv" class="pill-btn btn-action-upload">Upload inventory</button>
-            <button id="btn-view-staged" class="pill-btn btn-action-staged" style="display: none;">View Staged (0)</button>
-            <button id="btn-print-inv" class="pill-btn btn-action-print">Print inventory</button>
+            <button id="btn-print-edlps" class="pill-btn btn-action-print" disabled>Print EDLPs</button>
           </div>
           <div class="ping-display-box">
             <span class="ping-label">Live Ping Value:</span>
@@ -217,7 +214,7 @@
     <div class="modal-card">
       <div class="manifest-header">
         <h3 class="manifest-title">Module Manifest</h3>
-        <span class="manifest-sub">Prototype Blue Diagnostics</span>
+        <span class="manifest-sub">Prototype Crimson Diagnostics</span>
       </div>
       <table class="manifest-table">
         <thead>
@@ -374,6 +371,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.0.25"></script>
+  <script type="module" src="js/app.js?v=0.1.0"></script>
 </body>
 </html>
