@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.0 */
+/* Prototype Crimson - styles.css v0.1.1 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -1618,19 +1618,12 @@ body {
   line-height: 1.3;
 }
 
-.print-doc-sources {
-  font-size: 0.8rem;
-  color: #111;
-  margin-top: 2px;
-}
-
 .print-doc-banner {
   font-size: 0.8rem;
   font-weight: 800;
   color: #000;
   margin-top: 8px;
 }
-
 
 /* --- IN-DOC WYSIWYG COMMENTS & FLOATING / DOCKED RICH TEXT TOOLBAR --- */
 .print-comment-container {
@@ -1786,7 +1779,6 @@ body {
   color: var(--primary-hover);
 }
 
-
 .print-doc-body {
   display: flex;
   justify-content: space-between;
@@ -1830,24 +1822,19 @@ body {
 }
 
 .col-item {
-  width: 46%;
+  width: 48%;
   word-break: break-word;
 }
 
 .col-price {
-  width: 40%;
+  width: 52%;
   text-align: left;
   white-space: nowrap;
 }
 
-.col-qty {
-  width: 14%;
-  text-align: right;
-  font-weight: 700;
-}
-/* Dedicated Apple Table Column Widths - Shifted Left to eliminate QTY collision */
+/* Dedicated Apple Table Column Widths */
 .apple-table .col-item {
-  width: 24% !important;
+  width: 38% !important;
   word-break: break-word;
 }
 
@@ -1858,16 +1845,14 @@ body {
   font-size: 0.76rem;
 }
 
-.apple-table .col-qty {
-  width: 14% !important;
-  text-align: right;
-  font-weight: 700;
-}
-
-
-.tap-item, .tap-qty {
+.tap-item, .tap-price {
   cursor: pointer;
   user-select: none;
+}
+
+.print-row.is-hidden {
+  opacity: 0.35;
+  text-decoration: line-through;
 }
 
 .print-row.hl-partial .col-item {
@@ -1940,11 +1925,15 @@ body {
     border: none !important;
     box-shadow: none !important;
     width: 100% !important;
-    max-height: 10.4in !important;
+    max-height: 10.8in !important;
     height: 100% !important;
     overflow: hidden !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+
+  .print-row.is-hidden {
+    display: none !important;
   }
 
   .print-comment-editor {
