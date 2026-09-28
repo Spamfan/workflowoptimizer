@@ -1,7 +1,7 @@
-// Workflow Optimizer - js/scanner.js (v0.0.12)
+// Workflow Optimizer - js/scanner.js (v0.0.13)
 // Mobile Camera Hardware Sensor Photo Capture, Touch Pan/Zoom Adjuster & Test Ingestion
 
-export const SCANNER_VERSION = "v0.0.12";
+export const SCANNER_VERSION = "v0.0.13";
 
 let activeStream = null;
 
@@ -82,7 +82,7 @@ export function stopCamera(videoEl) {
  * @param {number} rotationAngle 
  * @returns {{ fullDataUrl: string, thumbDataUrl: string, canvas: HTMLCanvasElement }}
  */
-export function cropImageToLetter(img, rotationAngle = 0) {
+export function cropImageToLetter(img, rotationAngle = 0, videoEl = null) {
   const sw = img.naturalWidth || img.width;
   const sh = img.naturalHeight || img.height;
 
@@ -92,21 +92,94 @@ export function cropImageToLetter(img, rotationAngle = 0) {
 
   // Standard US Letter Portrait ratio (8.5 / 11 = ~0.7727)
   const targetRatio = 8.5 / 11;
-  let cropW = sw;
-  let cropH = sw / targetRatio;
+  let sx, sy, cropW, cropH;
+  let mappedFromViewfinder = false;
 
-  if (cropH > sh) {
-    cropH = sh;
-    cropW = sh * targetRatio;
+  if (videoEl && typeof videoEl.getBoundingClientRect === "function") {
+    try {
+      const vRect = videoEl.getBoundingClientRect();
+      const parent = videoEl.parentElement;
+      const guideBox = parent ? (parent.querySelector(".scanner-guide-box") || parent) : null;
+      const gRect = guideBox ? guideBox.getBoundingClientRect() : vRect;
+
+      const vw = videoEl.videoWidth;
+      const vh = videoEl.videoHeight;
+
+      if (vRect.width > 0 && vRect.height > 0 && gRect.width > 0 && gRect.height > 0 && vw > 0 && vh > 0) {
+        // Calculate object-fit: cover mapping of video feed inside videoEl container
+        const vario = vw / vh;
+        const eario = vRect.width / vRect.height;
+        let renderedW, renderedH, offX, offY;
+
+        if (vario > eario) {
+          renderedH = vRect.height;
+          renderedW = renderedH * vario;
+          offX = (renderedW - vRect.width) / 2;
+          offY = 0;
+        } else {
+          renderedW = vRect.width;
+          renderedH = renderedW / vario;
+          offX = 0;
+          offY = (renderedH - vRect.height) / 2;
+        }
+
+        // Relative coordinates of guide box within rendered video content
+        const leftOnVideo = (gRect.left - vRect.left) + offX;
+        const topOnVideo = (gRect.top - vRect.top) + offY;
+
+        const normX = Math.max(0, leftOnVideo / renderedW);
+        const normY = Math.max(0, topOnVideo / renderedH);
+        const normW = Math.min(1 - normX, gRect.width / renderedW);
+        const normH = Math.min(1 - normY, gRect.height / renderedH);
+
+        // Map normalized stream coords to full still sensor dimensions (handling 16:9 vs 4:3 FOV crops)
+        const photoAspect = sw / sh;
+        let sensorActiveX = 0, sensorActiveY = 0, sensorActiveW = sw, sensorActiveH = sh;
+
+        if (Math.abs(photoAspect - vario) > 0.02) {
+          if (photoAspect > vario) {
+            sensorActiveW = sh * vario;
+            sensorActiveX = (sw - sensorActiveW) / 2;
+          } else {
+            sensorActiveH = sw / vario;
+            sensorActiveY = (sh - sensorActiveH) / 2;
+          }
+        }
+
+        sx = Math.round(sensorActiveX + normX * sensorActiveW);
+        sy = Math.round(sensorActiveY + normY * sensorActiveH);
+        cropW = Math.round(normW * sensorActiveW);
+        cropH = Math.round(normH * sensorActiveH);
+
+        // Clamp to sensor bounds
+        sx = Math.max(0, Math.min(sx, sw - 10));
+        sy = Math.max(0, Math.min(sy, sh - 10));
+        cropW = Math.max(10, Math.min(cropW, sw - sx));
+        cropH = Math.max(10, Math.min(cropH, sh - sy));
+
+        mappedFromViewfinder = true;
+      }
+    } catch (_) {
+      mappedFromViewfinder = false;
+    }
   }
 
-  const sx = (sw - cropW) / 2;
-  const sy = (sh - cropH) / 2;
+  if (!mappedFromViewfinder) {
+    cropW = sw;
+    cropH = sw / targetRatio;
+    if (cropH > sh) {
+      cropH = sh;
+      cropW = sh * targetRatio;
+    }
+    sx = (sw - cropW) / 2;
+    sy = (sh - cropH) / 2;
+  }
 
   // Clamp to 300 DPI target scale (~2048px width) for OCR neural net optimization
   const maxTargetW = 2048;
   const outW = Math.round(Math.min(cropW, maxTargetW));
-  const outH = Math.round(outW / targetRatio);
+  const effectiveAspect = cropW / cropH;
+  const outH = Math.round(outW / (effectiveAspect || targetRatio));
 
   // Offscreen unrotated canvas at target photo resolution
   const offCanvas = document.createElement("canvas");
@@ -180,7 +253,7 @@ export async function takePhotoFromCamera(videoEl, rotationAngle = 0) {
     img.onload = () => {
       URL.revokeObjectURL(url);
       try {
-        resolve(cropImageToLetter(img, rotationAngle));
+        resolve(cropImageToLetter(img, rotationAngle, videoEl));
       } catch (err) {
         reject(err);
       }
@@ -215,7 +288,7 @@ export async function loadTestImage(url, rotationAngle = 0) {
     img.onload = () => {
       URL.revokeObjectURL(objUrl);
       try {
-        resolve(cropImageToLetter(img, rotationAngle));
+        resolve(cropImageToLetter(img, rotationAngle, videoEl));
       } catch (err) {
         reject(err);
       }
@@ -482,7 +555,8 @@ export function initAdjuster(imgEl, containerEl) {
 export function captureAdjustedFrame(imgEl, containerEl) {
   triggerHaptic(30);
 
-  const frameRect = containerEl.getBoundingClientRect();
+  const guideBox = containerEl.querySelector ? (containerEl.querySelector(".scanner-guide-box") || containerEl) : containerEl;
+  const frameRect = guideBox.getBoundingClientRect();
   if (!frameRect.width || !frameRect.height || !imgEl.naturalWidth || !imgEl.naturalHeight) {
     throw new Error("Invalid framing dimensions");
   }

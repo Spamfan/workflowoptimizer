@@ -1,8 +1,9 @@
-// Prototype Blue - js/app.js (v0.0.26)
+﻿// Prototype Blue - js/app.js (v0.0.23)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
+
 import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.7';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.6';
 import {
   startCamera,
   stopCamera,
@@ -13,7 +14,7 @@ import {
   setAdjusterRotation,
   captureAdjustedFrame,
   SCANNER_VERSION
-} from './scanner.js?v=0.0.12';
+} from './scanner.js?v=0.0.13';
 import { runOcrPipeline, getOcrTelemetry, OCR_VERSION } from './ocr.js?v=0.0.12';
 import {
   getStagedData,
@@ -43,6 +44,7 @@ import {
 } from './crypto.js?v=0.0.2';
 import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
+
 export const APP_VERSION = "v0.0.26";
 export const MODULE_VERSIONS = {
   "Prototype Blue": APP_VERSION,
@@ -59,6 +61,7 @@ export const MODULE_VERSIONS = {
   "index.html": "v0.0.14"
 };
 
+
 const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
 const scannerView = document.getElementById('scanner-view');
@@ -73,6 +76,7 @@ const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
 if (versionText) versionText.textContent = `BLUE ${APP_VERSION}`;
 
+
 let currentView = 'login-view';
 let isAuthenticated = false;
 let currentStore = '';
@@ -84,8 +88,10 @@ let latestFullCaptureUrl = null;
 let isQrScanning = false;
 let qrScanAnimationId = null;
 
+
 let privacyTimerInterval = null;
 let mobileShowQrToggle = false;
+
 
 // --- URL DEEP LINK AUTO-ENROLLMENT ---
 function handleUrlDeepLink() {
@@ -102,17 +108,20 @@ function handleUrlDeepLink() {
       const storeInput = document.getElementById('store-input');
       if (storeInput) storeInput.value = cleanStore;
 
+
       window.history.replaceState({}, document.title, window.location.pathname);
       alert(`✓ Store ${cleanStore} Optimizer Key successfully enrolled on this device!`);
     }
   } catch (_) {}
 }
 
+
 export function openModal(modalEl) {
   if (!modalEl) return;
   modalEl.style.display = 'flex';
   history.pushState({ modalId: modalEl.id }, '', '');
 }
+
 
 export function closeModal(modalEl) {
   if (!modalEl || modalEl.style.display !== 'flex') return;
@@ -126,12 +135,14 @@ export function closeModal(modalEl) {
   }
 }
 
+
 function updateDashboardStagedButton() {
   const btnViewStaged = document.getElementById('btn-view-staged');
   if (!btnViewStaged) return;
   const state = getStagedData(currentStore);
   const total = Object.values(state.sheets).reduce((sum, s) => sum + (s.items ? s.items.length : 0), 0);
   const offlineCount = getOfflineQueueCount();
+
 
   if (total > 0) {
     btnViewStaged.textContent = `View Staged (${total})${offlineCount > 0 ? ` • ${offlineCount} Offline` : ''}`;
@@ -144,11 +155,13 @@ function updateDashboardStagedButton() {
   }
 }
 
+
 function ensurePairingButtonOnDashboard() {
   if (document.getElementById('btn-pair-device')) return;
   const targetContainer = document.querySelector('#dashboard-view .card-actions-row')
     || document.querySelector('#dashboard-view .dash-card .card-body')
     || document.querySelector('#dashboard-view .dash-card');
+
 
   if (targetContainer) {
     const btnPair = document.createElement('button');
@@ -161,6 +174,7 @@ function ensurePairingButtonOnDashboard() {
   }
 }
 
+
 export function switchView(targetViewId, pushState = true) {
   if (targetViewId !== 'scanner-view') {
     if (isQrScanning) stopKeyQrScanner();
@@ -172,12 +186,15 @@ export function switchView(targetViewId, pushState = true) {
   if (reviewView) reviewView.style.display = 'none';
   if (printView) printView.style.display = 'none';
 
+
   const targetEl = document.getElementById(targetViewId);
   if (targetEl) {
     targetEl.style.display = 'flex';
   }
 
+
   currentView = targetViewId;
+
 
   if (currentView === 'dashboard-view') {
     btnLogout.style.display = 'inline-flex';
@@ -192,10 +209,12 @@ export function switchView(targetViewId, pushState = true) {
     btnBack.style.display = 'none';
   }
 
+
   if (pushState) {
     history.pushState({ view: targetViewId }, '', '');
   }
 }
+
 
 window.addEventListener('popstate', (e) => {
   const openModals = document.querySelectorAll('.modal-overlay');
@@ -210,12 +229,14 @@ window.addEventListener('popstate', (e) => {
     }
   }
 
+
   let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
   if (!isAuthenticated && dest === 'dashboard-view') {
     dest = 'login-view';
   }
   switchView(dest, false);
 });
+
 
 // Live Ping Engine
 const btnRefresh = document.getElementById('btn-refresh-ping');
@@ -224,10 +245,12 @@ const pingValueEl = document.getElementById('ping-value');
 const pingStatusEl = document.getElementById('ping-status');
 let statusTimer = null;
 
+
 async function fetchPing() {
   if (statusTimer) clearTimeout(statusTimer);
   refreshSvg.classList.add('spinning');
   pingStatusEl.textContent = 'Checking...';
+
 
   try {
     const data = await fetchCatalog();
@@ -243,8 +266,10 @@ async function fetchPing() {
   }
 }
 
+
 btnRefresh.addEventListener('click', fetchPing);
 btnLogout.addEventListener('click', logout);
+
 
 btnBack.addEventListener('click', () => {
   if (isQrScanning) {
@@ -260,7 +285,9 @@ btnBack.addEventListener('click', () => {
   }
 });
 
+
 initPrintEngine();
+
 
 if (btnPrintInv) {
   btnPrintInv.addEventListener('click', () => {
@@ -268,6 +295,7 @@ if (btnPrintInv) {
     openPrintPreview(currentStore, getStoreKey(currentStore));
   });
 }
+
 
 async function openScanner() {
   exitCropMode();
@@ -284,10 +312,12 @@ async function openScanner() {
   }
 }
 
+
 async function openKeyQrScanner() {
   exitCropMode();
   isQrScanning = true;
   switchView('scanner-view');
+
 
   if (scannerInstructionBanner) {
     scannerInstructionBanner.textContent = "Point camera at coworker's QR code or screen to pair.";
@@ -295,6 +325,7 @@ async function openKeyQrScanner() {
   if (cameraControlsDeck) {
     cameraControlsDeck.style.display = 'none';
   }
+
 
   try {
     await startCamera(scannerVideo);
@@ -304,6 +335,7 @@ async function openKeyQrScanner() {
     openPairingModal();
     return;
   }
+
 
   if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
     try {
@@ -337,14 +369,17 @@ async function openKeyQrScanner() {
   }
 }
 
+
 function handleScannedKeyToken(raw) {
   stopKeyQrScanner();
   try {
     if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
   } catch (_) {}
 
+
   let matchedStore = currentStore;
   let matchedKey = raw;
+
 
   if (raw.includes('?') && (raw.includes('key=') || raw.includes('store='))) {
     try {
@@ -355,6 +390,7 @@ function handleScannedKeyToken(raw) {
       if (k) matchedKey = k.trim();
     } catch (_) {}
   }
+
 
   if (matchedKey) {
     setStoreKey(matchedStore, matchedKey);
@@ -374,6 +410,7 @@ function handleScannedKeyToken(raw) {
   }
 }
 
+
 function stopKeyQrScanner() {
   isQrScanning = false;
   if (qrScanAnimationId) {
@@ -387,9 +424,11 @@ function stopKeyQrScanner() {
   }
 }
 
+
 if (btnUploadInv) {
   btnUploadInv.addEventListener('click', openScanner);
 }
+
 
 // Scanner & Review DOM bindings
 const scannerVideo = document.getElementById('scanner-video');
@@ -410,7 +449,9 @@ const scannerFileInput = document.getElementById('scanner-file-input');
 const reviewLoadingState = document.getElementById('review-loading-state');
 const ocrProgressText = document.getElementById('ocr-progress-text');
 
+
 let isCropMode = false;
+
 
 async function enterCropMode(file) {
   isCropMode = true;
@@ -431,6 +472,7 @@ async function enterCropMode(file) {
   }
 }
 
+
 function exitCropMode() {
   isCropMode = false;
   if (scannerPreviewImg) {
@@ -448,6 +490,7 @@ function exitCropMode() {
   }
 }
 
+
 if (tiltSlider) {
   tiltSlider.addEventListener('input', (e) => {
     const deg = parseFloat(e.target.value) || 0;
@@ -458,6 +501,7 @@ if (tiltSlider) {
   });
 }
 
+
 if (btnAdjustReset) {
   btnAdjustReset.addEventListener('click', () => {
     resetAdjuster(scannerPreviewImg);
@@ -465,6 +509,7 @@ if (btnAdjustReset) {
     if (tiltAngleDisplay) tiltAngleDisplay.textContent = '0.00°';
   });
 }
+
 
 if (btnCropCamera) {
   btnCropCamera.addEventListener('click', async () => {
@@ -477,11 +522,13 @@ if (btnCropCamera) {
   });
 }
 
+
 if (btnCropFile) {
   btnCropFile.addEventListener('click', () => {
     if (scannerFileInput) scannerFileInput.click();
   });
 }
+
 
 if (btnCropConfirm) {
   btnCropConfirm.addEventListener('click', () => {
@@ -497,6 +544,7 @@ if (btnCropConfirm) {
   });
 }
 
+
 if (btnScannerShutter) {
   btnScannerShutter.addEventListener('click', async () => {
     try {
@@ -511,6 +559,7 @@ if (btnScannerShutter) {
   });
 }
 
+
 if (scannerFileInput) {
   scannerFileInput.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
@@ -520,6 +569,7 @@ if (scannerFileInput) {
     scannerFileInput.value = '';
   });
 }
+
 
 const reviewMetaThumb = document.getElementById('review-meta-thumb');
 const reviewCarrierTitle = document.getElementById('review-carrier-title');
@@ -531,16 +581,20 @@ const btnAddItem = document.getElementById('btn-add-item');
 const btnScanNext = document.getElementById('btn-scan-next');
 const btnPublishAll = document.getElementById('btn-publish-all');
 
+
 function renderReview(carrierKey) {
   activeCarrier = carrierKey;
   carrierTabs.forEach(t => t.classList.toggle('active', t.dataset.carrier === carrierKey));
 
+
   const state = getStagedData(currentStore);
   const sheet = state.sheets[carrierKey] || { carrier: carrierKey.toUpperCase(), timestamp: '', thumb: '', items: [] };
+
 
   reviewCarrierTitle.textContent = `${sheet.carrier} Inventory`;
   reviewStoreText.textContent = `Store ${currentStore || '--'}`;
   reviewTimestampText.textContent = sheet.timestamp || 'Not scanned yet';
+
 
   const pageBadge = document.getElementById('review-page-badge');
   const pageCount = sheet.pageCount || (sheet.items && sheet.items.length > 0 ? 1 : 0);
@@ -553,6 +607,7 @@ function renderReview(carrierKey) {
     }
   }
 
+
   const media = getSessionMedia(carrierKey);
   if (media.thumb) {
     reviewMetaThumb.src = media.thumb;
@@ -561,10 +616,12 @@ function renderReview(carrierKey) {
     reviewMetaThumb.style.display = 'none';
   }
 
+
   if (reviewLoadingState) reviewLoadingState.style.display = 'none';
   stagedItemsContainer.style.display = 'flex';
   if (btnAddItem) btnAddItem.style.display = 'inline-flex';
   if (btnClearStaged) btnClearStaged.style.display = 'inline-flex';
+
 
   stagedItemsContainer.innerHTML = '';
   if (!sheet.items || sheet.items.length === 0) {
@@ -572,10 +629,12 @@ function renderReview(carrierKey) {
     return;
   }
 
+
   sheet.items.forEach(item => {
     const card = document.createElement('div');
     card.className = 'item-row-card';
     card.dataset.id = item.id;
+
 
     card.innerHTML = `
       <div class="item-main-info tap-editable" title="Tap to edit row">
@@ -591,6 +650,7 @@ function renderReview(carrierKey) {
       </div>
     `;
 
+
     const activateEdit = () => {
       card.innerHTML = `
         <div class="row-edit-form">
@@ -605,8 +665,10 @@ function renderReview(carrierKey) {
         </div>
       `;
 
+
       const modelInput = card.querySelector('.input-model');
       if (modelInput) modelInput.focus();
+
 
       const saveChanges = () => {
         const model = card.querySelector('.input-model').value.trim();
@@ -614,9 +676,11 @@ function renderReview(carrierKey) {
         const color = card.querySelector('.input-color').value.trim().toUpperCase();
         const qty = parseInt(card.querySelector('.input-qty').value, 10) || 0;
 
+
         updateStagedItem(currentStore, activeCarrier, item.id, { model, capacity, color, qty });
         renderReview(activeCarrier);
       };
+
 
       card.querySelector('.btn-save-row').addEventListener('click', saveChanges);
       card.querySelector('.btn-cancel-row').addEventListener('click', () => renderReview(activeCarrier));
@@ -628,9 +692,11 @@ function renderReview(carrierKey) {
       });
     };
 
+
     card.querySelectorAll('.tap-editable').forEach(el => {
       el.addEventListener('click', activateEdit);
     });
+
 
     card.querySelector('.btn-delete-row').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -638,13 +704,16 @@ function renderReview(carrierKey) {
       renderReview(activeCarrier);
     });
 
+
     stagedItemsContainer.appendChild(card);
   });
 }
 
+
 carrierTabs.forEach(tab => {
   tab.addEventListener('click', () => renderReview(tab.dataset.carrier));
 });
+
 
 if (btnAddItem) {
   btnAddItem.addEventListener('click', () => {
@@ -653,9 +722,11 @@ if (btnAddItem) {
   });
 }
 
+
 if (btnScanNext) {
   btnScanNext.addEventListener('click', openScanner);
 }
+
 
 if (btnClearStaged) {
   btnClearStaged.addEventListener('click', () => {
@@ -667,6 +738,7 @@ if (btnClearStaged) {
   });
 }
 
+
 if (reviewMetaThumb) {
   reviewMetaThumb.addEventListener('click', () => {
     const src = latestFullCaptureUrl || reviewMetaThumb.src;
@@ -677,6 +749,7 @@ if (reviewMetaThumb) {
   });
 }
 
+
 window.wfoHandleCapturedImage = handleCapturedImage;
 window.addEventListener('wfo:test_image_loaded', (e) => {
   if (e.detail) {
@@ -684,10 +757,12 @@ window.addEventListener('wfo:test_image_loaded', (e) => {
   }
 });
 
+
 async function handleCapturedImage(captureResult) {
   latestFullCaptureUrl = captureResult.fullDataUrl;
   stopCamera(scannerVideo);
   switchView('review-view');
+
 
   if (reviewMetaThumb) {
     reviewMetaThumb.src = captureResult.thumbDataUrl;
@@ -702,14 +777,17 @@ async function handleCapturedImage(captureResult) {
   if (reviewLoadingState) reviewLoadingState.style.display = 'flex';
   if (ocrProgressText) ocrProgressText.textContent = 'Reading sheet (0%)...';
 
+
   try {
     const { carrier, store, items } = await runOcrPipeline(captureResult.canvas, cachedStats || {}, pct => {
       if (ocrProgressText) ocrProgressText.textContent = `Reading sheet (${pct}%)...`;
     });
 
+
     if (carrier && ['tmo', 'vzw', 'att'].includes(carrier)) {
       activeCarrier = carrier;
     }
+
 
     const telem = getOcrTelemetry();
     commitScanToCarrier(currentStore, activeCarrier, items, captureResult.thumbDataUrl, telem, "append");
@@ -724,6 +802,7 @@ async function handleCapturedImage(captureResult) {
   }
 }
 
+
 const btnViewStaged = document.getElementById('btn-view-staged');
 if (btnViewStaged) {
   btnViewStaged.addEventListener('click', () => {
@@ -732,10 +811,12 @@ if (btnViewStaged) {
   });
 }
 
+
 // Modals: Manifest & Terms
 const manifestModal = document.getElementById('manifest-modal');
 const manifestListBody = document.getElementById('manifest-list-body');
 const btnManifestClose = document.getElementById('btn-manifest-close');
+
 
 versionText.addEventListener('click', () => {
   manifestListBody.innerHTML = Object.entries(MODULE_VERSIONS)
@@ -744,14 +825,17 @@ versionText.addEventListener('click', () => {
   openModal(manifestModal);
 });
 
+
 btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
 manifestModal.addEventListener('click', (e) => {
   if (e.target === manifestModal) closeModal(manifestModal);
 });
 
+
 const termsModal = document.getElementById('terms-modal');
 const btnTerms = document.getElementById('btn-terms');
 const btnTermsClose = document.getElementById('btn-terms-close');
+
 
 btnTerms.addEventListener('click', () => { openModal(termsModal); });
 btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
@@ -759,9 +843,11 @@ termsModal.addEventListener('click', (e) => {
   if (e.target === termsModal) closeModal(termsModal);
 });
 
+
 const lightboxModal = document.getElementById('lightbox-modal');
 const lightboxImg = document.getElementById('lightbox-img');
 const btnLightboxClose = document.getElementById('btn-lightbox-close');
+
 
 if (btnLightboxClose) {
   btnLightboxClose.addEventListener('click', () => { closeModal(lightboxModal); });
@@ -771,6 +857,7 @@ if (lightboxModal) {
     if (e.target === lightboxModal) closeModal(lightboxModal);
   });
 }
+
 
 // OCR Diagnostics Modal Binding
 const ocrDebugModal = document.getElementById('ocr-debug-modal');
@@ -785,12 +872,14 @@ const ocrDebugCount = document.getElementById('ocr-debug-count');
 const ocrDebugLinesList = document.getElementById('ocr-debug-lines-list');
 const ocrDebugRawText = document.getElementById('ocr-debug-raw-text');
 
+
 if (btnOcrDebug) {
   btnOcrDebug.addEventListener('click', () => {
     const state = getStagedData(currentStore);
     const sheet = state.sheets[activeCarrier];
     const media = getSessionMedia(activeCarrier);
     const telem = media.telemetry || getOcrTelemetry();
+
 
     if (ocrDebugTimestamp) {
       ocrDebugTimestamp.textContent = telem.timestamp
@@ -809,6 +898,7 @@ if (btnOcrDebug) {
       ocrDebugCount.textContent = String(telem.itemCount || (sheet && sheet.items ? sheet.items.length : 0));
     }
 
+
     if (ocrDebugLinesList) {
       ocrDebugLinesList.innerHTML = '';
       if (!telem.lineLogs || telem.lineLogs.length === 0) {
@@ -826,6 +916,7 @@ if (btnOcrDebug) {
             ? `Parsed: <strong>${log.item.model}</strong> • ${log.item.capacity} • ${log.item.color} • Qty: ${log.item.qty}${topCandidates ? `<br><span class="debug-line-note">Candidates: ${topCandidates}</span>` : ''}`
             : `<span style="color: var(--danger);">${log.reason || 'Not matched'}</span>`;
 
+
           itemEl.innerHTML = `
             <div class="debug-line-header">
               <span style="font-weight: 700; font-size: 0.75rem;">Row #${idx + 1}</span>
@@ -839,13 +930,16 @@ if (btnOcrDebug) {
       }
     }
 
+
     if (ocrDebugRawText) {
       ocrDebugRawText.textContent = telem.rawText || '(No raw OCR text captured for this sheet)';
     }
 
+
     openModal(ocrDebugModal);
   });
 }
+
 
 if (btnOcrCopyJson) {
   btnOcrCopyJson.addEventListener('click', async () => {
@@ -859,6 +953,7 @@ if (btnOcrCopyJson) {
       telemetry: (sheet && sheet.telemetry) || getOcrTelemetry()
     };
     const jsonText = JSON.stringify(payload, null, 2);
+
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -880,6 +975,7 @@ if (btnOcrCopyJson) {
   });
 }
 
+
 if (btnOcrDownloadImg) {
   btnOcrDownloadImg.addEventListener('click', () => {
     const state = getStagedData(currentStore);
@@ -899,6 +995,7 @@ if (btnOcrDownloadImg) {
   });
 }
 
+
 if (btnOcrDebugClose) {
   btnOcrDebugClose.addEventListener('click', () => { closeModal(ocrDebugModal); });
 }
@@ -908,15 +1005,18 @@ if (ocrDebugModal) {
   });
 }
 
+
 // --- OPTIMIZER KEY & PAIRING CONTROLLER ---
 function initPairingModal() {
   const modalEl = document.getElementById('pairing-modal');
   if (!modalEl) return null;
 
+
   if (modalEl.dataset.bound === 'true') {
     return modalEl;
   }
   modalEl.dataset.bound = 'true';
+
 
   // Backdrop dismiss
   const handleBackdropDismiss = (e) => {
@@ -933,6 +1033,7 @@ function initPairingModal() {
     }
   });
 
+
   // Mobile downward swipe-to-dismiss gesture on pairing card
   const cardEl = modalEl.querySelector('.modal-card') || modalEl.querySelector('.pairing-card');
   if (cardEl) {
@@ -945,6 +1046,7 @@ function initPairingModal() {
       }
     }, { passive: true });
 
+
     cardEl.addEventListener('touchend', (e) => {
       if (e.changedTouches && e.changedTouches.length === 1) {
         const deltaY = e.changedTouches[0].clientY - touchStartY;
@@ -956,6 +1058,7 @@ function initPairingModal() {
     }, { passive: true });
   }
 
+
   // Close button
   const btnClose = modalEl.querySelector('#btn-close-pairing-modal');
   if (btnClose) {
@@ -964,6 +1067,7 @@ function initPairingModal() {
       closeModal(modalEl);
     });
   }
+
 
   // Copy button
   const btnCopy = modalEl.querySelector('#btn-copy-pairing-code');
@@ -993,10 +1097,12 @@ function initPairingModal() {
     });
   }
 
+
   // Save manual key input
   const manualInput = modalEl.querySelector('#input-pairing-manual');
   const btnSave = modalEl.querySelector('#btn-save-pairing-manual');
   const statusMsg = modalEl.querySelector('#pairing-status-msg');
+
 
   const handleSaveKey = () => {
     if (!manualInput) return;
@@ -1018,6 +1124,7 @@ function initPairingModal() {
     }, 1000);
   };
 
+
   if (btnSave) {
     btnSave.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1033,6 +1140,7 @@ function initPairingModal() {
     });
   }
 
+
   // Privacy Shield Reveal Button
   const btnReveal = modalEl.querySelector('#btn-reveal-pairing');
   if (btnReveal) {
@@ -1041,6 +1149,7 @@ function initPairingModal() {
       revealPairingCode(modalEl);
     });
   }
+
 
   // Mobile Toggle QR / Barcode
   const btnToggleQr = modalEl.querySelector('#btn-toggle-qr-view');
@@ -1051,6 +1160,7 @@ function initPairingModal() {
       refreshPairingDisplay();
     });
   }
+
 
   // Camera scan trigger (Mobile)
   const btnCameraScan = modalEl.querySelector('#btn-scan-camera-pair');
@@ -1065,6 +1175,7 @@ function initPairingModal() {
       openKeyQrScanner();
     });
   }
+
 
   // Toggle manual entry on mobile
   const btnToggleManual = modalEl.querySelector('#btn-toggle-manual-input');
@@ -1082,6 +1193,7 @@ function initPairingModal() {
     });
   }
 
+
   // Accordion toggle
   const btnAccordion = modalEl.querySelector('#btn-toggle-accordion');
   const accordionBody = modalEl.querySelector('#pairing-accordion-body');
@@ -1094,11 +1206,13 @@ function initPairingModal() {
     });
   }
 
+
   // Initialize key prompt & confirmation card
   const btnInitPrompt = modalEl.querySelector('#btn-init-key-prompt');
   const confirmCard = modalEl.querySelector('#pairing-confirm-card');
   const btnCancelInit = modalEl.querySelector('#btn-cancel-init-key');
   const btnConfirmInit = modalEl.querySelector('#btn-confirm-init-key');
+
 
   if (btnInitPrompt && confirmCard) {
     btnInitPrompt.addEventListener('click', (e) => {
@@ -1124,35 +1238,40 @@ function initPairingModal() {
     });
   }
 
+
   // Reset key link
   const btnResetLink = modalEl.querySelector('#btn-reset-key-link');
   if (btnResetLink) {
     btnResetLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (confirm(`Reset and unlink the current Optimizer Key for Store ${currentStore || '--'}?
-
-Warning: This terminal will no longer be able to decrypt inventory reports until re-paired.`)) {
+      if (confirm(`Reset and unlink the current Optimizer Key for Store ${currentStore || '--'}?\n\nWarning: This terminal will no longer be able to decrypt inventory reports until re-paired.`)) {
         setStoreKey(currentStore, '');
         refreshPairingDisplay();
       }
     });
   }
 
+
   return modalEl;
 }
+
 
 function revealPairingCode(modalEl) {
   const shield = modalEl.querySelector('#pairing-privacy-shield');
   const timerBadge = modalEl.querySelector('#pairing-timer-badge');
   const timerText = modalEl.querySelector('#pairing-timer-text');
 
+
   if (shield) shield.style.display = 'none';
   if (timerBadge) timerBadge.style.display = 'inline-block';
 
+
   if (privacyTimerInterval) clearInterval(privacyTimerInterval);
+
 
   let secondsLeft = 30;
   if (timerText) timerText.textContent = `Auto-concealing in ${secondsLeft}s`;
+
 
   privacyTimerInterval = setInterval(() => {
     secondsLeft--;
@@ -1167,12 +1286,15 @@ function revealPairingCode(modalEl) {
   }, 1000);
 }
 
+
 function refreshPairingDisplay() {
   const modalEl = initPairingModal();
   if (!modalEl) return;
 
+
   const key = getStoreKey(currentStore);
   const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
 
   const titleEl = modalEl.querySelector('#pairing-modal-title');
   const subEl = modalEl.querySelector('#pairing-modal-sub');
@@ -1191,6 +1313,7 @@ function refreshPairingDisplay() {
   const accordionToggleLabel = modalEl.querySelector('#accordion-toggle-label');
   const btnResetLink = modalEl.querySelector('#btn-reset-key-link');
 
+
   if (privacyTimerInterval) {
     clearInterval(privacyTimerInterval);
     privacyTimerInterval = null;
@@ -1198,7 +1321,9 @@ function refreshPairingDisplay() {
   if (timerBadge) timerBadge.style.display = 'none';
   if (manualInput) manualInput.value = '';
 
+
   const deepLinkUrl = `https://spamfan.github.io/workflowoptimizer/?store=${encodeURIComponent(currentStore || '')}&key=${encodeURIComponent(key || '')}`;
+
 
   if (key) {
     // --- PAIRED STATE ---
@@ -1213,6 +1338,7 @@ function refreshPairingDisplay() {
     if (btnToggleManual) btnToggleManual.style.display = 'none';
     if (inputSection) inputSection.style.display = 'none';
 
+
     if (isTouchDevice) {
       // Mobile Paired: Default is 1D Code 128 barcode; can toggle coworker QR
       if (titleEl) titleEl.textContent = `Store ${currentStore || '--'} Optimizer Key`;
@@ -1224,6 +1350,7 @@ function refreshPairingDisplay() {
         btnToggleQr.style.display = 'inline-flex';
         btnToggleQr.textContent = mobileShowQrToggle ? 'Show Barcode' : 'Show Coworker QR';
       }
+
 
       if (barcodeContainer) {
         if (mobileShowQrToggle) {
@@ -1238,6 +1365,7 @@ function refreshPairingDisplay() {
       if (subEl) subEl.textContent = 'This computer is paired and can view and decrypt reports. Have coworkers scan with their phone camera to pair.';
       if (btnToggleQr) btnToggleQr.style.display = 'none';
       if (shield) shield.style.display = 'flex';
+
 
       if (barcodeContainer) {
         barcodeContainer.innerHTML = renderQrSvg(deepLinkUrl, { maxWidth: '210px' });
@@ -1257,6 +1385,7 @@ function refreshPairingDisplay() {
     if (accordionToggleLabel) {
       accordionToggleLabel.textContent = `First person setting up Store ${currentStore || '--'}?`;
     }
+
 
     if (isTouchDevice) {
       // Mobile Unpaired: Primary action is camera scan; manual entry is tucked
@@ -1296,6 +1425,7 @@ function refreshPairingDisplay() {
       if (btnToggleManual) btnToggleManual.style.display = 'none';
       if (inputSection) inputSection.style.display = 'block';
 
+
       if (manualInput) {
         setTimeout(() => manualInput.focus(), 150);
       }
@@ -1303,7 +1433,6 @@ function refreshPairingDisplay() {
   }
 }
 
-window.addEventListener('wfo:open-pairing-modal', () => openPairingModal());
 
 export function openPairingModal() {
   refreshPairingDisplay();
@@ -1316,20 +1445,24 @@ export function openPairingModal() {
   }
 }
 
+
 // GitHub REST API Publish Engine (stocks.json with AES-GCM Encryption)
 const patModal = document.getElementById('pat-modal');
 const patInput = document.getElementById('pat-input');
 const btnPatCancel = document.getElementById('btn-pat-cancel');
 const btnPatSave = document.getElementById('btn-pat-save');
 
+
 async function publishAllToGitHub() {
   const inventoryPayload = getStagedInventoryPayload(currentStore);
   const totalItems = Object.values(inventoryPayload).reduce((sum, list) => sum + list.length, 0);
+
 
   if (totalItems === 0) {
     alert('No staged items to publish.');
     return;
   }
+
 
   const pat = localStorage.getItem('wfo_admin_pat') || '';
   if (!pat) {
@@ -1338,10 +1471,12 @@ async function publishAllToGitHub() {
     return;
   }
 
+
   if (btnPublishAll) {
     btnPublishAll.disabled = true;
     btnPublishAll.textContent = 'Encrypting & Publishing...';
   }
+
 
   try {
     const storeKey = getStoreKey(currentStore);
@@ -1350,6 +1485,7 @@ async function publishAllToGitHub() {
       throw new Error(`Store Key missing for Store ${currentStore}. Please pair device.`);
     }
 
+
     const res = await commitStoreInventory({
       storeNum: currentStore,
       inventoryObj: inventoryPayload,
@@ -1357,6 +1493,7 @@ async function publishAllToGitHub() {
       storeSecret: storeKey,
       encrypt: true
     });
+
 
     alert(`Success: ${res.message}`);
     clearAllStaged(currentStore);
@@ -1376,9 +1513,11 @@ async function publishAllToGitHub() {
   }
 }
 
+
 if (btnPublishAll) {
   btnPublishAll.addEventListener('click', publishAllToGitHub);
 }
+
 
 if (btnPatCancel) {
   btnPatCancel.addEventListener('click', () => { closeModal(patModal); });
@@ -1401,6 +1540,7 @@ if (btnPatSave) {
   });
 }
 
+
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeModal(termsModal);
@@ -1413,8 +1553,10 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+
 // Deep-link check on startup
 handleUrlDeepLink();
+
 
 // Bootstrap
 initAuth({
@@ -1428,5 +1570,6 @@ initAuth({
     fetchPing();
   }
 });
+
 
 switchView('login-view');
