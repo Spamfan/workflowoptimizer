@@ -1,24 +1,23 @@
-// Prototype Blue - js/auth.js (v0.0.5)
-// Gatekeeper & Strict Store PIN Validation (Master PIN Retired)
+// Prototype Crimson - js/auth.js (v0.1.0)
+// Gatekeeper Passcode Validation
 
-export const AUTH_VERSION = "v0.0.5";
+export const AUTH_VERSION = "v0.1.0";
 
-const SECRET_SUFFIX = atob('MTAyMA=='); // "1020"
+const PASSCODE_SECRET = atob('MTAyMDMw'); // "102030"
 const SESSION_PIN_KEY = "wfo_session_pin";
 
 let currentSessionPin = '';
 
 /**
- * Validates store authentication.
- * Enforces strictly: PIN must equal store number + "1020".
- * Master PIN 102030 is permanently retired.
- * @param {string} store 
+ * Validates optimizer passcode.
+ * Enforces strictly: Passcode must match 102030.
  * @param {string} pin 
  * @returns {boolean}
  */
-export function isValidAuth(store, pin) {
-  if (!store || !pin) return false;
-  return pin === (store + SECRET_SUFFIX);
+export function isValidAuth(arg1, arg2) {
+  const pin = arg2 !== undefined ? arg2 : arg1;
+  if (!pin) return false;
+  return pin === PASSCODE_SECRET;
 }
 
 export function getSessionPin() {
@@ -55,56 +54,43 @@ export function logout() {
 }
 
 export function initAuth({ onSuccess }) {
-  const storeInput = document.getElementById('store-input');
   const pinInput = document.getElementById('pin-input');
   const pinError = document.getElementById('pin-error');
   const btnEnter = document.getElementById('btn-enter');
 
-  const saved = getSavedStore();
-  if (saved) {
-    storeInput.value = saved;
-    pinInput.focus();
-  }
+  if (pinInput) pinInput.focus();
 
   function handleAuthSubmit() {
-    const storeVal = storeInput.value.trim();
-    const pinVal = pinInput.value.trim();
+    const pinVal = pinInput ? pinInput.value.trim() : '';
 
-    if (isValidAuth(storeVal, pinVal)) {
-      pinError.style.display = 'none';
-      saveStore(storeVal);
+    if (isValidAuth(pinVal)) {
+      if (pinError) pinError.style.display = 'none';
       setSessionPin(pinVal);
-      if (typeof onSuccess === 'function') onSuccess(storeVal, pinVal);
+      if (typeof onSuccess === 'function') onSuccess(pinVal);
     } else {
-      pinError.style.display = 'block';
-      pinInput.value = '';
-      pinInput.focus();
+      if (pinError) pinError.style.display = 'block';
+      if (pinInput) {
+        pinInput.value = '';
+        pinInput.focus();
+      }
     }
   }
 
-  btnEnter.addEventListener('click', handleAuthSubmit);
+  if (btnEnter) btnEnter.addEventListener('click', handleAuthSubmit);
 
-  storeInput.addEventListener('input', (e) => {
-    if (e.target.value.trim().length >= 4) pinInput.focus();
-  });
+  if (pinInput) {
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAuthSubmit();
+    });
 
-  storeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') pinInput.focus();
-  });
-
-  pinInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleAuthSubmit();
-  });
-
-  pinInput.addEventListener('input', (e) => {
-    const storeVal = storeInput.value.trim();
-    const pinVal = e.target.value.trim();
-    if (isValidAuth(storeVal, pinVal)) {
-      e.target.blur();
-      pinError.style.display = 'none';
-      saveStore(storeVal);
-      setSessionPin(pinVal);
-      if (typeof onSuccess === 'function') onSuccess(storeVal, pinVal);
-    }
-  });
+    pinInput.addEventListener('input', (e) => {
+      const pinVal = e.target.value.trim();
+      if (pinVal.length >= 6 && isValidAuth(pinVal)) {
+        e.target.blur();
+        if (pinError) pinError.style.display = 'none';
+        setSessionPin(pinVal);
+        if (typeof onSuccess === 'function') onSuccess(pinVal);
+      }
+    });
+  }
 }

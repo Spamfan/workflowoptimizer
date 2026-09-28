@@ -1,8 +1,8 @@
-﻿// Prototype Blue - js/app.js (v0.0.23)
+// Prototype Crimson - js/app.js (v0.1.0)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 
-import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.0.5';
+import { initAuth, getSavedStore, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.0.6';
 import {
   startCamera,
@@ -45,20 +45,14 @@ import {
 import { renderCode128Svg, renderQrSvg, BARCODE_VERSION } from './barcode.js?v=0.0.2';
 
 
-export const APP_VERSION = "v0.0.26";
+export const APP_VERSION = "v0.1.0";
 export const MODULE_VERSIONS = {
-  "Prototype Blue": APP_VERSION,
+  "Prototype Crimson": APP_VERSION,
   "app.js": APP_VERSION,
-  "barcode.js": BARCODE_VERSION,
-  "crypto.js": CRYPTO_VERSION,
-  "api.js": API_VERSION,
   "auth.js": AUTH_VERSION,
-  "scanner.js": SCANNER_VERSION,
-  "ocr.js": OCR_VERSION,
-  "staging.js": STAGING_VERSION,
   "print.js": PRINT_VERSION,
-  "styles.css": "v0.0.13",
-  "index.html": "v0.0.14"
+  "styles.css": "v0.1.0",
+  "index.html": "v0.1.0"
 };
 
 
@@ -71,10 +65,11 @@ const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const btnUploadInv = document.getElementById('btn-upload-inv');
 const btnPrintInv = document.getElementById('btn-print-inv');
+const btnPrintEdlps = document.getElementById('btn-print-edlps');
 const btnClearStaged = document.getElementById('btn-clear-staged');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
-if (versionText) versionText.textContent = `BLUE ${APP_VERSION}`;
+if (versionText) versionText.textContent = `Crimson ${APP_VERSION}`;
 
 
 let currentView = 'login-view';
@@ -248,42 +243,44 @@ let statusTimer = null;
 
 async function fetchPing() {
   if (statusTimer) clearTimeout(statusTimer);
-  refreshSvg.classList.add('spinning');
-  pingStatusEl.textContent = 'Checking...';
+  if (refreshSvg) refreshSvg.classList.add('spinning');
+  if (pingStatusEl) pingStatusEl.textContent = 'Checking...';
 
 
   try {
     const data = await fetchCatalog();
     cachedStats = data;
-    pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'Connected.';
-    pingStatusEl.textContent = 'Refresh complete';
-    statusTimer = setTimeout(() => { pingStatusEl.textContent = ''; }, 2000);
+    if (pingValueEl) pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'Connected.';
+    if (pingStatusEl) pingStatusEl.textContent = 'Refresh complete';
+    statusTimer = setTimeout(() => { if (pingStatusEl) pingStatusEl.textContent = ''; }, 2000);
   } catch (err) {
-    pingValueEl.textContent = 'Error';
-    pingStatusEl.textContent = 'Error';
+    if (pingValueEl) pingValueEl.textContent = 'Error';
+    if (pingStatusEl) pingStatusEl.textContent = 'Error';
   } finally {
-    setTimeout(() => { refreshSvg.classList.remove('spinning'); }, 300);
+    setTimeout(() => { if (refreshSvg) refreshSvg.classList.remove('spinning'); }, 300);
   }
 }
 
 
-btnRefresh.addEventListener('click', fetchPing);
-btnLogout.addEventListener('click', logout);
+if (btnRefresh) btnRefresh.addEventListener('click', fetchPing);
+if (btnLogout) btnLogout.addEventListener('click', logout);
 
 
-btnBack.addEventListener('click', () => {
-  if (isQrScanning) {
-    stopKeyQrScanner();
-    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
-    openPairingModal();
-    return;
-  }
-  if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
-    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
-  } else {
-    switchView('login-view');
-  }
-});
+if (btnBack) {
+  btnBack.addEventListener('click', () => {
+    if (isQrScanning) {
+      stopKeyQrScanner();
+      switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+      openPairingModal();
+      return;
+    }
+    if (currentView === 'scanner-view' || currentView === 'review-view' || currentView === 'print-view') {
+      switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+    } else {
+      switchView('login-view');
+    }
+  });
+}
 
 
 initPrintEngine();
@@ -293,6 +290,12 @@ if (btnPrintInv) {
   btnPrintInv.addEventListener('click', () => {
     switchView('print-view');
     openPrintPreview(currentStore, getStoreKey(currentStore));
+  });
+}
+
+if (btnPrintEdlps) {
+  btnPrintEdlps.addEventListener('click', (e) => {
+    e.preventDefault();
   });
 }
 
@@ -818,18 +821,22 @@ const manifestListBody = document.getElementById('manifest-list-body');
 const btnManifestClose = document.getElementById('btn-manifest-close');
 
 
-versionText.addEventListener('click', () => {
-  manifestListBody.innerHTML = Object.entries(MODULE_VERSIONS)
-    .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
-    .join('');
-  openModal(manifestModal);
-});
+if (versionText) {
+  versionText.addEventListener('click', () => {
+    manifestListBody.innerHTML = Object.entries(MODULE_VERSIONS)
+      .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
+      .join('');
+    openModal(manifestModal);
+  });
+}
 
 
-btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
-manifestModal.addEventListener('click', (e) => {
-  if (e.target === manifestModal) closeModal(manifestModal);
-});
+if (btnManifestClose) btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
+if (manifestModal) {
+  manifestModal.addEventListener('click', (e) => {
+    if (e.target === manifestModal) closeModal(manifestModal);
+  });
+}
 
 
 const termsModal = document.getElementById('terms-modal');
@@ -837,11 +844,13 @@ const btnTerms = document.getElementById('btn-terms');
 const btnTermsClose = document.getElementById('btn-terms-close');
 
 
-btnTerms.addEventListener('click', () => { openModal(termsModal); });
-btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
-termsModal.addEventListener('click', (e) => {
-  if (e.target === termsModal) closeModal(termsModal);
-});
+if (btnTerms) btnTerms.addEventListener('click', () => { openModal(termsModal); });
+if (btnTermsClose) btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
+if (termsModal) {
+  termsModal.addEventListener('click', (e) => {
+    if (e.target === termsModal) closeModal(termsModal);
+  });
+}
 
 
 const lightboxModal = document.getElementById('lightbox-modal');
@@ -1560,12 +1569,10 @@ handleUrlDeepLink();
 
 // Bootstrap
 initAuth({
-  onSuccess: (storeVal, pinVal) => {
+  onSuccess: (pinVal) => {
     isAuthenticated = true;
-    currentStore = storeVal;
     currentStoreSecret = pinVal;
-    cardPrintTitle.textContent = `Print inventory (${storeVal})`;
-    ensurePairingButtonOnDashboard();
+    if (cardPrintTitle) cardPrintTitle.textContent = "Print EDLPs";
     switchView('dashboard-view');
     fetchPing();
   }
