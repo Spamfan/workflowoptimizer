@@ -1,21 +1,18 @@
-// Prototype Blue - js/print.js (v0.0.7)
-// Print Inventory Engine & Store-Key Decryption Integration
+// Prototype Crimson - js/print.js (v1.1.0)
+// Print Likely EDLP Price Engine
 
-import { fetchCatalog, fetchStoreInventory, API_VERSION } from './api.js?v=0.0.3';
-import { getStoreKey, hasStoreKey, setStoreKey, CRYPTO_VERSION } from './crypto.js?v=0.0.2';
+import { fetchCatalog, API_VERSION } from './api.js?v=0.0.3';
 
-export const PRINT_VERSION = "v0.0.7";
+export const PRINT_VERSION = "v1.1.0";
 
 let activeStore = '';
-let currentMode = 'inventory'; // 'inventory' | 'pricing'
 let shiftComment = '';
 let isCarriedOver = false;
 let isDocumentEdited = false;
 let catalogData = null;
-let storeInventoryData = null;
 let hiddenItemKeys = new Set();
 let manualHighlights = {}; // key -> 'partial' | 'full'
-let quantityOverrides = {}; // key -> qty
+let priceOverrides = {}; // key -> price string
 
 // 10-Step In-Memory Undo / Redo History Stack
 let historyStack = [];
@@ -26,7 +23,7 @@ function pushHistoryState() {
   const state = {
     hidden: Array.from(hiddenItemKeys),
     highlights: { ...manualHighlights },
-    qtyOverrides: { ...quantityOverrides },
+    prices: { ...priceOverrides },
     comment: shiftComment,
     isEdited: isDocumentEdited,
     isCarriedOver: isCarriedOver
@@ -68,7 +65,7 @@ export function redo() {
 function applyHistoryState(state) {
   hiddenItemKeys = new Set(state.hidden || []);
   manualHighlights = state.highlights || {};
-  quantityOverrides = state.qtyOverrides || {};
+  priceOverrides = state.prices || {};
   shiftComment = state.comment || '';
   isDocumentEdited = Boolean(state.isEdited);
   isCarriedOver = Boolean(state.isCarriedOver);
@@ -78,8 +75,8 @@ function applyHistoryState(state) {
   updateHistoryButtons();
 }
 
-const getSessionOverrideKey = (store) => `wfo_print_overrides_${store || 'default'}`;
-const getPersistentCommentKey = (store) => `wfo_saved_comment_${store || 'default'}`;
+const getLocalOverrideKey = (store) => `wfo_price_sheet_hidden_${store || 'default'}`;
+const getLocalCommentKey = (store) => `wfo_saved_comment_${store || 'default'}`;
 
 function saveSessionOverrides() {
   if (!activeStore) return;
@@ -87,35 +84,35 @@ function saveSessionOverrides() {
     const payload = {
       hidden: Array.from(hiddenItemKeys),
       highlights: manualHighlights,
-      qtyOverrides: quantityOverrides,
+      prices: priceOverrides,
       comment: shiftComment,
       isEdited: isDocumentEdited,
       isCarriedOver: isCarriedOver
     };
-    sessionStorage.setItem(getSessionOverrideKey(activeStore), JSON.stringify(payload));
+    localStorage.setItem(getLocalOverrideKey(activeStore), JSON.stringify(payload));
     if (shiftComment) {
-      localStorage.setItem(getPersistentCommentKey(activeStore), shiftComment);
+      localStorage.setItem(getLocalCommentKey(activeStore), shiftComment);
     } else {
-      localStorage.removeItem(getPersistentCommentKey(activeStore));
+      localStorage.removeItem(getLocalCommentKey(activeStore));
     }
   } catch (_) {}
 }
 
 function loadSessionOverrides(store) {
   try {
-    const raw = sessionStorage.getItem(getSessionOverrideKey(store));
+    const raw = localStorage.getItem(getLocalOverrideKey(store));
     if (raw) {
       const p = JSON.parse(raw);
       hiddenItemKeys = new Set(p.hidden || []);
       manualHighlights = p.highlights || {};
-      quantityOverrides = p.qtyOverrides || {};
+      priceOverrides = p.prices || {};
       shiftComment = p.comment || '';
       isDocumentEdited = Boolean(p.isEdited);
       isCarriedOver = Boolean(p.isCarriedOver);
       return true;
     }
     // Fallback: check persistent localStorage for comments
-    const savedComment = localStorage.getItem(getPersistentCommentKey(store));
+    const savedComment = localStorage.getItem(getLocalCommentKey(store));
     if (savedComment) {
       shiftComment = savedComment;
       isCarriedOver = true;
@@ -129,108 +126,40 @@ function loadSessionOverrides(store) {
 
 function clearSessionOverrides(store) {
   try {
-    sessionStorage.removeItem(getSessionOverrideKey(store));
-    localStorage.removeItem(getPersistentCommentKey(store));
+    localStorage.removeItem(getLocalOverrideKey(store));
+    localStorage.removeItem(getLocalCommentKey(store));
   } catch (_) {}
-}
-
-// Model Normalization & Lookup Index
-function buildCatalogIndex(catalog) {
-  const index = {};
-  if (!catalog || !catalog.devices) return index;
-  for (const [key, dev] of Object.entries(catalog.devices)) {
-    const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normName = (dev.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normAbbr = (dev.abbr || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    index[normKey] = dev;
-    if (normName) index[normName] = dev;
-    if (normAbbr) index[normAbbr] = dev;
-  }
-  return index;
-}
-
-function resolveDevice(modelName, catalogIndex) {
-  const norm = (modelName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (catalogIndex[norm]) return catalogIndex[norm];
-
-  for (const key of Object.keys(catalogIndex)) {
-    if (norm.startsWith(key) || key.startsWith(norm)) {
-      return catalogIndex[key];
-    }
-  }
-  return null;
 }
 
 // Pricing Formatters
 function getAttPrice(dev) {
-  if (!dev || dev.attMO === null || dev.attMO === undefined || dev.attMO === 0) return '___';
+  if (!dev || dev.attMO === null || dev.attMO === undefined || dev.attMO === 0) return null;
   return '$' + Math.round(dev.attMO * 36);
 }
 
 function getVzwPrice(dev) {
-  if (!dev || dev.vzwMO === null || dev.vzwMO === undefined || dev.vzwMO === 0) return '___';
+  if (!dev || dev.vzwMO === null || dev.vzwMO === undefined || dev.vzwMO === 0) return null;
   return '$' + Math.round(dev.vzwMO * 36);
 }
 
 function getTmoPrice(dev) {
-  if (!dev) return '(___ + ___/mo)';
+  if (!dev) return null;
   const dp = dev.tmoDP;
   const mo = dev.tmoMOADP !== null && dev.tmoMOADP !== undefined ? dev.tmoMOADP : dev.tmoMO;
-  if (dp === null && mo === null) return '(___ + ___/mo)';
+  const hasDP = dp !== null && dp !== undefined;
+  const hasMO = mo !== null && mo !== undefined;
+  const hasBaseMO = dev.tmoMO !== null && dev.tmoMO !== undefined;
+
+  if (!hasDP && !hasMO && !hasBaseMO) return null;
+  if ((dp === 0 || !hasDP) && (mo === 0 || !hasMO) && (dev.tmoMO === 0 || !hasBaseMO)) return null;
 
   let total = 0;
   if (dev.tmoMO) {
     total = Math.round(dev.tmoMO * 24);
-  } else if (dp !== null || mo !== null) {
+  } else if (hasDP || hasMO) {
     total = Math.round((dp || 0) + (mo || 0) * 24);
   }
   return `$${total} ($${dp ?? '___'} + $${mo ?? '___'}/mo)`;
-}
-
-// 30-Minute Clustering Engine
-function formatClusteredTimestamps(timestampMap) {
-  const entries = Object.entries(timestampMap).filter(([, ts]) => Boolean(ts));
-  if (entries.length === 0) return 'Sources: None recorded';
-
-  const dateObjs = entries.map(([c, ts]) => ({ carrier: c.toUpperCase(), time: new Date(ts) }))
-    .sort((a, b) => a.time - b.time);
-
-  const clusters = [];
-  let cur = [dateObjs[0]];
-
-  for (let i = 1; i < dateObjs.length; i++) {
-    const prev = cur[cur.length - 1];
-    const diffMin = (dateObjs[i].time - prev.time) / 60000;
-    if (diffMin <= 30) {
-      cur.push(dateObjs[i]);
-    } else {
-      clusters.push(cur);
-      cur = [dateObjs[i]];
-    }
-  }
-  clusters.push(cur);
-
-  const clusterStrings = clusters.map(group => {
-    const carriers = group.map(g => g.carrier).join(', ');
-    const t0 = group[0].time;
-    const t1 = group[group.length - 1].time;
-    const month = t0.getMonth() + 1;
-    const day = t0.getDate();
-    const fmtTime = (d) => {
-      let h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
-      const ampm = h >= 12 ? 'pm' : 'am';
-      h = h % 12 || 12;
-      return `${h}:${m}${ampm}`;
-    };
-
-    if (group.length === 1 || t0.getTime() === t1.getTime()) {
-      return `${month}/${day} ${fmtTime(t0)} (${carriers})`;
-    }
-    return `${month}/${day} ${fmtTime(t0)}-${fmtTime(t1)} (${carriers})`;
-  });
-
-  return `Sources: ${clusterStrings.join(', ')}`;
 }
 
 // Global Keydown Handler for Undo / Redo in Print View
@@ -258,25 +187,16 @@ window.addEventListener('keydown', (e) => {
 
 // View Initializer
 export function initPrintEngine() {
-  const btnPrintModeToggle = document.getElementById('btn-print-mode-toggle');
   const btnPrintReset = document.getElementById('btn-print-reset');
   const btnPrintSheet = document.getElementById('btn-print-sheet');
   const btnPrintUndo = document.getElementById('btn-print-undo');
   const btnPrintRedo = document.getElementById('btn-print-redo');
 
-  if (btnPrintModeToggle) {
-    btnPrintModeToggle.addEventListener('click', () => {
-      currentMode = currentMode === 'inventory' ? 'pricing' : 'inventory';
-      btnPrintModeToggle.textContent = currentMode === 'inventory' ? 'Mode: Inventory' : 'Mode: Pricing Index';
-      renderPrintDocument();
-    });
-  }
-
   if (btnPrintReset) {
     btnPrintReset.addEventListener('click', () => {
       hiddenItemKeys.clear();
       manualHighlights = {};
-      quantityOverrides = {};
+      priceOverrides = {};
       shiftComment = '';
       isCarriedOver = false;
       isDocumentEdited = false;
@@ -300,36 +220,27 @@ export function initPrintEngine() {
 }
 
 export async function openPrintPreview(storeNum, storeSecret = '') {
-  activeStore = storeNum;
-  currentMode = 'inventory';
+  activeStore = storeNum || '';
   isDocumentEdited = false;
   hiddenItemKeys.clear();
   manualHighlights = {};
-  quantityOverrides = {};
+  priceOverrides = {};
   historyStack = [];
   historyIndex = -1;
 
-  loadSessionOverrides(storeNum);
+  loadSessionOverrides(activeStore);
 
   const sheetContainer = document.getElementById('print-preview-sheet');
   if (sheetContainer) {
-    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-sub, #606770);">Loading catalog and decrypting inventory...</div>';
+    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-sub, #606770);">Loading device catalog...</div>';
   }
 
-  const effectiveSecret = storeSecret || getStoreKey(storeNum);
-
   try {
-    const [catalog, storeRecord] = await Promise.all([
-      fetchCatalog(),
-      fetchStoreInventory(storeNum, effectiveSecret)
-    ]);
-
-    catalogData = catalog;
-    storeInventoryData = storeRecord;
+    catalogData = await fetchCatalog();
   } catch (err) {
-    console.error("Failed to load print preview data:", err);
+    console.error("Failed to load catalog for print preview:", err);
     if (sheetContainer) {
-      renderPrintUnpairedCard(sheetContainer, storeNum, err.message);
+      sheetContainer.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">Failed to load device catalog: ${err.message || err}</div>`;
     }
     return;
   }
@@ -338,171 +249,79 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   renderPrintDocument();
 }
 
-function renderPrintUnpairedCard(container, storeNum, errorMsg = '') {
-  container.innerHTML = `
-    <div class="print-setup-card">
-      <div style="font-size: 2.2rem; line-height: 1;">🔑</div>
-      <h3 class="print-setup-title">Store ${storeNum || '--'} Optimizer Key Required</h3>
-      <p class="print-setup-desc">
-        Workflow Optimizer encrypts daily stock counts locally for Store ${storeNum || '--'}.
-        If an OSL associate has already set up a key, scan the barcode off their phone with the handheld scanner or enter it below to unlock this report.
-      </p>
-      <div style="display: flex; gap: 8px; width: 100%; max-width: 360px; margin: 6px 0 10px;">
-        <input type="text" id="print-setup-scanner-input" class="pairing-input scanner-input-pulse" placeholder="Scan barcode or enter key..." style="flex: 1;">
-        <button id="btn-print-setup-save" class="pill-btn btn-primary" style="width: auto; padding: 8px 18px;">Unlock</button>
-      </div>
-      <p id="print-setup-status-msg" class="pairing-status-msg" style="display: none;"></p>
-      <div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 6px;">
-        <button id="btn-print-open-hub" class="pill-btn btn-secondary" style="width: auto; font-size: 0.85rem; padding: 8px 16px;">Open Pairing Hub</button>
-      </div>
-    </div>
-  `;
-
-  const input = container.querySelector('#print-setup-scanner-input');
-  const btnSave = container.querySelector('#btn-print-setup-save');
-  const btnOpenHub = container.querySelector('#btn-print-open-hub');
-  const statusMsg = container.querySelector('#print-setup-status-msg');
-
-  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-  if (input && !isTouchDevice) {
-    setTimeout(() => input.focus(), 100);
-  }
-
-  const handleUnlock = () => {
-    if (!input) return;
-    const val = input.value.trim();
-    if (!val) return;
-
-    setStoreKey(storeNum, val);
-    if (statusMsg) {
-      statusMsg.style.display = 'block';
-      statusMsg.style.color = '#10b981';
-      statusMsg.textContent = '✓ Key saved! Decrypting inventory...';
-    }
-    setTimeout(() => {
-      openPrintPreview(storeNum, val);
-    }, 600);
-  };
-
-  if (btnSave) {
-    btnSave.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleUnlock();
-    });
-  }
-
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleUnlock();
-      }
-    });
-  }
-
-  if (btnOpenHub) {
-    btnOpenHub.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      import('./app.js?v=0.0.25').then(mod => {
-      const pairBtn = document.getElementById('btn-pair-device');
-      if (pairBtn) {
-        pairBtn.click();
-      } else {
-        window.dispatchEvent(new CustomEvent('wfo:open-pairing-modal'));
-        import('./app.js?v=0.0.26').then(mod => {
-          if (mod && mod.openPairingModal) mod.openPairingModal();
-        }).catch(() => {});
-      }
-      }).catch(err => console.error(err));
-
-    });
-  }
-}
-
 export function renderPrintDocument(pushToHistory = true) {
   const sheet = document.getElementById('print-preview-sheet');
   if (!sheet) return;
 
-  const catalogIndex = buildCatalogIndex(catalogData);
-  const rawInventory = storeInventoryData ? (storeInventoryData.inventory || {}) : {};
-  const lastUpdated = storeInventoryData ? storeInventoryData.lastUpdated : null;
-
-  const timestampMap = {
-    att: lastUpdated,
-    vzw: lastUpdated,
-    tmo: lastUpdated
-  };
+  const devicesObj = (catalogData && catalogData.devices) ? catalogData.devices : {};
 
   const isVaporized = (model) => /iPhone\s*(11|12|13)(?!\d)/i.test(model);
   const isApple = (model) => /iPhone|Apple Watch|AW\b/i.test(model);
-  const isUnlocked = (model) => /unlocked/i.test(model);
 
   const attList = [];
   const vzwList = [];
   const tmoList = [];
-  const appleMap = {};
-  const unlockedList = [];
+  const appleList = [];
   const hiddenSummary = { att: [], vzw: [], tmo: [], apple: [] };
 
-  function processCarrierItems(carrierKey, targetList) {
-    const items = rawInventory[carrierKey] || [];
-    items.forEach((item, idx) => {
-      if (isVaporized(item.model)) return;
+  for (const [key, dev] of Object.entries(devicesObj)) {
+    const displayName = dev.abbr || dev.name || key;
+    if (isVaporized(displayName)) continue;
 
-      const uid = `${carrierKey}_${item.id || idx}_${item.model}`;
-      const dev = resolveDevice(item.model, catalogIndex);
-      const displayName = dev ? (dev.abbr || dev.name) : item.model;
-      const qty = quantityOverrides[uid] !== undefined ? quantityOverrides[uid] : item.qty;
+    if (isApple(displayName)) {
+      const pAtt = getAttPrice(dev);
+      const pVzw = getVzwPrice(dev);
+      const pTmo = getTmoPrice(dev);
 
-      if (isUnlocked(item.model)) {
-        unlockedList.push({ name: displayName, qty });
-        return;
-      }
-
-      if (isApple(item.model)) {
-        if (!appleMap[displayName]) {
-          appleMap[displayName] = {
-            model: displayName,
-            dev,
-            counts: { att: 0, vzw: 0, tmo: 0 },
-            uids: []
-          };
+      if (pAtt || pVzw || pTmo) {
+        const uid = `apple_${key}`;
+        if (hiddenItemKeys.has(uid)) {
+          hiddenSummary.apple.push(displayName);
         }
-        appleMap[displayName].counts[carrierKey] += qty;
-        appleMap[displayName].uids.push(uid);
-        return;
+        appleList.push({
+          uid,
+          model: displayName,
+          dev,
+          pAtt,
+          pVzw,
+          pTmo
+        });
       }
+      continue;
+    }
 
-      const rowObj = { uid, model: displayName, rawModel: item.model, dev, qty, carrier: carrierKey };
+    const pAtt = getAttPrice(dev);
+    if (pAtt) {
+      const uid = `att_${key}`;
       if (hiddenItemKeys.has(uid)) {
-        hiddenSummary[carrierKey].push(displayName);
-      } else {
-        targetList.push(rowObj);
+        hiddenSummary.att.push(displayName);
       }
-    });
+      attList.push({ uid, model: displayName, dev });
+    }
+
+    const pVzw = getVzwPrice(dev);
+    if (pVzw) {
+      const uid = `vzw_${key}`;
+      if (hiddenItemKeys.has(uid)) {
+        hiddenSummary.vzw.push(displayName);
+      }
+      vzwList.push({ uid, model: displayName, dev });
+    }
+
+    const pTmo = getTmoPrice(dev);
+    if (pTmo) {
+      const uid = `tmo_${key}`;
+      if (hiddenItemKeys.has(uid)) {
+        hiddenSummary.tmo.push(displayName);
+      }
+      tmoList.push({ uid, model: displayName, dev });
+    }
   }
 
-  processCarrierItems('att', attList);
-  processCarrierItems('vzw', vzwList);
-  processCarrierItems('tmo', tmoList);
-
-  const appleList = [];
-  Object.values(appleMap).forEach(appItem => {
-    const isHidden = appItem.uids.some(uid => hiddenItemKeys.has(uid));
-    const effectiveQty = appItem.counts.att || appItem.counts.vzw || appItem.counts.tmo;
-    if (isHidden) {
-      hiddenSummary.apple.push(appItem.model);
-    } else {
-      appleList.push({
-        uid: appItem.uids[0],
-        model: appItem.model,
-        dev: appItem.dev,
-        qty: effectiveQty,
-        counts: appItem.counts
-      });
-    }
-  });
+  const sortAlpha = (a, b) => a.model.localeCompare(b.model);
+  attList.sort(sortAlpha);
+  vzwList.sort(sortAlpha);
+  tmoList.sort(sortAlpha);
 
   appleList.sort((a, b) => {
     const aWatch = /watch/i.test(a.model);
@@ -520,54 +339,45 @@ export function renderPrintDocument(pushToHistory = true) {
   hours = hours % 12 || 12;
   const timeStr = `${hours}:${mins}${ampm}`;
 
-  const titleLine = currentMode === 'inventory'
-    ? `${dateStr} ${timeStr} Store #${activeStore || '--'} Inventory Report - Made with Optimizer.`
-    : `${dateStr} ${timeStr} likely EDLP price index`;
-
-  const bannerText = currentMode === 'inventory'
-    ? '[!] EXPERIMENTAL SOFTWARE. Stock counts may be inaccurate, pricing is not affected.'
-    : '[!] NOT A STOCK REPORT, FOR PRICING REFERENCE ONLY.';
-
-  const sourceClusterText = formatClusteredTimestamps(timestampMap);
+  const titleLine = `${dateStr} ${timeStr} Store #${activeStore || '--'} Likely EDLPs`;
+  const bannerText = '[!] Experimental software, use with caution.';
 
   const renderRows = (list, carrierType) => {
     if (list.length === 0) {
-      return `<tr><td colspan="${currentMode === 'inventory' ? 3 : 2}" style="color: #888; font-style: italic; padding: 4px 0;">No items</td></tr>`;
+      return `<tr><td colspan="2" style="color: #888; font-style: italic; padding: 4px 0;">No items</td></tr>`;
     }
 
     return list.map(item => {
+      const isHidden = hiddenItemKeys.has(item.uid);
       const hlClass = manualHighlights[item.uid] === 'full'
         ? 'hl-full'
         : (manualHighlights[item.uid] === 'partial' ? 'hl-partial' : '');
+      const hiddenClass = isHidden ? 'is-hidden' : '';
 
       let priceCell = '';
-      if (carrierType === 'att') priceCell = getAttPrice(item.dev);
-      else if (carrierType === 'vzw') priceCell = getVzwPrice(item.dev);
-      else if (carrierType === 'tmo') priceCell = getTmoPrice(item.dev);
-      else if (carrierType === 'apple') {
-        const pAtt = getAttPrice(item.dev);
-        const pVzw = getVzwPrice(item.dev);
-        const pTmo = getTmoPrice(item.dev);
+      if (priceOverrides[item.uid]) {
+        priceCell = priceOverrides[item.uid];
+      } else if (carrierType === 'att') {
+        priceCell = getAttPrice(item.dev) || '___';
+      } else if (carrierType === 'vzw') {
+        priceCell = getVzwPrice(item.dev) || '___';
+      } else if (carrierType === 'tmo') {
+        priceCell = getTmoPrice(item.dev) || '(___ + ___/mo)';
+      } else if (carrierType === 'apple') {
+        const pAtt = item.pAtt || '___';
+        const pVzw = item.pVzw || '___';
+        const pTmo = item.pTmo || '(___ + ___/mo)';
         priceCell = `${pAtt}, ${pVzw}, ${pTmo}`;
       }
 
-      const qtyCell = currentMode === 'inventory'
-        ? `<td class="col-qty tap-qty" data-uid="${item.uid}" title="Tap to edit qty">${item.qty}</td>`
-        : '';
-
       return `
-        <tr class="print-row ${hlClass}" data-uid="${item.uid}">
-          <td class="col-item tap-item" data-uid="${item.uid}" title="Tap to toggle hide, right-click to highlight">${item.model}</td>
-          <td class="col-price">${priceCell}</td>
-          ${qtyCell}
+        <tr class="print-row ${hlClass} ${hiddenClass}" data-uid="${item.uid}">
+          <td class="col-item tap-item" data-uid="${item.uid}" title="Tap to toggle hide/show, right-click to highlight">${item.model}</td>
+          <td class="col-price tap-price" data-uid="${item.uid}" title="Tap to override price">${priceCell}</td>
         </tr>
       `;
     }).join('');
   };
-
-  const unlockedSummaryText = unlockedList.length > 0
-    ? 'Unlocked phones: ' + unlockedList.sort((a, b) => b.qty - a.qty).map(u => `${u.qty}x ${u.name}`).join(', ')
-    : '';
 
   const hiddenParts = [];
   if (hiddenSummary.att.length) hiddenParts.push(`ATT: ${hiddenSummary.att.join(', ')}`);
@@ -581,9 +391,8 @@ export function renderPrintDocument(pushToHistory = true) {
   sheet.innerHTML = `
     <div class="print-doc-header">
       <div class="print-doc-title">${titleLine}</div>
-      <div class="print-doc-sources">${sourceClusterText}</div>
 
-      <!-- In-Document Comments Box (WYSIWYG between sources and banner) -->
+      <!-- In-Document Comments Box (WYSIWYG) -->
       <div class="print-comment-container" id="print-comment-container">
         ${isCarriedOver && shiftComment ? `
           <div class="comment-carryover-badge" id="comment-carryover-badge">
@@ -609,8 +418,7 @@ export function renderPrintDocument(pushToHistory = true) {
             <thead>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">Likely<br>EDLPs</th>
-                ${currentMode === 'inventory' ? '<th class="col-qty">QTY</th>' : ''}
+                <th class="col-price">Likely EDLPs</th>
               </tr>
             </thead>
             <tbody>${renderRows(attList, 'att')}</tbody>
@@ -623,8 +431,7 @@ export function renderPrintDocument(pushToHistory = true) {
             <thead>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">Likely<br>EDLPs</th>
-                ${currentMode === 'inventory' ? '<th class="col-qty">QTY</th>' : ''}
+                <th class="col-price">Likely EDLPs</th>
               </tr>
             </thead>
             <tbody>${renderRows(vzwList, 'vzw')}</tbody>
@@ -639,8 +446,7 @@ export function renderPrintDocument(pushToHistory = true) {
             <thead>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">Likely<br>EDLPs (dp + /mo)</th>
-                ${currentMode === 'inventory' ? '<th class="col-qty">QTY</th>' : ''}
+                <th class="col-price">Likely EDLPs (dp + /mo)</th>
               </tr>
             </thead>
             <tbody>${renderRows(tmoList, 'tmo')}</tbody>
@@ -653,8 +459,7 @@ export function renderPrintDocument(pushToHistory = true) {
             <thead>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">Likely EDLPs<br>ATT, VZW, TMO (dp + /mo)</th>
-                ${currentMode === 'inventory' ? '<th class="col-qty">QTY</th>' : ''}
+                <th class="col-price">Likely EDLPs: ATT, VZW, TMO (dp + /mo)</th>
               </tr>
             </thead>
             <tbody>${renderRows(appleList, 'apple')}</tbody>
@@ -664,7 +469,6 @@ export function renderPrintDocument(pushToHistory = true) {
     </div>
 
     <div class="print-doc-footer">
-      ${unlockedSummaryText ? `<div class="footer-summary-row">${unlockedSummaryText}</div>` : ''}
       <div class="footer-summary-row">${hiddenSummaryText}</div>
       ${isDocumentEdited ? '<div class="footer-audit-notice">[This document was edited from the original]</div>' : ''}
     </div>
@@ -672,14 +476,18 @@ export function renderPrintDocument(pushToHistory = true) {
 
   attachCommentEditorListeners();
 
-  sheet.querySelectorAll('.tap-qty').forEach(td => {
+  sheet.querySelectorAll('.tap-price').forEach(td => {
     td.addEventListener('click', (e) => {
       e.stopPropagation();
       const uid = td.dataset.uid;
       const currentVal = td.textContent.trim();
-      const newVal = prompt('Override Quantity:', currentVal);
-      if (newVal !== null && !isNaN(parseInt(newVal, 10))) {
-        quantityOverrides[uid] = parseInt(newVal, 10);
+      const newVal = prompt('Override Price:', currentVal);
+      if (newVal !== null) {
+        if (newVal.trim() === '') {
+          delete priceOverrides[uid];
+        } else {
+          priceOverrides[uid] = newVal.trim();
+        }
         isDocumentEdited = true;
         saveSessionOverrides();
         pushHistoryState();
@@ -876,8 +684,11 @@ export function triggerSilentPrint() {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Inventory Report</title>
-        <link rel="stylesheet" href="styles.css?v=0.0.13">
+        <title>Likely EDLPs</title>
+        <link rel="stylesheet" href="styles.css?v=0.1.1">
+        <style>
+          .print-row.is-hidden { display: none !important; }
+        </style>
       </head>
       <body>
         <div id="print-preview-sheet" class="print-preview-sheet" style="border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important;">
