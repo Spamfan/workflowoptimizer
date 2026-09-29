@@ -1,9 +1,22 @@
-// Prototype Crimson - js/print.js (v1.1.0)
+// Prototype Crimson - js/print.js (v1.1.1)
 // Print Likely EDLP Price Engine
 
-import { fetchCatalog, API_VERSION } from './api.js?v=0.0.3';
+export const PRINT_VERSION = "v1.1.1";
 
-export const PRINT_VERSION = "v1.1.0";
+let sessionCatalogCache = null;
+
+async function fetchStatsCatalog() {
+  try {
+    const res = await fetch('./stats.json?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    sessionCatalogCache = data;
+    return data;
+  } catch (err) {
+    if (sessionCatalogCache) return sessionCatalogCache;
+    throw err;
+  }
+}
 
 let activeStore = '';
 let shiftComment = '';
@@ -236,7 +249,7 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   }
 
   try {
-    catalogData = await fetchCatalog();
+    catalogData = await fetchStatsCatalog();
   } catch (err) {
     console.error("Failed to load catalog for print preview:", err);
     if (sheetContainer) {
