@@ -30,3 +30,9 @@
   passcode to proceed." followed by non-bold terms disclaimer.  
 * **Input & Feedback:** Single 6-digit passcode field;  
   inline error alert if invalid; auto-submit on 6 digits.  
+* **Terms of Use Modal:** Centered overlay card  
+  (`#terms-modal`) informing that terms are pending,  
+  with standard acknowledgement button.  
+* **Universal 4-Way Dismissal:** All modals dismiss  
+  via close button, backdrop click, Escape key,  
+  and browser history back gesture.  
