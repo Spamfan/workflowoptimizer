@@ -1,18 +1,36 @@
-// Prototype Crimson - js/app.js (v0.1.1)
+// Prototype Crimson - js/app.js (v0.1.2)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=1.1.1';
 
-export const APP_VERSION = "v0.1.1";
-export const MODULE_VERSIONS = {
-  "Prototype Crimson": APP_VERSION,
-  "app.js": APP_VERSION,
-  "auth.js": AUTH_VERSION,
-  "print.js": PRINT_VERSION,
-  "styles.css": "v0.1.1",
-  "index.html": "v0.1.1"
-};
+export const APP_VERSION = "v0.1.2";
+
+export function getRuntimeVersions() {
+  let indexVer = 'v0.1.0';
+  const metaVer = document.querySelector('meta[name="version"]');
+  if (metaVer && metaVer.content) {
+    indexVer = metaVer.content;
+  } else if (document.documentElement && document.documentElement.dataset && document.documentElement.dataset.version) {
+    indexVer = document.documentElement.dataset.version;
+  }
+
+  let cssVer = 'v0.1.1';
+  const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
+  if (cssLink) {
+    const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
+    if (match && match[1]) cssVer = match[1].startsWith('v') ? match[1] : `v${match[1]}`;
+  }
+
+  return {
+    "Prototype Crimson": APP_VERSION,
+    "app.js": APP_VERSION,
+    "auth.js": AUTH_VERSION,
+    "print.js": PRINT_VERSION,
+    "styles.css": cssVer,
+    "index.html": indexVer
+  };
+}
 
 
 const loginView = document.getElementById('login-view');
@@ -43,6 +61,20 @@ export async function fetchCatalog() {
 }
 
 
+export function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'flex';
+  history.pushState({ modalId: modalEl.id }, '', '');
+}
+
+export function closeModal(modalEl) {
+  if (!modalEl || modalEl.style.display === 'none') return;
+  modalEl.style.display = 'none';
+  if (history.state && history.state.modalId === modalEl.id) {
+    history.back();
+  }
+}
+
 export function switchView(targetViewId, pushState = true) {
   if (loginView) loginView.style.display = 'none';
   if (dashboardView) dashboardView.style.display = 'none';
@@ -72,16 +104,18 @@ export function switchView(targetViewId, pushState = true) {
 }
 
 window.addEventListener('popstate', (e) => {
+  let modalDismissed = false;
   const openModals = document.querySelectorAll('.modal-overlay');
   for (const modal of openModals) {
     if (modal.style.display === 'flex') {
       modal.style.display = 'none';
-      return;
+      modalDismissed = true;
     }
   }
+  if (modalDismissed) return;
 
   let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
-  if (!isAuthenticated && dest === 'dashboard-view') {
+  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view')) {
     dest = 'login-view';
   }
   switchView(dest, false);
@@ -148,7 +182,8 @@ const btnManifestClose = document.getElementById('btn-manifest-close');
 if (versionText) {
   versionText.addEventListener('click', () => {
     if (manifestListBody) {
-      manifestListBody.innerHTML = Object.entries(MODULE_VERSIONS)
+      const liveVersions = getRuntimeVersions();
+      manifestListBody.innerHTML = Object.entries(liveVersions)
         .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
         .join('');
     }
@@ -193,4 +228,5 @@ initAuth({
   }
 });
 
-switchView('login-view');
+history.replaceState({ view: 'login-view' }, '', '');
+switchView('login-view', false);
