@@ -1,13 +1,13 @@
-// Prototype Crimson - js/app.js (v0.1.4)
+// Prototype Crimson - js/app.js (v0.1.5)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.6';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.7';
 
-export const APP_VERSION = "v0.1.4";
+export const APP_VERSION = "v0.1.5";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.0';
+  let indexVer = 'v0.1.5';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -15,7 +15,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.2';
+  let cssVer = 'v0.1.3';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -214,6 +214,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeModal(termsModal);
     closeModal(manifestModal);
+    const resetModal = document.getElementById('print-reset-modal');
+    if (resetModal) resetModal.style.display = 'none';
   }
 });
 

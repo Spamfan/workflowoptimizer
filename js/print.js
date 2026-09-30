@@ -1,7 +1,7 @@
-// Prototype Crimson - js/print.js (v0.1.6)
+// Prototype Crimson - js/print.js (v0.1.7)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.6";
+export const PRINT_VERSION = "v0.1.7";
 
 let sessionCatalogCache = null;
 
@@ -27,10 +27,12 @@ let hiddenItemKeys = new Set();
 let manualHighlights = {}; // key -> 'partial' | 'full'
 let priceOverrides = {}; // key -> price string
 
-// 10-Step In-Memory Undo / Redo History Stack
+let isDrawerOpen = false;
+
+// 50-Step In-Memory Undo / Redo History Stack
 let historyStack = [];
 let historyIndex = -1;
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 50;
 
 function pushHistoryState() {
   const state = {
@@ -204,9 +206,26 @@ export function initPrintEngine() {
   const btnPrintSheet = document.getElementById('btn-print-sheet');
   const btnPrintUndo = document.getElementById('btn-print-undo');
   const btnPrintRedo = document.getElementById('btn-print-redo');
+  const btnToggleDrawer = document.getElementById('btn-toggle-other-devices');
+  const drawerTabBtn = document.getElementById('drawer-tab-btn');
+  const resetModal = document.getElementById('print-reset-modal');
+  const btnResetCancel = document.getElementById('btn-reset-cancel');
+  const btnResetConfirm = document.getElementById('btn-reset-confirm');
 
   if (btnPrintReset) {
     btnPrintReset.addEventListener('click', () => {
+      if (resetModal) resetModal.style.display = 'flex';
+    });
+  }
+
+  if (btnResetCancel) {
+    btnResetCancel.addEventListener('click', () => {
+      if (resetModal) resetModal.style.display = 'none';
+    });
+  }
+
+  if (btnResetConfirm) {
+    btnResetConfirm.addEventListener('click', () => {
       hiddenItemKeys.clear();
       manualHighlights = {};
       priceOverrides = {};
@@ -214,9 +233,18 @@ export function initPrintEngine() {
       isCarriedOver = false;
       isDocumentEdited = false;
       clearSessionOverrides(activeStore);
+      if (resetModal) resetModal.style.display = 'none';
       pushHistoryState();
       renderPrintDocument();
     });
+  }
+
+  if (btnToggleDrawer) {
+    btnToggleDrawer.addEventListener('click', toggleDrawer);
+  }
+
+  if (drawerTabBtn) {
+    drawerTabBtn.addEventListener('click', toggleDrawer);
   }
 
   if (btnPrintUndo) {
@@ -229,6 +257,28 @@ export function initPrintEngine() {
 
   if (btnPrintSheet) {
     btnPrintSheet.addEventListener('click', triggerSilentPrint);
+  }
+}
+
+function toggleDrawer() {
+  isDrawerOpen = !isDrawerOpen;
+  syncDrawerUI();
+}
+
+function syncDrawerUI() {
+  const drawer = document.getElementById('other-devices-drawer');
+  const toggleBtn = document.getElementById('btn-toggle-other-devices');
+
+  if (drawer) {
+    if (isDrawerOpen) {
+      drawer.classList.remove('collapsed');
+    } else {
+      drawer.classList.add('collapsed');
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.textContent = isDrawerOpen ? 'Hide other devices' : 'Show other devices';
   }
 }
 
@@ -269,13 +319,14 @@ export function renderPrintDocument(pushToHistory = true) {
   const devicesObj = (catalogData && catalogData.devices) ? catalogData.devices : {};
 
   const isVaporized = (model) => /iPhone\s*(11|12|13)(?!\d)/i.test(model);
-  const isApple = (model) => /iPhone|Apple Watch|AW\b/i.test(model);
+  const isApple = (model) => /iPhone/i.test(model);
 
   const attList = [];
   const vzwList = [];
   const tmoList = [];
   const appleList = [];
   const hiddenSummary = { att: [], vzw: [], tmo: [], apple: [] };
+  const hiddenDrawerItems = { att: [], vzw: [], tmo: [], apple: [] };
 
   for (const [key, dev] of Object.entries(devicesObj)) {
     const displayName = dev.abbr || dev.name || key;
@@ -288,18 +339,13 @@ export function renderPrintDocument(pushToHistory = true) {
 
       if (pAtt || pVzw || pTmo) {
         const uid = `apple_${key}`;
+        const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev, pAtt, pVzw, pTmo };
         if (hiddenItemKeys.has(uid)) {
           hiddenSummary.apple.push(displayName);
+          hiddenDrawerItems.apple.push(itemObj);
+        } else {
+          appleList.push(itemObj);
         }
-        appleList.push({
-          uid,
-          model: displayName,
-          intakeName: dev.name || displayName,
-          dev,
-          pAtt,
-          pVzw,
-          pTmo
-        });
       }
       continue;
     }
@@ -307,28 +353,37 @@ export function renderPrintDocument(pushToHistory = true) {
     const pAtt = getAttPrice(dev);
     if (pAtt) {
       const uid = `att_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.att.push(displayName);
+        hiddenDrawerItems.att.push(itemObj);
+      } else {
+        attList.push(itemObj);
       }
-      attList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
 
     const pVzw = getVzwPrice(dev);
     if (pVzw) {
       const uid = `vzw_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.vzw.push(displayName);
+        hiddenDrawerItems.vzw.push(itemObj);
+      } else {
+        vzwList.push(itemObj);
       }
-      vzwList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
 
     const pTmo = getTmoPrice(dev);
     if (pTmo) {
       const uid = `tmo_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.tmo.push(displayName);
+        hiddenDrawerItems.tmo.push(itemObj);
+      } else {
+        tmoList.push(itemObj);
       }
-      tmoList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
   }
 
@@ -336,14 +391,12 @@ export function renderPrintDocument(pushToHistory = true) {
   attList.sort(sortAlpha);
   vzwList.sort(sortAlpha);
   tmoList.sort(sortAlpha);
+  appleList.sort(sortAlpha);
 
-  appleList.sort((a, b) => {
-    const aWatch = /watch/i.test(a.intakeName);
-    const bWatch = /watch/i.test(b.intakeName);
-    if (aWatch && !bWatch) return -1;
-    if (!aWatch && bWatch) return 1;
-    return a.intakeName.localeCompare(b.intakeName);
-  });
+  hiddenDrawerItems.att.sort(sortAlpha);
+  hiddenDrawerItems.vzw.sort(sortAlpha);
+  hiddenDrawerItems.tmo.sort(sortAlpha);
+  hiddenDrawerItems.apple.sort(sortAlpha);
 
   const renderRows = (list, carrierType) => {
     if (list.length === 0) {
@@ -351,11 +404,9 @@ export function renderPrintDocument(pushToHistory = true) {
     }
 
     return list.map(item => {
-      const isHidden = hiddenItemKeys.has(item.uid);
       const hlClass = manualHighlights[item.uid] === 'full'
         ? 'hl-full'
         : (manualHighlights[item.uid] === 'partial' ? 'hl-partial' : '');
-      const hiddenClass = isHidden ? 'is-hidden' : '';
 
       let priceCell = '';
       if (priceOverrides[item.uid]) {
@@ -374,8 +425,8 @@ export function renderPrintDocument(pushToHistory = true) {
       }
 
       return `
-        <tr class="print-row ${hlClass} ${hiddenClass}" data-uid="${item.uid}">
-          <td class="col-item tap-item" data-uid="${item.uid}" title="Tap to toggle hide/show, right-click to highlight">${item.model}</td>
+        <tr class="print-row ${hlClass}" data-uid="${item.uid}">
+          <td class="col-item tap-item" data-uid="${item.uid}" data-model="${item.model}" title="Tap to hide device, right-click to highlight">${item.model}</td>
           <td class="col-price tap-price" data-uid="${item.uid}" title="Tap to override price">${priceCell}</td>
         </tr>
       `;
@@ -486,6 +537,7 @@ export function renderPrintDocument(pushToHistory = true) {
   `;
 
   attachCommentEditorListeners();
+  renderOtherDevicesDrawer(hiddenDrawerItems);
 
   sheet.querySelectorAll('.tap-price').forEach(td => {
     td.addEventListener('click', (e) => {
@@ -511,15 +563,13 @@ export function renderPrintDocument(pushToHistory = true) {
     td.addEventListener('click', (e) => {
       e.stopPropagation();
       const uid = td.dataset.uid;
-      if (hiddenItemKeys.has(uid)) {
-        hiddenItemKeys.delete(uid);
-      } else {
-        hiddenItemKeys.add(uid);
-      }
+      const modelName = td.dataset.model || td.textContent.trim();
+      hiddenItemKeys.add(uid);
       isDocumentEdited = true;
       saveSessionOverrides();
       pushHistoryState();
       renderPrintDocument();
+      spawnHideToast(modelName);
     });
 
     td.addEventListener('contextmenu', (e) => {
@@ -537,6 +587,103 @@ export function renderPrintDocument(pushToHistory = true) {
   });
 
   updateHistoryButtons();
+  syncDrawerUI();
+}
+
+function renderOtherDevicesDrawer(hiddenGroups) {
+  const carriersContainer = document.getElementById('drawer-carriers-container');
+  const countBadge = document.getElementById('drawer-hidden-count');
+  if (!carriersContainer) return;
+
+  const totalHidden = hiddenItemKeys.size;
+  if (countBadge) countBadge.textContent = String(totalHidden);
+
+  if (totalHidden === 0) {
+    carriersContainer.innerHTML = '<div class="drawer-empty-notice">All available catalog devices are currently on your report.</div>';
+    return;
+  }
+
+  const sectionsConfig = [
+    { label: 'AT&T', list: hiddenGroups.att },
+    { label: 'Verizon', list: hiddenGroups.vzw },
+    { label: 'T-Mobile', list: hiddenGroups.tmo },
+    { label: 'Apple Devices', list: hiddenGroups.apple }
+  ];
+
+  let html = '';
+  sectionsConfig.forEach(sec => {
+    if (sec.list && sec.list.length > 0) {
+      html += `
+        <div class="drawer-carrier-section">
+          <div class="drawer-carrier-title">${sec.label}</div>
+          <div class="drawer-items-list">
+            ${sec.list.map(item => `
+              <div class="drawer-item-chip" data-uid="${item.uid}" title="Click to put back on report">
+                <span>${item.model}</span>
+                <span style="font-size: 0.8rem; color: var(--primary);">+ Add</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  carriersContainer.innerHTML = html;
+
+  carriersContainer.querySelectorAll('.drawer-item-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const uid = chip.dataset.uid;
+      if (uid && hiddenItemKeys.has(uid)) {
+        hiddenItemKeys.delete(uid);
+        isDocumentEdited = true;
+        saveSessionOverrides();
+        pushHistoryState();
+        renderPrintDocument();
+      }
+    });
+  });
+}
+
+function spawnHideToast(deviceName) {
+  const container = document.getElementById('print-toast-container');
+  if (!container) return;
+
+  while (container.children.length >= 5) {
+    container.removeChild(container.firstChild);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'print-toast';
+  toast.innerHTML = `
+    <span>Hidden <b>${escapeHtml(deviceName)}</b></span>
+    <button type="button" class="btn-toast-undo">Undo</button>
+  `;
+
+  const btnUndo = toast.querySelector('.btn-toast-undo');
+  if (btnUndo) {
+    btnUndo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      undo();
+      toast.remove();
+    });
+  }
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.remove();
+    }
+  }, 3000);
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function attachCommentEditorListeners() {
@@ -696,7 +843,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.2">
+        <link rel="stylesheet" href="styles.css?v=0.1.3">
         <style>
           .print-row.is-hidden { display: none !important; }
         </style>
