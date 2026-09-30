@@ -1,7 +1,7 @@
-// Prototype Crimson - js/print.js (v0.1.5)
+// Prototype Crimson - js/print.js (v0.1.6)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.5";
+export const PRINT_VERSION = "v0.1.6";
 
 let sessionCatalogCache = null;
 
@@ -294,6 +294,7 @@ export function renderPrintDocument(pushToHistory = true) {
         appleList.push({
           uid,
           model: displayName,
+          intakeName: dev.name || displayName,
           dev,
           pAtt,
           pVzw,
@@ -309,7 +310,7 @@ export function renderPrintDocument(pushToHistory = true) {
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.att.push(displayName);
       }
-      attList.push({ uid, model: displayName, dev });
+      attList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
 
     const pVzw = getVzwPrice(dev);
@@ -318,7 +319,7 @@ export function renderPrintDocument(pushToHistory = true) {
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.vzw.push(displayName);
       }
-      vzwList.push({ uid, model: displayName, dev });
+      vzwList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
 
     const pTmo = getTmoPrice(dev);
@@ -327,33 +328,22 @@ export function renderPrintDocument(pushToHistory = true) {
       if (hiddenItemKeys.has(uid)) {
         hiddenSummary.tmo.push(displayName);
       }
-      tmoList.push({ uid, model: displayName, dev });
+      tmoList.push({ uid, model: displayName, intakeName: dev.name || displayName, dev });
     }
   }
 
-  const sortAlpha = (a, b) => a.model.localeCompare(b.model);
+  const sortAlpha = (a, b) => a.intakeName.localeCompare(b.intakeName);
   attList.sort(sortAlpha);
   vzwList.sort(sortAlpha);
   tmoList.sort(sortAlpha);
 
   appleList.sort((a, b) => {
-    const aWatch = /watch/i.test(a.model);
-    const bWatch = /watch/i.test(b.model);
+    const aWatch = /watch/i.test(a.intakeName);
+    const bWatch = /watch/i.test(b.intakeName);
     if (aWatch && !bWatch) return -1;
     if (!aWatch && bWatch) return 1;
-    return a.model.localeCompare(b.model);
+    return a.intakeName.localeCompare(b.intakeName);
   });
-
-  const now = new Date();
-  const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
-  let hours = now.getHours();
-  const mins = String(now.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'pm' : 'am';
-  hours = hours % 12 || 12;
-  const timeStr = `${hours}:${mins}${ampm}`;
-
-  const titleLine = `${dateStr} ${timeStr} Store #${activeStore || '--'} Likely EDLPs`;
-  const bannerText = '[!] Experimental software, use with caution.';
 
   const renderRows = (list, carrierType) => {
     if (list.length === 0) {
@@ -403,7 +393,17 @@ export function renderPrintDocument(pushToHistory = true) {
 
   sheet.innerHTML = `
     <div class="print-doc-header">
-      <div class="print-doc-title">${titleLine}</div>
+      <div class="print-header-top-row">
+        <div class="print-doc-title"><b>Recent EDLP reports</b></div>
+        <div class="print-disclaimer-pill">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>This software is in early development and may make mistakes.</span>
+        </div>
+      </div>
 
       <!-- In-Document Comments Box (WYSIWYG) -->
       <div class="print-comment-container" id="print-comment-container">
@@ -419,8 +419,6 @@ export function renderPrintDocument(pushToHistory = true) {
           <button type="button" class="rt-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
         </div>
       </div>
-
-      <div class="print-doc-banner">${bannerText}</div>
     </div>
 
     <div class="print-doc-body">
@@ -698,7 +696,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.1">
+        <link rel="stylesheet" href="styles.css?v=0.1.2">
         <style>
           .print-row.is-hidden { display: none !important; }
         </style>
