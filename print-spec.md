@@ -6,6 +6,16 @@
 ### 1. LAYOUT ARCHITECTURE
 * **2-Column Typewriter Table:** Formats device  
   pricing in a high-density, 2-column layout.  
+* **Canonical Intake Sorting:** Carrier tables  
+  sort devices alphabetically by their original  
+  intake name (`dev.name`), never by abbreviations.  
+* **Header Architecture:** Title is strictly bold  
+  "Recent EDLP reports"; timestamp and store  
+  number logic are deprecated and stripped.  
+* **Inline Disclaimer Pill:** Placed immediately  
+  to the right of the title in the header row,  
+  displaying a circular exclamation icon with text:  
+  "This software is in early development and may make mistakes."  
 * **Apple Segregation:** iPhones and Apple Watches  
   segregate into a dedicated top table.  
 * **Carrier Priority:** Apple stock resolves in order:  
