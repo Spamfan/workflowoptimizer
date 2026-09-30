@@ -24,8 +24,11 @@
 
 ---
 
-### 3. CANONICAL DICTIONARY
+### 3. CANONICAL DICTIONARY & ORDERING
 * **Structure:** Keyed lookup containing canonical  
-  model names, capacities, colors, and carrier aliases.  
+  device entries with `name`, `abbr`, and carrier pricing.  
+* **Alphabetical Ordering:** Devices in `stats.json`  
+  and all editing tools must maintain strict  
+  alphabetical ordering by full intake `name`.  
 * **Matching:** Used by `print.js` to normalize labels  
   prior to table generation.  
