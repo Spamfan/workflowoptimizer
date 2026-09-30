@@ -1,10 +1,10 @@
-// Prototype Crimson - js/app.js (v0.1.2)
+// Prototype Crimson - js/app.js (v0.1.3)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=1.1.1';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.5';
 
-export const APP_VERSION = "v0.1.2";
+export const APP_VERSION = "v0.1.3";
 
 export function getRuntimeVersions() {
   let indexVer = 'v0.1.0';
