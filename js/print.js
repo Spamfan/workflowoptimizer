@@ -1,234 +1,867 @@
-// Prototype Crimson - js/app.js (v0.1.6)
-// Master Router, Unified View Coordinator & Lifecycle Controller
+// Prototype Crimson - js/print.js (v0.1.8)
+// Print Likely EDLP Price Engine
 
-import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.8';
+export const PRINT_VERSION = "v0.1.8";
 
-export const APP_VERSION = "v0.1.6";
+let sessionCatalogCache = null;
 
-export function getRuntimeVersions() {
-  let indexVer = 'v0.1.6';
-  const metaVer = document.querySelector('meta[name="version"]');
-  if (metaVer && metaVer.content) {
-    indexVer = metaVer.content;
-  } else if (document.documentElement && document.documentElement.dataset && document.documentElement.dataset.version) {
-    indexVer = document.documentElement.dataset.version;
-  }
-
-  let cssVer = 'v0.1.4';
-  const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
-  if (cssLink) {
-    const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
-    if (match && match[1]) cssVer = match[1].startsWith('v') ? match[1] : `v${match[1]}`;
-  }
-
-  return {
-    "Prototype Crimson": APP_VERSION,
-    "app.js": APP_VERSION,
-    "auth.js": AUTH_VERSION,
-    "print.js": PRINT_VERSION,
-    "styles.css": cssVer,
-    "index.html": indexVer
-  };
-}
-
-
-const loginView = document.getElementById('login-view');
-const dashboardView = document.getElementById('dashboard-view');
-const printView = document.getElementById('print-view');
-const btnLogout = document.getElementById('btn-logout');
-const btnBack = document.getElementById('btn-back');
-const btnPrintEdlps = document.getElementById('btn-print-edlps');
-const cardPrintTitle = document.getElementById('card-print-title');
-const versionText = document.getElementById('version-text');
-if (versionText) versionText.textContent = `Crimson ${APP_VERSION}`;
-
-let currentView = 'login-view';
-let isAuthenticated = false;
-let cachedStats = null;
-
-export async function fetchCatalog() {
+async function fetchStatsCatalog() {
   try {
     const res = await fetch('./stats.json?t=' + Date.now());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    cachedStats = data;
+    sessionCatalogCache = data;
     return data;
   } catch (err) {
-    if (cachedStats) return cachedStats;
+    if (sessionCatalogCache) return sessionCatalogCache;
     throw err;
   }
 }
 
+let activeStore = '';
+let shiftComment = '';
+let isCarriedOver = false;
+let isDocumentEdited = false;
+let catalogData = null;
+let hiddenItemKeys = new Set();
+let manualHighlights = {}; // key -> 'partial' | 'full'
+let priceOverrides = {}; // key -> price string
 
-export function openModal(modalEl) {
-  if (!modalEl) return;
-  modalEl.style.display = 'flex';
-  history.pushState({ modalId: modalEl.id }, '', '');
+let isDrawerOpen = false;
+
+// 50-Step In-Memory Undo / Redo History Stack
+let historyStack = [];
+let historyIndex = -1;
+const MAX_HISTORY = 50;
+
+function pushHistoryState() {
+  const state = {
+    hidden: Array.from(hiddenItemKeys),
+    highlights: { ...manualHighlights },
+    prices: { ...priceOverrides },
+    comment: shiftComment,
+    isEdited: isDocumentEdited,
+    isCarriedOver: isCarriedOver
+  };
+
+  if (historyIndex < historyStack.length - 1) {
+    historyStack = historyStack.slice(0, historyIndex + 1);
+  }
+
+  historyStack.push(JSON.stringify(state));
+  if (historyStack.length > MAX_HISTORY) {
+    historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+  updateHistoryButtons();
 }
 
-export function closeModal(modalEl) {
-  if (!modalEl || modalEl.style.display === 'none') return;
-  modalEl.style.display = 'none';
-  if (history.state && history.state.modalId === modalEl.id) {
-    history.back();
+function updateHistoryButtons() {
+  const btnUndo = document.getElementById('btn-print-undo');
+  const btnRedo = document.getElementById('btn-print-redo');
+  if (btnUndo) btnUndo.disabled = (historyIndex <= 0);
+  if (btnRedo) btnRedo.disabled = (historyIndex >= historyStack.length - 1);
+}
+
+export function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    applyHistoryState(JSON.parse(historyStack[historyIndex]));
   }
 }
 
-export function switchView(targetViewId, pushState = true) {
-  if (loginView) loginView.style.display = 'none';
-  if (dashboardView) dashboardView.style.display = 'none';
-  if (printView) printView.style.display = 'none';
-
-  const targetEl = document.getElementById(targetViewId);
-  if (targetEl) {
-    targetEl.style.display = 'flex';
-  }
-
-  currentView = targetViewId;
-
-  if (currentView === 'dashboard-view') {
-    if (btnLogout) btnLogout.style.display = 'inline-flex';
-    if (btnBack) btnBack.style.display = 'none';
-  } else if (currentView === 'print-view') {
-    if (btnLogout) btnLogout.style.display = 'none';
-    if (btnBack) btnBack.style.display = 'inline-flex';
-  } else {
-    if (btnLogout) btnLogout.style.display = 'none';
-    if (btnBack) btnBack.style.display = 'none';
-  }
-
-  if (pushState) {
-    history.pushState({ view: targetViewId }, '', '');
+export function redo() {
+  if (historyIndex < historyStack.length - 1) {
+    historyIndex++;
+    applyHistoryState(JSON.parse(historyStack[historyIndex]));
   }
 }
 
-window.addEventListener('popstate', (e) => {
-  let modalDismissed = false;
-  const openModals = document.querySelectorAll('.modal-overlay');
-  for (const modal of openModals) {
-    if (modal.style.display === 'flex') {
-      modal.style.display = 'none';
-      modalDismissed = true;
+function applyHistoryState(state) {
+  hiddenItemKeys = new Set(state.hidden || []);
+  manualHighlights = state.highlights || {};
+  priceOverrides = state.prices || {};
+  shiftComment = state.comment || '';
+  isDocumentEdited = Boolean(state.isEdited);
+  isCarriedOver = Boolean(state.isCarriedOver);
+
+  saveSessionOverrides();
+  renderPrintDocument(false);
+  updateHistoryButtons();
+}
+
+const STORAGE_OVERRIDE_KEY = 'wfo_price_sheet_state';
+const STORAGE_COMMENT_KEY = 'wfo_saved_comment';
+
+function saveSessionOverrides() {
+  try {
+    const payload = {
+      hidden: Array.from(hiddenItemKeys),
+      highlights: manualHighlights,
+      prices: priceOverrides,
+      comment: shiftComment,
+      isEdited: isDocumentEdited,
+      isCarriedOver: isCarriedOver
+    };
+    localStorage.setItem(STORAGE_OVERRIDE_KEY, JSON.stringify(payload));
+    if (shiftComment) {
+      localStorage.setItem(STORAGE_COMMENT_KEY, shiftComment);
+    } else {
+      localStorage.removeItem(STORAGE_COMMENT_KEY);
     }
-  }
-  if (modalDismissed) return;
+  } catch (_) {}
+}
 
-  let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
-  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view')) {
-    dest = 'login-view';
+function loadSessionOverrides() {
+  try {
+    const raw = localStorage.getItem(STORAGE_OVERRIDE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      hiddenItemKeys = new Set(p.hidden || []);
+      manualHighlights = p.highlights || {};
+      priceOverrides = p.prices || {};
+      shiftComment = p.comment || '';
+      isDocumentEdited = Boolean(p.isEdited);
+      isCarriedOver = Boolean(p.isCarriedOver);
+      return true;
+    }
+    const savedComment = localStorage.getItem(STORAGE_COMMENT_KEY);
+    if (savedComment) {
+      shiftComment = savedComment;
+      isCarriedOver = true;
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return false;
   }
-  switchView(dest, false);
+}
+
+function clearSessionOverrides() {
+  try {
+    localStorage.removeItem(STORAGE_OVERRIDE_KEY);
+    localStorage.removeItem(STORAGE_COMMENT_KEY);
+  } catch (_) {}
+}
+  if (!dev) return null;
+  const dp = dev.tmoDP;
+  const mo = dev.tmoMOADP !== null && dev.tmoMOADP !== undefined ? dev.tmoMOADP : dev.tmoMO;
+  const hasDP = dp !== null && dp !== undefined;
+  const hasMO = mo !== null && mo !== undefined;
+  const hasBaseMO = dev.tmoMO !== null && dev.tmoMO !== undefined;
+
+  if (!hasDP && !hasMO && !hasBaseMO) return null;
+  if ((dp === 0 || !hasDP) && (mo === 0 || !hasMO) && (dev.tmoMO === 0 || !hasBaseMO)) return null;
+
+  let total = 0;
+  if (dev.tmoMO) {
+    total = Math.round(dev.tmoMO * 24);
+  } else if (hasDP || hasMO) {
+    total = Math.round((dp || 0) + (mo || 0) * 24);
+  }
+  return `$${total} ($${dp ?? '___'} + $${mo ?? '___'}/mo)`;
+}
+
+// Global Keydown Handler for Undo / Redo in Print View
+window.addEventListener('keydown', (e) => {
+  const printView = document.getElementById('print-view');
+  if (!printView || printView.style.display === 'none') return;
+
+  const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey;
+  const isRedo = (e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey));
+
+  if (isUndo) {
+    if (e.target && e.target.id === 'print-comment-editor') {
+      return; // allow contenteditable native undo
+    }
+    e.preventDefault();
+    undo();
+  } else if (isRedo) {
+    if (e.target && e.target.id === 'print-comment-editor') {
+      return;
+    }
+    e.preventDefault();
+    redo();
+  }
 });
 
+// View Initializer
+export function initPrintEngine() {
+  const btnPrintReset = document.getElementById('btn-print-reset');
+  const btnPrintSheet = document.getElementById('btn-print-sheet');
+  const btnPrintUndo = document.getElementById('btn-print-undo');
+  const btnPrintRedo = document.getElementById('btn-print-redo');
+  const btnToggleDrawer = document.getElementById('btn-toggle-other-devices');
+  const drawerTabBtn = document.getElementById('drawer-tab-btn');
+  const resetModal = document.getElementById('print-reset-modal');
+  const btnResetCancel = document.getElementById('btn-reset-cancel');
+  const btnResetConfirm = document.getElementById('btn-reset-confirm');
 
-// Live Ping Engine
-const btnRefresh = document.getElementById('btn-refresh-ping');
-const refreshSvg = document.getElementById('refresh-svg');
-const pingValueEl = document.getElementById('ping-value');
-const pingStatusEl = document.getElementById('ping-status');
-let statusTimer = null;
+  if (btnPrintReset) {
+    btnPrintReset.addEventListener('click', () => {
+      if (resetModal) resetModal.style.display = 'flex';
+    });
+  }
 
+  if (btnResetCancel) {
+    btnResetCancel.addEventListener('click', () => {
+      if (resetModal) resetModal.style.display = 'none';
+    });
+  }
 
-async function fetchPing() {
-  if (statusTimer) clearTimeout(statusTimer);
-  if (refreshSvg) refreshSvg.classList.add('spinning');
-  if (pingStatusEl) pingStatusEl.textContent = 'Checking...';
+  if (btnResetConfirm) {
+    btnResetConfirm.addEventListener('click', () => {
+      hiddenItemKeys.clear();
+      manualHighlights = {};
+      priceOverrides = {};
+      shiftComment = '';
+      isCarriedOver = false;
+      isDocumentEdited = false;
+      clearSessionOverrides();
+      if (resetModal) resetModal.style.display = 'none';
+      pushHistoryState();
+      renderPrintDocument();
+    });
+  }
 
+  if (btnToggleDrawer) {
+    btnToggleDrawer.addEventListener('click', toggleDrawer);
+  }
+
+  if (drawerTabBtn) {
+    drawerTabBtn.addEventListener('click', toggleDrawer);
+  }
+
+  if (btnPrintUndo) {
+    btnPrintUndo.addEventListener('click', undo);
+  }
+
+  if (btnPrintRedo) {
+    btnPrintRedo.addEventListener('click', redo);
+  }
+
+  if (btnPrintSheet) {
+    btnPrintSheet.addEventListener('click', triggerSilentPrint);
+  }
+}
+
+function toggleDrawer() {
+  isDrawerOpen = !isDrawerOpen;
+  syncDrawerUI();
+}
+
+function syncDrawerUI() {
+  const drawer = document.getElementById('other-devices-drawer');
+  const toggleBtn = document.getElementById('btn-toggle-other-devices');
+
+  if (drawer) {
+    if (isDrawerOpen) {
+      drawer.classList.remove('collapsed');
+    } else {
+      drawer.classList.add('collapsed');
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.textContent = isDrawerOpen ? 'Hide other devices' : 'Show other devices';
+  }
+}
+
+export async function openPrintPreview(storeNum, storeSecret = '') {
+  activeStore = storeNum || '';
+  isDocumentEdited = false;
+  hiddenItemKeys.clear();
+  manualHighlights = {};
+  priceOverrides = {};
+  historyStack = [];
+  historyIndex = -1;
+
+  loadSessionOverrides();
+
+  const sheetContainer = document.getElementById('print-preview-sheet');
+  if (sheetContainer) {
+    sheetContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-sub, #606770);">Loading device catalog...</div>';
+  }
 
   try {
-    const data = await fetchCatalog();
-    cachedStats = data;
-    if (pingValueEl) pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'Connected.';
-    if (pingStatusEl) pingStatusEl.textContent = 'Refresh complete';
-    statusTimer = setTimeout(() => { if (pingStatusEl) pingStatusEl.textContent = ''; }, 2000);
+    catalogData = await fetchStatsCatalog();
   } catch (err) {
-    if (pingValueEl) pingValueEl.textContent = 'Error';
-    if (pingStatusEl) pingStatusEl.textContent = 'Error';
-  } finally {
-    setTimeout(() => { if (refreshSvg) refreshSvg.classList.remove('spinning'); }, 300);
+    console.error("Failed to load catalog for print preview:", err);
+    if (sheetContainer) {
+      sheetContainer.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">Failed to load device catalog: ${err.message || err}</div>`;
+    }
+    return;
   }
+
+  pushHistoryState();
+  renderPrintDocument();
 }
 
+export function renderPrintDocument(pushToHistory = true) {
+  const sheet = document.getElementById('print-preview-sheet');
+  if (!sheet) return;
 
-if (btnRefresh) btnRefresh.addEventListener('click', fetchPing);
-if (btnLogout) btnLogout.addEventListener('click', logout);
+  const devicesObj = (catalogData && catalogData.devices) ? catalogData.devices : {};
 
+  const isVaporized = (dev, name) => /iPhone\s*(11|12|13)(?!\d)/i.test(dev?.name || name);
+  const isAppleDevice = (dev, name) => {
+    const fullName = (dev?.name || name || '').toLowerCase();
+    const abbr = (dev?.abbr || '').toLowerCase();
+    return fullName.includes('iphone') || fullName.includes('somm') || abbr.startsWith('ip') || abbr.startsWith('se');
+  };
 
-if (btnBack) {
-  btnBack.addEventListener('click', () => {
-    if (currentView === 'print-view') {
-      switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
-    } else {
-      switchView('login-view');
+  const attList = [];
+  const vzwList = [];
+  const tmoList = [];
+  const appleList = [];
+  const hiddenSummary = { att: [], vzw: [], tmo: [], apple: [] };
+  const hiddenDrawerItems = { att: [], vzw: [], tmo: [], apple: [] };
+
+  for (const [key, dev] of Object.entries(devicesObj)) {
+    const displayName = dev.abbr || dev.name || key;
+    if (isVaporized(dev, displayName)) continue;
+
+    if (isAppleDevice(dev, displayName)) {
+      const pAtt = getAttPrice(dev);
+      const pVzw = getVzwPrice(dev);
+      const pTmo = getTmoPrice(dev);
+
+      if (pAtt || pVzw || pTmo) {
+        const uid = `apple_${key}`;
+        const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev, pAtt, pVzw, pTmo };
+        if (hiddenItemKeys.has(uid)) {
+          hiddenSummary.apple.push(displayName);
+          hiddenDrawerItems.apple.push(itemObj);
+        } else {
+          appleList.push(itemObj);
+        }
+      }
+      continue;
+    }
+
+    const pAtt = getAttPrice(dev);
+    if (pAtt) {
+      const uid = `att_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
+      if (hiddenItemKeys.has(uid)) {
+        hiddenSummary.att.push(displayName);
+        hiddenDrawerItems.att.push(itemObj);
+      } else {
+        attList.push(itemObj);
+      }
+    }
+
+    const pVzw = getVzwPrice(dev);
+    if (pVzw) {
+      const uid = `vzw_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
+      if (hiddenItemKeys.has(uid)) {
+        hiddenSummary.vzw.push(displayName);
+        hiddenDrawerItems.vzw.push(itemObj);
+      } else {
+        vzwList.push(itemObj);
+      }
+    }
+
+    const pTmo = getTmoPrice(dev);
+    if (pTmo) {
+      const uid = `tmo_${key}`;
+      const itemObj = { uid, model: displayName, intakeName: dev.name || displayName, dev };
+      if (hiddenItemKeys.has(uid)) {
+        hiddenSummary.tmo.push(displayName);
+        hiddenDrawerItems.tmo.push(itemObj);
+      } else {
+        tmoList.push(itemObj);
+      }
+    }
+  }
+
+  const sortAlpha = (a, b) => a.intakeName.localeCompare(b.intakeName);
+  attList.sort(sortAlpha);
+  vzwList.sort(sortAlpha);
+  tmoList.sort(sortAlpha);
+  appleList.sort(sortAlpha);
+
+  hiddenDrawerItems.att.sort(sortAlpha);
+  hiddenDrawerItems.vzw.sort(sortAlpha);
+  hiddenDrawerItems.tmo.sort(sortAlpha);
+  hiddenDrawerItems.apple.sort(sortAlpha);
+
+  const renderRows = (list, carrierType) => {
+    if (list.length === 0) {
+      return `<tr><td colspan="2" style="color: #888; font-style: italic; padding: 4px 0;">No items</td></tr>`;
+    }
+
+    return list.map(item => {
+      const hlClass = manualHighlights[item.uid] === 'full'
+        ? 'hl-full'
+        : (manualHighlights[item.uid] === 'partial' ? 'hl-partial' : '');
+
+      let priceCell = '';
+      if (priceOverrides[item.uid]) {
+        priceCell = priceOverrides[item.uid];
+      } else if (carrierType === 'att') {
+        priceCell = getAttPrice(item.dev) || '___';
+      } else if (carrierType === 'vzw') {
+        priceCell = getVzwPrice(item.dev) || '___';
+      } else if (carrierType === 'tmo') {
+        priceCell = getTmoPrice(item.dev) || '(___ + ___/mo)';
+      } else if (carrierType === 'apple') {
+        const pAtt = item.pAtt || '___';
+        const pVzw = item.pVzw || '___';
+        const pTmo = item.pTmo || '(___ + ___/mo)';
+        priceCell = `${pAtt}, ${pVzw}, ${pTmo}`;
+      }
+
+      return `
+        <tr class="print-row ${hlClass}" data-uid="${item.uid}">
+          <td class="col-item tap-item" data-uid="${item.uid}" data-model="${item.model}" title="Tap to hide device, right-click to highlight">${item.model}</td>
+          <td class="col-price tap-price" data-uid="${item.uid}" title="Tap to override price">${priceCell}</td>
+        </tr>
+      `;
+    }).join('');
+  };
+
+  const hasManualOverrides = Object.keys(priceOverrides).length > 0;
+  const hasCustomComment = Boolean(shiftComment && shiftComment.trim() !== '' && !isCarriedOver);
+  const showEditedNotice = isDocumentEdited && (hasManualOverrides || hasCustomComment);
+
+  sheet.innerHTML = `
+    <div class="print-doc-header">
+      <div class="print-header-top-row">
+        <div class="print-doc-title"><b>Recent EDLP reports</b></div>
+        <div class="print-disclaimer-pill">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>This software is in early development and may make mistakes.</span>
+        </div>
+      </div>
+      <div class="print-instruction-hint">Tap device to hide • Tap price to override • Right-click to highlight</div>
+
+      <!-- In-Document Comments Box (WYSIWYG) -->
+      <div class="print-comment-container" id="print-comment-container">
+        ${isCarriedOver && shiftComment ? `
+          <div class="comment-carryover-badge" id="comment-carryover-badge">
+            Previous report comments saved • <span class="comment-carryover-clear" id="btn-clear-comment">Clear</span>
+          </div>
+        ` : ''}
+        <div id="print-comment-editor" class="print-comment-editor" contenteditable="true" data-placeholder="You can type comments for today's report here...">${shiftComment || ''}</div>
+        <div id="rt-toolbar" class="rt-toolbar" style="display: none;">
+          <button type="button" class="rt-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="rt-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="rt-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-doc-body">
+      <div class="print-col print-col-left">
+        <div class="print-section">
+          <div class="print-section-header">ATT</div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th class="col-item">ITEM</th>
+                <th class="col-price">Likely EDLPs</th>
+              </tr>
+            </thead>
+            <tbody>${renderRows(attList, 'att')}</tbody>
+          </table>
+        </div>
+
+        <div class="print-section">
+          <div class="print-section-header">VZW</div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th class="col-item">ITEM</th>
+                <th class="col-price">Likely EDLPs</th>
+              </tr>
+            </thead>
+            <tbody>${renderRows(vzwList, 'vzw')}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="print-col print-col-right">
+        <div class="print-section">
+          <div class="print-section-header">TMO</div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th class="col-item">ITEM</th>
+                <th class="col-price">Likely EDLPs (dp + /mo)</th>
+              </tr>
+            </thead>
+            <tbody>${renderRows(tmoList, 'tmo')}</tbody>
+          </table>
+        </div>
+
+        <div class="print-section">
+          <div class="print-section-header">Apple Devices</div>
+          <table class="print-table apple-table">
+            <thead>
+              <tr>
+                <th class="col-item">ITEM</th>
+                <th class="col-price">Likely EDLPs: ATT, VZW, TMO (dp + /mo)</th>
+              </tr>
+            </thead>
+            <tbody>${renderRows(appleList, 'apple')}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-doc-footer">
+      ${showEditedNotice ? '<div class="footer-audit-notice">[This document was edited from the original]</div>' : ''}
+    </div>
+  `;
+
+  attachCommentEditorListeners();
+  renderOtherDevicesDrawer(hiddenDrawerItems);
+
+  sheet.querySelectorAll('.tap-price').forEach(td => {
+    td.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = td.dataset.uid;
+      const currentVal = td.textContent.trim();
+      const newVal = prompt('Override Price:', currentVal);
+      if (newVal !== null) {
+        if (newVal.trim() === '') {
+          delete priceOverrides[uid];
+        } else {
+          priceOverrides[uid] = newVal.trim();
+        }
+        isDocumentEdited = true;
+        saveSessionOverrides();
+        pushHistoryState();
+        renderPrintDocument();
+      }
+    });
+  });
+
+  sheet.querySelectorAll('.tap-item').forEach(td => {
+    td.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = td.dataset.uid;
+      const modelName = td.dataset.model || td.textContent.trim();
+      hiddenItemKeys.add(uid);
+      isDocumentEdited = true;
+      saveSessionOverrides();
+      pushHistoryState();
+      renderPrintDocument();
+      spawnHideToast(modelName);
+    });
+
+    td.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const uid = td.dataset.uid;
+      const cur = manualHighlights[uid];
+      if (!cur) manualHighlights[uid] = 'partial';
+      else if (cur === 'partial') manualHighlights[uid] = 'full';
+      else delete manualHighlights[uid];
+      isDocumentEdited = true;
+      saveSessionOverrides();
+      pushHistoryState();
+      renderPrintDocument();
+    });
+  });
+
+  updateHistoryButtons();
+  syncDrawerUI();
+}
+
+function renderOtherDevicesDrawer(hiddenGroups) {
+  const carriersContainer = document.getElementById('drawer-carriers-container');
+  const countBadge = document.getElementById('drawer-hidden-count');
+  if (!carriersContainer) return;
+
+  const totalHidden = hiddenItemKeys.size;
+  if (countBadge) countBadge.textContent = String(totalHidden);
+
+  if (totalHidden === 0) {
+    carriersContainer.innerHTML = '<div class="drawer-empty-notice">All available catalog devices are currently on your report.</div>';
+    return;
+  }
+
+  const sectionsConfig = [
+    { label: 'AT&T', list: hiddenGroups.att },
+    { label: 'Verizon', list: hiddenGroups.vzw },
+    { label: 'T-Mobile', list: hiddenGroups.tmo },
+    { label: 'Apple Devices', list: hiddenGroups.apple }
+  ];
+
+  let html = '';
+  sectionsConfig.forEach(sec => {
+    if (sec.list && sec.list.length > 0) {
+      html += `
+        <div class="drawer-carrier-section">
+          <div class="drawer-carrier-title">${sec.label}</div>
+          <div class="drawer-items-list">
+            ${sec.list.map(item => `
+              <div class="drawer-item-chip" data-uid="${item.uid}" title="Click to put back on report">
+                <span>${item.model}</span>
+                <span style="font-size: 0.8rem; color: var(--primary);">+ Add</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  carriersContainer.innerHTML = html;
+
+  carriersContainer.querySelectorAll('.drawer-item-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const uid = chip.dataset.uid;
+      if (uid && hiddenItemKeys.has(uid)) {
+        hiddenItemKeys.delete(uid);
+        isDocumentEdited = true;
+        saveSessionOverrides();
+        pushHistoryState();
+        renderPrintDocument();
+      }
+    });
+  });
+}
+
+function spawnHideToast(deviceName) {
+  const container = document.getElementById('print-toast-container');
+  if (!container) return;
+
+  while (container.children.length >= 5) {
+    container.removeChild(container.firstChild);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'print-toast';
+  toast.innerHTML = `
+    <span>Hidden <b>${escapeHtml(deviceName)}</b></span>
+    <button type="button" class="btn-toast-undo">Undo</button>
+  `;
+
+  const btnUndo = toast.querySelector('.btn-toast-undo');
+  if (btnUndo) {
+    btnUndo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      undo();
+      toast.remove();
+    });
+  }
+
+  let touchStartX = 0;
+  toast.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches[0]) {
+      touchStartX = e.touches[0].clientX;
+    }
+  }, { passive: true });
+
+  toast.addEventListener('touchend', (e) => {
+    if (e.changedTouches && e.changedTouches[0]) {
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(deltaX) > 40) {
+        toast.classList.add('dismissing');
+        setTimeout(() => { toast.remove(); }, 200);
+      }
+    }
+  }, { passive: true });
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.add('dismissing');
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 200);
+    }
+  }, 3000);
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function attachCommentEditorListeners() {
+  const container = document.getElementById('print-comment-container');
+  const editor = document.getElementById('print-comment-editor');
+  const toolbar = document.getElementById('rt-toolbar');
+  const btnClear = document.getElementById('btn-clear-comment');
+  const carryoverBadge = document.getElementById('comment-carryover-badge');
+
+  if (!editor || !toolbar) return;
+
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && (window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+  if (btnClear) {
+    btnClear.addEventListener('click', (e) => {
+      e.preventDefault();
+      editor.innerHTML = '';
+      shiftComment = '';
+      isCarriedOver = false;
+      if (carryoverBadge) carryoverBadge.style.display = 'none';
+      saveSessionOverrides();
+      pushHistoryState();
+    });
+  }
+
+  const updateToolbarPosition = () => {
+    if (isTouchDevice) {
+      toolbar.classList.add('mobile-docked');
+      toolbar.style.display = 'flex';
+      return;
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !editor.contains(sel.anchorNode)) {
+      toolbar.style.display = 'none';
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    toolbar.classList.remove('mobile-docked');
+    toolbar.style.display = 'flex';
+
+    const top = rect.top - containerRect.top - 38;
+    const left = Math.max(0, rect.left - containerRect.left + (rect.width / 2) - 60);
+
+    toolbar.style.top = `${top}px`;
+    toolbar.style.left = `${left}px`;
+  };
+
+  editor.addEventListener('focus', () => {
+    if (isTouchDevice) {
+      toolbar.classList.add('mobile-docked');
+      toolbar.style.display = 'flex';
+    }
+  });
+
+  editor.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!isTouchDevice) {
+        toolbar.style.display = 'none';
+      }
+    }, 250);
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (sel && sel.anchorNode && editor.contains(sel.anchorNode)) {
+      updateToolbarPosition();
+      updateButtonStates();
+    } else if (!isTouchDevice && toolbar.style.display !== 'none') {
+      toolbar.style.display = 'none';
+    }
+  });
+
+  function updateButtonStates() {
+    toolbar.querySelectorAll('.rt-btn').forEach(btn => {
+      const cmd = btn.dataset.cmd;
+      if (cmd && document.queryCommandState && document.queryCommandState(cmd)) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  toolbar.querySelectorAll('.rt-btn').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const cmd = btn.dataset.cmd;
+      if (cmd) {
+        document.execCommand(cmd, false, null);
+        shiftComment = editor.innerHTML;
+        isDocumentEdited = true;
+        isCarriedOver = false;
+        if (carryoverBadge) carryoverBadge.style.display = 'none';
+        saveSessionOverrides();
+        pushHistoryState();
+        updateButtonStates();
+      }
+    });
+  });
+
+  editor.addEventListener('input', () => {
+    shiftComment = editor.innerHTML;
+    isDocumentEdited = true;
+    isCarriedOver = false;
+    if (carryoverBadge) carryoverBadge.style.display = 'none';
+    saveSessionOverrides();
+  });
+
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        document.execCommand('bold', false, null);
+        updateButtonStates();
+      } else if (key === 'i') {
+        e.preventDefault();
+        document.execCommand('italic', false, null);
+        updateButtonStates();
+      } else if (key === 'u') {
+        e.preventDefault();
+        document.execCommand('underline', false, null);
+        updateButtonStates();
+      }
     }
   });
 }
 
-initPrintEngine();
+export function triggerSilentPrint() {
+  const sheet = document.getElementById('print-preview-sheet');
+  if (!sheet) return;
 
-if (btnPrintEdlps) {
-  btnPrintEdlps.addEventListener('click', () => {
-    switchView('print-view');
-    openPrintPreview('');
-  });
-}
-
-// Modals: Manifest & Terms
-const manifestModal = document.getElementById('manifest-modal');
-const manifestListBody = document.getElementById('manifest-list-body');
-const btnManifestClose = document.getElementById('btn-manifest-close');
-
-if (versionText) {
-  versionText.addEventListener('click', () => {
-    if (manifestListBody) {
-      const liveVersions = getRuntimeVersions();
-      manifestListBody.innerHTML = Object.entries(liveVersions)
-        .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
-        .join('');
-    }
-    openModal(manifestModal);
-  });
-}
-
-if (btnManifestClose) btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
-if (manifestModal) {
-  manifestModal.addEventListener('click', (e) => {
-    if (e.target === manifestModal) closeModal(manifestModal);
-  });
-}
-
-const termsModal = document.getElementById('terms-modal');
-const btnTerms = document.getElementById('btn-terms');
-const btnTermsClose = document.getElementById('btn-terms-close');
-
-if (btnTerms) btnTerms.addEventListener('click', () => { openModal(termsModal); });
-if (btnTermsClose) btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
-if (termsModal) {
-  termsModal.addEventListener('click', (e) => {
-    if (e.target === termsModal) closeModal(termsModal);
-  });
-}
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeModal(termsModal);
-    closeModal(manifestModal);
-    const resetModal = document.getElementById('print-reset-modal');
-    if (resetModal) resetModal.style.display = 'none';
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.print();
+    return;
   }
-});
 
-// Bootstrap
-initAuth({
-  onSuccess: () => {
-    isAuthenticated = true;
-    if (cardPrintTitle) cardPrintTitle.textContent = "Print EDLPs";
-    if (btnPrintEdlps) btnPrintEdlps.disabled = false;
-    switchView('dashboard-view');
-    fetchPing();
-  }
-});
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
 
-history.replaceState({ view: 'login-view' }, '', '');
-switchView('login-view', false);
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Likely EDLPs</title>
+        <link rel="stylesheet" href="styles.css?v=0.1.3">
+        <style>
+          .print-row.is-hidden { display: none !important; }
+        </style>
+      </head>
+      <body>
+        <div id="print-preview-sheet" class="print-preview-sheet" style="border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important;">
+          ${sheet.innerHTML}
+        </div>
+      </body>
+    </html>
+  `);
+  doc.close();
+
+  iframe.contentWindow.focus();
+  setTimeout(() => {
+    iframe.contentWindow.print();
+    setTimeout(() => { iframe.remove(); }, 5000);
+  }, 400);
+}
