@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.5 */
+/* Prototype Crimson - styles.css v0.1.6 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -1623,14 +1623,19 @@ body {
 .print-preview-sheet {
   background: #ffffff;
   width: 8.5in;
-  min-height: 11in;
+  max-width: 100%;
+  height: 11in;
+  max-height: 11in;
+  aspect-ratio: 8.5 / 11;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--border);
-  padding: 0.28in 0.32in;
+  border-radius: 4px;
+  padding: 0.35in 0.4in;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   color: #000000;
+  overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -1638,7 +1643,10 @@ body {
   .print-preview-sheet {
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
     min-height: auto !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
     padding: 16px 12px !important;
     border-radius: 14px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
@@ -1846,7 +1854,7 @@ body {
   justify-content: space-between;
   gap: 3.5%;
   width: 100%;
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .print-col-left {
@@ -2173,7 +2181,7 @@ body {
 /* --- PRINT RULES (GHOST PAGE DEFENSE) --- */
 @page {
   size: letter portrait;
-  margin: 0.3in 0.35in;
+  margin: 0.35in 0.4in;
 }
 
 @media print {
@@ -2218,8 +2226,9 @@ body {
     max-height: 10.8in !important;
     height: 100% !important;
     overflow: hidden !important;
-    padding: 0 !important;
+    padding: 0.35in 0.4in !important;
     margin: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .print-row.is-hidden {

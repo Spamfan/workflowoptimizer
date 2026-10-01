@@ -19,6 +19,16 @@
   to the right of the title with an exclamation icon.  
   Subtle interactive hint sits beneath:  
   "Tap device to hide • Tap price to override • Right-click to highlight".  
+* **Total Installment Pricing:** AT&T and Verizon  
+  EDLPs display as total installment prices over 36  
+  months (`$TOTAL`, e.g., `$55`, `$170`). T-Mobile  
+  displays as `$TOTAL ($DP + $MO/mo)`. Apple Devices  
+  displays multi-carrier total pricing:  
+  `$a-total, $v-total, $t-total ($dp + $mo/mo)`.  
+* **Store Defaults Factory Whitelist:** Unedited  
+  initial load and "Reset list to defaults" restore  
+  the curated baseline store active list, moving all  
+  other catalog entries into the "Other devices" drawer.  
 * **Apple Segregation:** All iPhones segregate  
   strictly into the Apple Devices table (checked via  
   canonical name and root abbreviations); zero  
@@ -48,7 +58,9 @@
   with hotkey hints (`Ctrl+Z`, `Ctrl+Y`).  
 * **Reset Confirmation Modal:** "Reset list to defaults"  
   triggers a 4-way dismissible confirmation modal  
-  before clearing overrides, comments, and highlights.  
+  (Cancel, backdrop click, Escape, popstate) before  
+  restoring whitelist defaults, clearing overrides,  
+  comments, and highlights.  
 * **Session Overrides:** Client state persists across  
   refresh via unified keys `wfo_price_sheet_state` and  
   `wfo_saved_comment` without requiring store credentials.  
@@ -59,7 +71,13 @@
 
 ---
 
-### 3. PHYSICAL 1-PAGE CONSTRAINTS
+### 3. PHYSICAL 1-PAGE CONSTRAINTS & MARGIN DEFENSE
+* **Letter Paper Geometry Lock:** On-screen sheet preview  
+  locks to Letter proportions (`aspect-ratio: 8.5 / 11; width: 8.5in; height: 11in;`)  
+  preventing vertical elongation.  
+* **Margin Safeguards:** Enforces `0.35in 0.4in` printable buffer  
+  via `@page` rules and `.print-preview-sheet` padding so prints  
+  with "Margins: None" never clip against paper edges.  
 * **Silent Driver:** Background hidden `<iframe>`  
   handles the print trigger with auto-cleanup.  
 * **Physical Bound:** Strictly enforces 1-page output:  
