@@ -1,7 +1,7 @@
-// Prototype Crimson - js/print.js (v0.1.8)
+// Prototype Crimson - js/print.js (v0.1.9)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.8";
+export const PRINT_VERSION = "v0.1.9";
 
 let sessionCatalogCache = null;
 
@@ -143,6 +143,18 @@ function clearSessionOverrides() {
     localStorage.removeItem(STORAGE_COMMENT_KEY);
   } catch (_) {}
 }
+
+function getAttPrice(dev) {
+  if (!dev || dev.attMO === null || dev.attMO === undefined) return null;
+  return `${dev.attMO}/mo`;
+}
+
+function getVzwPrice(dev) {
+  if (!dev || dev.vzwMO === null || dev.vzwMO === undefined) return null;
+  return `${dev.vzwMO}/mo`;
+}
+
+function getTmoPrice(dev) {
   if (!dev) return null;
   const dp = dev.tmoDP;
   const mo = dev.tmoMOADP !== null && dev.tmoMOADP !== undefined ? dev.tmoMOADP : dev.tmoMO;
@@ -845,7 +857,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.3">
+        <link rel="stylesheet" href="styles.css?v=0.1.5">
         <style>
           .print-row.is-hidden { display: none !important; }
         </style>
