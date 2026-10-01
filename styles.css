@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.4 */
+/* Prototype Crimson - styles.css v0.1.5 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -450,7 +450,7 @@ body {
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 200;
