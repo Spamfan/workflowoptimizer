@@ -1,7 +1,7 @@
-// Prototype Crimson - js/print.js (v0.1.9)
+// Prototype Crimson - js/print.js (v0.1.10)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.9";
+export const PRINT_VERSION = "v0.1.10";
 
 let sessionCatalogCache = null;
 
@@ -145,13 +145,15 @@ function clearSessionOverrides() {
 }
 
 function getAttPrice(dev) {
-  if (!dev || dev.attMO === null || dev.attMO === undefined) return null;
-  return `${dev.attMO}/mo`;
+  if (!dev || dev.attMO === null || dev.attMO === undefined || dev.attMO === 0) return null;
+  const total = Math.round(dev.attMO * 36);
+  return `${total}`;
 }
 
 function getVzwPrice(dev) {
-  if (!dev || dev.vzwMO === null || dev.vzwMO === undefined) return null;
-  return `${dev.vzwMO}/mo`;
+  if (!dev || dev.vzwMO === null || dev.vzwMO === undefined || dev.vzwMO === 0) return null;
+  const total = Math.round(dev.vzwMO * 36);
+  return `${total}`;
 }
 
 function getTmoPrice(dev) {
@@ -171,7 +173,46 @@ function getTmoPrice(dev) {
   } else if (hasDP || hasMO) {
     total = Math.round((dp || 0) + (mo || 0) * 24);
   }
-  return `$${total} ($${dp ?? '___'} + $${mo ?? '___'}/mo)`;
+  return `${total} (${dp ?? '___'} + ${mo ?? '___'}/mo)`;
+}
+
+const DEFAULT_VISIBLE_KEYS = {
+  att: new Set(['classic', 'galaxya175g', 'galaxya235g', 'galaxys25plus5g', 'galaxys25ultra5g', 'galaxys26fe5g', 'galaxys26ultra5g', 'motog5g2026', 'motogpower2026', 'motogstylus2025', 'motogstylus2026']),
+  vzw: new Set(['galaxya175g', 'galaxys26fe5g', 'galaxys26ultra5g', 'motog5g2026', 'motogplay2026', 'motogpower2026', 'motogstylus2026', 'tclflip3']),
+  tmo: new Set(['flip45g', 'galaxya175g', 'motog5g2026', 'motogplay2026']),
+  apple: new Set(['iphone17', 'iphone17pro', 'iphone17promax', 'iphone17e', 'iphone18pro', 'iphone18promax', 'iphoneair'])
+};
+
+function applyDefaultVisibleKeys(catalog) {
+  hiddenItemKeys.clear();
+  const devices = (catalog && catalog.devices) ? catalog.devices : {};
+
+  for (const [key, dev] of Object.entries(devices)) {
+    const displayName = dev.abbr || dev.name || key;
+    const fullName = (dev?.name || displayName || '').toLowerCase();
+    const abbr = (dev?.abbr || '').toLowerCase();
+    const isApple = fullName.includes('iphone') || fullName.includes('somm') || abbr.startsWith('ip') || abbr.startsWith('se');
+
+    if (isApple) {
+      const uid = `apple_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.apple.has(key)) {
+        hiddenItemKeys.add(uid);
+      }
+    } else {
+      const uidAtt = `att_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.att.has(key)) {
+        hiddenItemKeys.add(uidAtt);
+      }
+      const uidVzw = `vzw_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.vzw.has(key)) {
+        hiddenItemKeys.add(uidVzw);
+      }
+      const uidTmo = `tmo_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.tmo.has(key)) {
+        hiddenItemKeys.add(uidTmo);
+      }
+    }
+  }
 }
 
 // Global Keydown Handler for Undo / Redo in Print View
@@ -215,6 +256,14 @@ export function initPrintEngine() {
     });
   }
 
+  if (resetModal) {
+    resetModal.addEventListener('click', (e) => {
+      if (e.target === resetModal) {
+        resetModal.style.display = 'none';
+      }
+    });
+  }
+
   if (btnResetCancel) {
     btnResetCancel.addEventListener('click', () => {
       if (resetModal) resetModal.style.display = 'none';
@@ -230,6 +279,7 @@ export function initPrintEngine() {
       isCarriedOver = false;
       isDocumentEdited = false;
       clearSessionOverrides();
+      applyDefaultVisibleKeys(catalogData);
       if (resetModal) resetModal.style.display = 'none';
       pushHistoryState();
       renderPrintDocument();
@@ -288,7 +338,7 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
   historyStack = [];
   historyIndex = -1;
 
-  loadSessionOverrides();
+  const hasSavedOverrides = loadSessionOverrides();
 
   const sheetContainer = document.getElementById('print-preview-sheet');
   if (sheetContainer) {
@@ -303,6 +353,10 @@ export async function openPrintPreview(storeNum, storeSecret = '') {
       sheetContainer.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger, #d93025);">Failed to load device catalog: ${err.message || err}</div>`;
     }
     return;
+  }
+
+  if (!hasSavedOverrides) {
+    applyDefaultVisibleKeys(catalogData);
   }
 
   pushHistoryState();
@@ -857,9 +911,18 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.5">
+        <link rel="stylesheet" href="styles.css?v=0.1.6">
         <style>
           .print-row.is-hidden { display: none !important; }
+          @page { size: letter portrait; margin: 0.35in 0.4in; }
+          #print-preview-sheet {
+            padding: 0.35in 0.4in !important;
+            box-sizing: border-box !important;
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
         </style>
       </head>
       <body>

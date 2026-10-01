@@ -1,13 +1,13 @@
-// Prototype Crimson - js/app.js (v0.1.7)
+// Prototype Crimson - js/app.js (v0.1.8)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.9';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.10';
 
-export const APP_VERSION = "v0.1.7";
+export const APP_VERSION = "v0.1.8";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.7';
+  let indexVer = 'v0.1.8';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -15,7 +15,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.5';
+  let cssVer = 'v0.1.6';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -207,6 +207,15 @@ if (btnTermsClose) btnTermsClose.addEventListener('click', () => { closeModal(te
 if (termsModal) {
   termsModal.addEventListener('click', (e) => {
     if (e.target === termsModal) closeModal(termsModal);
+  });
+}
+
+const printResetModal = document.getElementById('print-reset-modal');
+if (printResetModal) {
+  printResetModal.addEventListener('click', (e) => {
+    if (e.target === printResetModal) {
+      printResetModal.style.display = 'none';
+    }
   });
 }
 
