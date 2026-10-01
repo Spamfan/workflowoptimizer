@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.5">
+<html lang="en" data-version="v0.1.6">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.5">
+  <meta name="version" content="v0.1.6">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.3">
+  <link rel="stylesheet" href="styles.css?v=0.1.4">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
   <div id="top-left-controls">
     <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.5</div>
+    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.6</div>
   </div>
 
   <div id="top-right-hub">
@@ -187,10 +187,10 @@
   <div id="print-view" style="display: none;">
     <div class="print-controls-bar">
       <div class="print-controls-left">
-        <button id="btn-print-reset" class="pill-btn btn-secondary" style="width: auto;">Reset list to defaults</button>
-        <button id="btn-toggle-other-devices" class="pill-btn btn-secondary" style="width: auto;">Show other devices</button>
-        <button id="btn-print-undo" class="pill-btn btn-secondary btn-history-ctrl" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-        <button id="btn-print-redo" class="pill-btn btn-secondary btn-history-ctrl" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+        <button id="btn-print-reset" class="pill-btn btn-secondary">Reset list to defaults</button>
+        <button id="btn-toggle-other-devices" class="pill-btn btn-secondary">Show other devices</button>
+        <button id="btn-print-undo" class="pill-btn btn-secondary btn-history-ctrl" title="Undo (Ctrl+Z)" disabled>↶ Undo <span class="hotkey-hint">(Ctrl+Z)</span></button>
+        <button id="btn-print-redo" class="pill-btn btn-secondary btn-history-ctrl" title="Redo (Ctrl+Y)" disabled>↷ Redo <span class="hotkey-hint">(Ctrl+Y)</span></button>
       </div>
       <div style="flex: 1;"></div>
       <button id="btn-print-sheet" class="pill-btn btn-primary btn-print-sheet">Print Sheet</button>
@@ -279,6 +279,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=0.1.5"></script>
+  <script type="module" src="js/app.js?v=0.1.6"></script>
 </body>
 </html>

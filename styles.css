@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.3 */
+/* Prototype Crimson - styles.css v0.1.4 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -1555,14 +1555,40 @@ body {
   max-width: 8.5in;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .print-controls-left {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.print-controls-bar .pill-btn {
+  width: auto !important;
+  min-width: 0;
+  padding: 6px 14px;
+  height: 38px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  border-radius: 9999px;
+  box-sizing: border-box;
+}
+
+.hotkey-hint {
+  font-size: 0.74rem;
+  opacity: 0.7;
+  margin-left: 3px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .hotkey-hint {
+    display: none;
+  }
 }
 
 .print-comment-field {
@@ -1591,6 +1617,7 @@ body {
   justify-content: center;
   overflow-x: auto;
   padding-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .print-preview-sheet {
@@ -1599,7 +1626,7 @@ body {
   min-height: 11in;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--border);
-  padding: 0.3in 0.35in;
+  padding: 0.28in 0.32in;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1607,8 +1634,19 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+@media (max-width: 840px) {
+  .print-preview-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 16px 12px !important;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+}
+
 .print-doc-header {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .print-header-top-row {
@@ -1640,6 +1678,13 @@ body {
 
 .print-disclaimer-pill svg {
   flex-shrink: 0;
+}
+
+.print-instruction-hint {
+  font-size: 0.72rem;
+  color: var(--text-sub);
+  margin-top: 4px;
+  user-select: none;
 }
 
 /* --- IN-DOC WYSIWYG COMMENTS & FLOATING / DOCKED RICH TEXT TOOLBAR --- */
@@ -1799,22 +1844,32 @@ body {
 .print-doc-body {
   display: flex;
   justify-content: space-between;
-  gap: 2%;
+  gap: 3.5%;
+  width: 100%;
   flex: 1;
 }
 
-.print-col {
-  width: 49%;
+.print-col-left {
+  flex: 0 0 41.5%;
+  width: 41.5%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+}
+
+.print-col-right {
+  flex: 0 0 55%;
+  width: 55%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .print-section-header {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   text-decoration: underline;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: #000;
 }
 
@@ -1822,13 +1877,13 @@ body {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .print-table th, .print-table td {
   vertical-align: bottom;
-  padding: 2.5px 2px;
-  line-height: 1.2;
+  padding: 1.8px 2px;
+  line-height: 1.15;
 }
 
 .print-table th {
@@ -2079,6 +2134,14 @@ body {
   justify-content: space-between;
   gap: 12px;
   animation: toastSlideUp 0.22s ease-out;
+  touch-action: pan-y;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  user-select: none;
+}
+
+.print-toast.dismissing {
+  transform: translateX(120%);
+  opacity: 0;
 }
 
 @keyframes toastSlideUp {
@@ -2132,7 +2195,8 @@ body {
   .comment-carryover-badge,
   .rt-toolbar,
   #other-devices-drawer,
-  #print-toast-container {
+  #print-toast-container,
+  .print-instruction-hint {
     display: none !important;
   }
 
