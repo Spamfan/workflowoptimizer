@@ -1813,6 +1813,76 @@ body {
   font-style: italic;
   font-weight: 600;
 }
+
+/* --- PRINT RULES (GHOST PAGE DEFENSE & PAPER FIDELITY) --- */
+@page {
+  size: letter portrait;
+  margin: 0.35in 0.4in;
+}
+
+@media print {
+  body, html {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #top-left-controls,
+  #top-right-hub,
+  #dashboard-view,
+  #login-view,
+  #scanner-view,
+  #review-view,
+  .print-controls-bar,
+  .modal-overlay,
+  .comment-carryover-badge,
+  .rt-toolbar,
+  #other-devices-drawer,
+  #print-toast-container,
+  .print-instruction-hint {
+    display: none !important;
+  }
+
+  #print-view {
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .print-paper-viewport {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-preview-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-height: 10.8in !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 0.35in 0.4in !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-row.is-hidden {
+    display: none !important;
+  }
+
+  .print-row.hl-partial .col-item,
+  .print-row.hl-full {
+    background-color: #dadddf !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-comment-editor {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;

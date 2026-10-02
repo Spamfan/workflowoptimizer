@@ -823,6 +823,20 @@ function attachCommentEditorListeners() {
     toolbar.style.left = `${left}px`;
   };
 
+  const handleVisualViewportAdjust = () => {
+    if (!isTouchDevice || !toolbar.classList.contains('mobile-docked')) return;
+    if (window.visualViewport) {
+      const vv = window.visualViewport;
+      toolbar.style.top = `${vv.offsetTop + vv.height - 48}px`;
+      toolbar.style.bottom = 'auto';
+    }
+  };
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleVisualViewportAdjust);
+    window.visualViewport.addEventListener('scroll', handleVisualViewportAdjust);
+  }
+
   editor.addEventListener('focus', () => {
     if (isTouchDevice) {
       toolbar.classList.add('mobile-docked');
@@ -930,7 +944,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.6">
+        <link rel="stylesheet" href="styles.css?v=0.1.7">
         <style>
           .print-row.is-hidden { display: none !important; }
           @page { size: letter portrait; margin: 0.35in 0.4in; }
@@ -941,6 +955,14 @@ export function triggerSilentPrint() {
             box-shadow: none !important;
             margin: 0 !important;
             width: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-row.hl-partial .col-item,
+          .print-row.hl-full {
+            background-color: #dadddf !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         </style>
       </head>
