@@ -1,7 +1,7 @@
-// Prototype Crimson - print.js (v0.1.15)
+// Prototype Crimson - print.js (v0.1.16)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.15";
+export const PRINT_VERSION = "v0.1.16";
 
 let sessionCatalogCache = null;
 
@@ -147,13 +147,13 @@ function clearSessionOverrides() {
 function getAttPrice(dev) {
   if (!dev || dev.attMO === null || dev.attMO === undefined || dev.attMO === 0) return null;
   const total = Math.round(dev.attMO * 36);
-  return `${total}`;
+  return `$${total}`;
 }
 
 function getVzwPrice(dev) {
   if (!dev || dev.vzwMO === null || dev.vzwMO === undefined || dev.vzwMO === 0) return null;
   const total = Math.round(dev.vzwMO * 36);
-  return `${total}`;
+  return `$${total}`;
 }
 
 function getTmoPrice(dev) {
@@ -173,9 +173,9 @@ function getTmoPrice(dev) {
   } else if (hasDP || hasMO) {
     total = Math.round((dp || 0) + (mo || 0) * 24);
   }
-  const dpStr = hasDP ? `${dp}` : '$___';
-  const moStr = hasMO ? `${mo}` : '$___';
-  return `${total} (${dpStr} + ${moStr}/mo)`;
+  const dpStr = hasDP ? `$${dp}` : '$___';
+  const moStr = hasMO ? `$${mo}` : '$___';
+  return `$${total} (${dpStr} + ${moStr}/mo)`;
 }
 
 const DEFAULT_VISIBLE_KEYS = {
