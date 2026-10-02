@@ -1,7 +1,7 @@
-// Prototype Crimson - print.js (v0.1.14)
+// Prototype Crimson - print.js (v0.1.15)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.14";
+export const PRINT_VERSION = "v0.1.15";
 
 let sessionCatalogCache = null;
 
