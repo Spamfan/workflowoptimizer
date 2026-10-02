@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.8">
+<html lang="en" data-version="v0.1.9">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.8">
+  <meta name="version" content="v0.1.9">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.6">
+  <link rel="stylesheet" href="styles.css?v=0.1.7">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -187,13 +187,20 @@
   <div id="print-view" style="display: none;">
     <div class="print-controls-bar">
       <div class="print-controls-left">
-        <button id="btn-print-reset" class="pill-btn btn-secondary">Reset list to defaults</button>
-        <button id="btn-toggle-other-devices" class="pill-btn btn-secondary">Show other devices</button>
+        <button id="btn-print-reset" class="pill-btn btn-reset-caution" title="Reset list to defaults">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Reset all</span>
+        </button>
         <button id="btn-print-undo" class="pill-btn btn-secondary btn-history-ctrl" title="Undo (Ctrl+Z)" disabled>↶ Undo <span class="hotkey-hint">(Ctrl+Z)</span></button>
         <button id="btn-print-redo" class="pill-btn btn-secondary btn-history-ctrl" title="Redo (Ctrl+Y)" disabled>↷ Redo <span class="hotkey-hint">(Ctrl+Y)</span></button>
       </div>
       <div style="flex: 1;"></div>
-      <button id="btn-print-sheet" class="pill-btn btn-primary btn-print-sheet">Print Sheet</button>
+      <div class="print-controls-right">
+        <button id="btn-toggle-other-devices" class="pill-btn btn-secondary">Show other devices</button>
+        <button id="btn-print-sheet" class="pill-btn btn-primary btn-print-sheet">Print Sheet</button>
+      </div>
     </div>
     <div class="print-paper-viewport">
       <div id="print-preview-sheet" class="print-preview-sheet"></div>
@@ -279,6 +286,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=0.1.8"></script>
+  <script type="module" src="app.js?v=0.1.9"></script>
 </body>
 </html>
