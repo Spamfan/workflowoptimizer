@@ -1,7 +1,7 @@
-// Prototype Crimson - print.js (v0.1.11)
+// Prototype Crimson - print.js (v0.1.10)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.11";
+export const PRINT_VERSION = "v0.1.10";
 
 let sessionCatalogCache = null;
 
@@ -173,9 +173,7 @@ function getTmoPrice(dev) {
   } else if (hasDP || hasMO) {
     total = Math.round((dp || 0) + (mo || 0) * 24);
   }
-  const dpStr = hasDP ? `${dp}` : '___';
-  const moStr = hasMO ? `${mo}` : '___';
-  return `${total} (${dpStr} + ${moStr}/mo)`;
+  return `${total} (${dp ?? '___'} + ${mo ?? '___'}/mo)`;
 }
 
 const DEFAULT_VISIBLE_KEYS = {
@@ -197,18 +195,21 @@ function applyDefaultVisibleKeys(catalog) {
 
     if (isApple) {
       const uid = `apple_${key}`;
-      if ((getAttPrice(dev) || getVzwPrice(dev) || getTmoPrice(dev)) && !DEFAULT_VISIBLE_KEYS.apple.has(key)) {
+      if (!DEFAULT_VISIBLE_KEYS.apple.has(key)) {
         hiddenItemKeys.add(uid);
       }
     } else {
-      if (getAttPrice(dev) && !DEFAULT_VISIBLE_KEYS.att.has(key)) {
-        hiddenItemKeys.add(`att_${key}`);
+      const uidAtt = `att_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.att.has(key)) {
+        hiddenItemKeys.add(uidAtt);
       }
-      if (getVzwPrice(dev) && !DEFAULT_VISIBLE_KEYS.vzw.has(key)) {
-        hiddenItemKeys.add(`vzw_${key}`);
+      const uidVzw = `vzw_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.vzw.has(key)) {
+        hiddenItemKeys.add(uidVzw);
       }
-      if (getTmoPrice(dev) && !DEFAULT_VISIBLE_KEYS.tmo.has(key)) {
-        hiddenItemKeys.add(`tmo_${key}`);
+      const uidTmo = `tmo_${key}`;
+      if (!DEFAULT_VISIBLE_KEYS.tmo.has(key)) {
+        hiddenItemKeys.add(uidTmo);
       }
     }
   }
@@ -480,7 +481,7 @@ export function renderPrintDocument(pushToHistory = true) {
 
       return `
         <tr class="print-row ${hlClass}" data-uid="${item.uid}">
-          <td class="col-item tap-item" data-uid="${item.uid}" data-model="${item.model}" title="Click to highlight, right-click to move to other">${item.model}</td>
+          <td class="col-item tap-item" data-uid="${item.uid}" data-model="${item.model}" title="Tap to hide device, right-click to highlight">${item.model}</td>
           <td class="col-price tap-price" data-uid="${item.uid}" title="Tap to override price">${priceCell}</td>
         </tr>
       `;
@@ -494,10 +495,17 @@ export function renderPrintDocument(pushToHistory = true) {
   sheet.innerHTML = `
     <div class="print-doc-header">
       <div class="print-header-top-row">
-        <div class="print-doc-title">Recent EDLP Reports (internal use only)</div>
-        <div class="print-doc-disclaimer">This software is in early development and may make mistakes; always verify pricing first in ESP.</div>
+        <div class="print-doc-title"><b>Recent EDLP reports</b></div>
+        <div class="print-disclaimer-pill">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>This software is in early development and may make mistakes.</span>
+        </div>
       </div>
-      <div class="print-instruction-hint">Left click an entry to change its highlight level, remove it from the list with right-click.</div>
+      <div class="print-instruction-hint">Tap device to hide • Tap price to override • Right-click to highlight</div>
 
       <!-- In-Document Comments Box (WYSIWYG) -->
       <div class="print-comment-container" id="print-comment-container">
@@ -518,7 +526,7 @@ export function renderPrintDocument(pushToHistory = true) {
     <div class="print-doc-body">
       <div class="print-col print-col-left">
         <div class="print-section">
-          <div class="print-section-header">AT&T</div>
+          <div class="print-section-header">ATT</div>
           <table class="print-table">
             <thead>
               <tr>
@@ -531,7 +539,7 @@ export function renderPrintDocument(pushToHistory = true) {
         </div>
 
         <div class="print-section">
-          <div class="print-section-header">Verizon Wireless</div>
+          <div class="print-section-header">VZW</div>
           <table class="print-table">
             <thead>
               <tr>
@@ -546,15 +554,12 @@ export function renderPrintDocument(pushToHistory = true) {
 
       <div class="print-col print-col-right">
         <div class="print-section">
+          <div class="print-section-header">TMO</div>
           <table class="print-table">
             <thead>
-              <tr class="header-carrier-row">
-                <th class="col-item section-title">T-Mobile</th>
-                <th class="col-price section-subtitle">Likely</th>
-              </tr>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">EDLPs (dp + /mo)</th>
+                <th class="col-price">Likely EDLPs (dp + /mo)</th>
               </tr>
             </thead>
             <tbody>${renderRows(tmoList, 'tmo')}</tbody>
@@ -562,15 +567,12 @@ export function renderPrintDocument(pushToHistory = true) {
         </div>
 
         <div class="print-section">
+          <div class="print-section-header">Apple Devices</div>
           <table class="print-table apple-table">
             <thead>
-              <tr class="header-carrier-row">
-                <th class="col-item section-title">Apple Devices</th>
-                <th class="col-price section-subtitle">Likely EDLPs:</th>
-              </tr>
               <tr>
                 <th class="col-item">ITEM</th>
-                <th class="col-price">ATT, VZW, TMO (dp + /mo)</th>
+                <th class="col-price">Likely EDLPs: ATT, VZW, TMO (dp + /mo)</th>
               </tr>
             </thead>
             <tbody>${renderRows(appleList, 'apple')}</tbody>
@@ -611,19 +613,6 @@ export function renderPrintDocument(pushToHistory = true) {
     td.addEventListener('click', (e) => {
       e.stopPropagation();
       const uid = td.dataset.uid;
-      const cur = manualHighlights[uid];
-      if (!cur) manualHighlights[uid] = 'partial';
-      else if (cur === 'partial') manualHighlights[uid] = 'full';
-      else delete manualHighlights[uid];
-      isDocumentEdited = true;
-      saveSessionOverrides();
-      pushHistoryState();
-      renderPrintDocument();
-    });
-
-    td.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const uid = td.dataset.uid;
       const modelName = td.dataset.model || td.textContent.trim();
       hiddenItemKeys.add(uid);
       isDocumentEdited = true;
@@ -633,26 +622,18 @@ export function renderPrintDocument(pushToHistory = true) {
       spawnHideToast(modelName);
     });
 
-    let touchTimer = null;
-    td.addEventListener('touchstart', () => {
-      touchTimer = setTimeout(() => {
-        touchTimer = null;
-        const uid = td.dataset.uid;
-        const modelName = td.dataset.model || td.textContent.trim();
-        hiddenItemKeys.add(uid);
-        isDocumentEdited = true;
-        saveSessionOverrides();
-        pushHistoryState();
-        renderPrintDocument();
-        spawnHideToast(modelName);
-      }, 500);
-    }, { passive: true });
-    td.addEventListener('touchend', () => {
-      if (touchTimer) clearTimeout(touchTimer);
-    }, { passive: true });
-    td.addEventListener('touchmove', () => {
-      if (touchTimer) clearTimeout(touchTimer);
-    }, { passive: true });
+    td.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const uid = td.dataset.uid;
+      const cur = manualHighlights[uid];
+      if (!cur) manualHighlights[uid] = 'partial';
+      else if (cur === 'partial') manualHighlights[uid] = 'full';
+      else delete manualHighlights[uid];
+      isDocumentEdited = true;
+      saveSessionOverrides();
+      pushHistoryState();
+      renderPrintDocument();
+    });
   });
 
   updateHistoryButtons();
@@ -664,7 +645,7 @@ function renderOtherDevicesDrawer(hiddenGroups) {
   const countBadge = document.getElementById('drawer-hidden-count');
   if (!carriersContainer) return;
 
-  const totalHidden = hiddenGroups.att.length + hiddenGroups.vzw.length + hiddenGroups.tmo.length + hiddenGroups.apple.length;
+  const totalHidden = hiddenItemKeys.size;
   if (countBadge) countBadge.textContent = String(totalHidden);
 
   if (totalHidden === 0) {
@@ -823,20 +804,6 @@ function attachCommentEditorListeners() {
     toolbar.style.left = `${left}px`;
   };
 
-  const handleVisualViewportAdjust = () => {
-    if (!isTouchDevice || !toolbar.classList.contains('mobile-docked')) return;
-    if (window.visualViewport) {
-      const vv = window.visualViewport;
-      toolbar.style.top = `${vv.offsetTop + vv.height - 48}px`;
-      toolbar.style.bottom = 'auto';
-    }
-  };
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', handleVisualViewportAdjust);
-    window.visualViewport.addEventListener('scroll', handleVisualViewportAdjust);
-  }
-
   editor.addEventListener('focus', () => {
     if (isTouchDevice) {
       toolbar.classList.add('mobile-docked');
@@ -944,7 +911,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.7">
+        <link rel="stylesheet" href="styles.css?v=0.1.6">
         <style>
           .print-row.is-hidden { display: none !important; }
           @page { size: letter portrait; margin: 0.35in 0.4in; }
@@ -955,14 +922,6 @@ export function triggerSilentPrint() {
             box-shadow: none !important;
             margin: 0 !important;
             width: 100% !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .print-row.hl-partial .col-item,
-          .print-row.hl-full {
-            background-color: #dadddf !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
         </style>
       </head>
