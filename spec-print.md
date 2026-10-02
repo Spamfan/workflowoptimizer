@@ -12,19 +12,39 @@
 * **Canonical Intake Sorting:** Carrier tables  
   sort devices alphabetically by their original  
   intake name (`dev.name`), never by abbreviations.  
-* **Header Architecture:** Title is strictly bold  
-  "Recent EDLP reports"; timestamp and store  
-  number logic are deprecated and stripped.  
-* **Inline Disclaimer & Hint:** Disclaimer pill sits  
-  to the right of the title with an exclamation icon.  
-  Subtle interactive hint sits beneath:  
-  "Tap device to hide • Tap price to override • Right-click to highlight".  
-* **Total Installment Pricing:** AT&T and Verizon  
-  EDLPs display as total installment prices over 36  
-  months (`$TOTAL`, e.g., `$55`, `$170`). T-Mobile  
-  displays as `$TOTAL ($DP + $MO/mo)`. Apple Devices  
-  displays multi-carrier total pricing:  
-  `$a-total, $v-total, $t-total ($dp + $mo/mo)`.  
+* **Header Architecture:** Title is bold "Recent EDLP  
+  Reports (internal use only)" with early development  
+  disclaimer immediately underneath.  
+* **External Interactive Hint:** Tutorial hint  
+  resides outside the sheet preview, situated between  
+  navigation controls and the paper viewport.  
+* **Total Installment Pricing:** All single and  
+  multi-carrier prices explicitly include `# PRINT ENGINE SPECIFICATION
+### Target Files: `js/print.js`, `styles.css`
+
+---
+
+### 1. LAYOUT ARCHITECTURE
+* **Asymmetric 2-Column Layout:** High-density  
+  split layout. Left column (~42%) stacks ATT  
+  above VZW. Right column (~56%) stacks TMO  
+  above Apple Devices (wider width accommodates  
+  multi-carrier pricing).  
+* **Canonical Intake Sorting:** Carrier tables  
+  sort devices alphabetically by their original  
+  intake name (`dev.name`), never by abbreviations.  
+* **Header Architecture:** Title is bold "Recent EDLP  
+  Reports (internal use only)" with early development  
+  disclaimer immediately underneath.  
+* **External Interactive Hint:** Tutorial hint  
+  resides outside the sheet preview, situated between  
+  navigation controls and the paper viewport.  
+ currency  
+  signs (e.g., `$TOTAL`, `$TOTAL ($DP + $MO/mo)`).  
+* **Typography & Header Parity:** All sheet labels,  
+  headers, and prices match device name font size  
+  (`0.76rem`). Carrier titles are underlined. Column  
+  header is strictly "Device name".  
 * **Store Defaults Factory Whitelist:** Unedited  
   initial load and "Reset list to defaults" restore  
   the curated baseline store active list, moving all  
@@ -53,6 +73,9 @@
 * **Action Toasts & Swipe Dismissal:** Hiding a device  
   spawns a toast (3s timeout, max 5 stacked) with an inline  
   yellow "Undo" button and horizontal touch swipe-to-dismiss.  
+* **Mobile RTC Toolbar:** Rich text controls dock dynamically  
+  above virtual keyboard via `visualViewport` tracking,  
+  with left-aligned dark controls.  
 * **50-Step History Stack:** In-memory stack supporting  
   up to 50 undo/redo states via compact pill controls  
   with hotkey hints (`Ctrl+Z`, `Ctrl+Y`).  
@@ -65,9 +88,9 @@
   refresh via unified keys `wfo_price_sheet_state` and  
   `wfo_saved_comment` without requiring store credentials.  
 * **Footer Notice Rules:** Manually hidden devices  
-  are strictly omitted from the printed footer copy.  
+  and report comments are omitted from footer edit notices.  
   The notice `[This document was edited from the original]`  
-  triggers exclusively on price overrides and report comments.  
+  triggers strictly and exclusively on price overrides.  
 
 ---
 

@@ -1,7 +1,7 @@
-// Prototype Crimson - print.js (v0.1.11)
+// Prototype Crimson - print.js (v0.1.13)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.11";
+export const PRINT_VERSION = "v0.1.13";
 
 let sessionCatalogCache = null;
 
@@ -173,8 +173,8 @@ function getTmoPrice(dev) {
   } else if (hasDP || hasMO) {
     total = Math.round((dp || 0) + (mo || 0) * 24);
   }
-  const dpStr = hasDP ? `${dp}` : '___';
-  const moStr = hasMO ? `${mo}` : '___';
+  const dpStr = hasDP ? `${dp}` : '$___';
+  const moStr = hasMO ? `${mo}` : '$___';
   return `${total} (${dpStr} + ${moStr}/mo)`;
 }
 
@@ -470,11 +470,11 @@ export function renderPrintDocument(pushToHistory = true) {
       } else if (carrierType === 'vzw') {
         priceCell = getVzwPrice(item.dev) || '___';
       } else if (carrierType === 'tmo') {
-        priceCell = getTmoPrice(item.dev) || '(___ + ___/mo)';
+        priceCell = getTmoPrice(item.dev) || '$___ ($___ + $___/mo)';
       } else if (carrierType === 'apple') {
-        const pAtt = item.pAtt || '___';
-        const pVzw = item.pVzw || '___';
-        const pTmo = item.pTmo || '(___ + ___/mo)';
+        const pAtt = item.pAtt || '$___';
+        const pVzw = item.pVzw || '$___';
+        const pTmo = item.pTmo || '$___ ($___ + $___/mo)';
         priceCell = `${pAtt}, ${pVzw}, ${pTmo}`;
       }
 
@@ -488,16 +488,12 @@ export function renderPrintDocument(pushToHistory = true) {
   };
 
   const hasManualOverrides = Object.keys(priceOverrides).length > 0;
-  const hasCustomComment = Boolean(shiftComment && shiftComment.trim() !== '' && !isCarriedOver);
-  const showEditedNotice = isDocumentEdited && (hasManualOverrides || hasCustomComment);
+  const showEditedNotice = isDocumentEdited && hasManualOverrides;
 
   sheet.innerHTML = `
     <div class="print-doc-header">
-      <div class="print-header-top-row">
-        <div class="print-doc-title">Recent EDLP Reports (internal use only)</div>
-        <div class="print-doc-disclaimer">This software is in early development and may make mistakes; always verify pricing first in ESP.</div>
-      </div>
-      <div class="print-instruction-hint">Left click an entry to change its highlight level, remove it from the list with right-click.</div>
+      <div class="print-doc-title">Recent EDLP Reports (internal use only)</div>
+      <div class="print-doc-disclaimer">This software is in early development and may make mistakes; always verify pricing first in ESP.</div>
 
       <!-- In-Document Comments Box (WYSIWYG) -->
       <div class="print-comment-container" id="print-comment-container">
@@ -522,7 +518,7 @@ export function renderPrintDocument(pushToHistory = true) {
           <table class="print-table">
             <thead>
               <tr>
-                <th class="col-item">ITEM</th>
+                <th class="col-item">Device name</th>
                 <th class="col-price">Likely EDLPs</th>
               </tr>
             </thead>
@@ -535,7 +531,7 @@ export function renderPrintDocument(pushToHistory = true) {
           <table class="print-table">
             <thead>
               <tr>
-                <th class="col-item">ITEM</th>
+                <th class="col-item">Device name</th>
                 <th class="col-price">Likely EDLPs</th>
               </tr>
             </thead>
@@ -553,7 +549,7 @@ export function renderPrintDocument(pushToHistory = true) {
                 <th class="col-price section-subtitle">Likely</th>
               </tr>
               <tr>
-                <th class="col-item">ITEM</th>
+                <th class="col-item">Device name</th>
                 <th class="col-price">EDLPs (dp + /mo)</th>
               </tr>
             </thead>
@@ -569,7 +565,7 @@ export function renderPrintDocument(pushToHistory = true) {
                 <th class="col-price section-subtitle">Likely EDLPs:</th>
               </tr>
               <tr>
-                <th class="col-item">ITEM</th>
+                <th class="col-item">Device name</th>
                 <th class="col-price">ATT, VZW, TMO (dp + /mo)</th>
               </tr>
             </thead>
@@ -800,6 +796,10 @@ function attachCommentEditorListeners() {
     if (isTouchDevice) {
       toolbar.classList.add('mobile-docked');
       toolbar.style.display = 'flex';
+      if (window.visualViewport) {
+        const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        toolbar.style.bottom = `${offset}px`;
+      }
       return;
     }
 
@@ -827,8 +827,17 @@ function attachCommentEditorListeners() {
     if (isTouchDevice) {
       toolbar.classList.add('mobile-docked');
       toolbar.style.display = 'flex';
+      if (window.visualViewport) {
+        const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        toolbar.style.bottom = `${offset}px`;
+      }
     }
   });
+
+  if (isTouchDevice && window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateToolbarPosition);
+    window.visualViewport.addEventListener('scroll', updateToolbarPosition);
+  }
 
   editor.addEventListener('blur', () => {
     setTimeout(() => {
