@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.6 */
+/* Prototype Crimson - styles.css v0.1.9 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -132,6 +132,28 @@ body {
 
 .btn-back:hover {
   background-color: #e4e6eb;
+}
+
+.btn-reset-caution {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #f59e0b;
+}
+
+.btn-reset-caution:hover {
+  background-color: #fde68a;
+  color: #78350f;
+}
+
+.btn-reset-caution svg {
+  width: 14px;
+  height: 14px;
+}
+
+.print-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary {
@@ -1666,8 +1688,17 @@ body {
 
 .print-doc-title {
   font-size: 0.95rem;
+  font-weight: 700;
   color: #000;
   line-height: 1.3;
+}
+
+.print-doc-disclaimer {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #1c1e21;
+  line-height: 1.25;
+  margin-top: 2px;
 }
 
 .print-disclaimer-pill {
@@ -1876,9 +1907,25 @@ body {
 .print-section-header {
   font-size: 0.95rem;
   font-weight: 800;
-  text-decoration: underline;
+  text-decoration: none;
   margin-bottom: 3px;
   color: #000;
+}
+
+.header-carrier-row th {
+  padding-bottom: 2px !important;
+}
+
+.section-title {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: #000 !important;
+}
+
+.section-subtitle {
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  color: #000 !important;
 }
 
 .print-table {
@@ -1897,7 +1944,7 @@ body {
 .print-table th {
   text-align: left;
   font-weight: 700;
-  border-bottom: 1px solid #ccc;
+  border-bottom: none;
   color: #000;
 }
 
@@ -1945,7 +1992,7 @@ body {
 .print-doc-footer {
   margin-top: 14px;
   padding-top: 8px;
-  border-top: 1px solid #111;
+  border-top: none;
   font-size: 0.76rem;
   line-height: 1.35;
   display: flex;
@@ -2233,6 +2280,13 @@ body {
 
   .print-row.is-hidden {
     display: none !important;
+  }
+
+  .print-row.hl-partial .col-item,
+  .print-row.hl-full {
+    background-color: #dadddf !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-comment-editor {
