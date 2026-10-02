@@ -1,7 +1,7 @@
-// Prototype Crimson - print.js (v0.1.13)
+// Prototype Crimson - print.js (v0.1.14)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.13";
+export const PRINT_VERSION = "v0.1.14";
 
 let sessionCatalogCache = null;
 
@@ -466,9 +466,9 @@ export function renderPrintDocument(pushToHistory = true) {
       if (priceOverrides[item.uid]) {
         priceCell = priceOverrides[item.uid];
       } else if (carrierType === 'att') {
-        priceCell = getAttPrice(item.dev) || '___';
+        priceCell = getAttPrice(item.dev) || '$___';
       } else if (carrierType === 'vzw') {
-        priceCell = getVzwPrice(item.dev) || '___';
+        priceCell = getVzwPrice(item.dev) || '$___';
       } else if (carrierType === 'tmo') {
         priceCell = getTmoPrice(item.dev) || '$___ ($___ + $___/mo)';
       } else if (carrierType === 'apple') {
@@ -798,7 +798,7 @@ function attachCommentEditorListeners() {
       toolbar.style.display = 'flex';
       if (window.visualViewport) {
         const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
-        toolbar.style.bottom = `${offset}px`;
+        toolbar.style.setProperty('bottom', `${offset}px`, 'important');
       }
       return;
     }
@@ -825,12 +825,7 @@ function attachCommentEditorListeners() {
 
   editor.addEventListener('focus', () => {
     if (isTouchDevice) {
-      toolbar.classList.add('mobile-docked');
-      toolbar.style.display = 'flex';
-      if (window.visualViewport) {
-        const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
-        toolbar.style.bottom = `${offset}px`;
-      }
+      updateToolbarPosition();
     }
   });
 
@@ -939,7 +934,7 @@ export function triggerSilentPrint() {
     <html>
       <head>
         <title>Likely EDLPs</title>
-        <link rel="stylesheet" href="styles.css?v=0.1.9">
+        <link rel="stylesheet" href="styles.css?v=0.1.11">
         <style>
           .print-row.is-hidden { display: none !important; }
           @page { size: letter portrait; margin: 0.35in 0.4in; }

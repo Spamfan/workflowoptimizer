@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.10 */
+/* Prototype Crimson - styles.css v0.1.11 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -1714,10 +1714,12 @@ body {
 }
 
 .print-instruction-hint-external {
+  width: 100%;
+  max-width: 8.5in;
   font-size: 0.75rem;
   color: var(--text-sub);
   margin-bottom: 10px;
-  text-align: center;
+  text-align: left;
   user-select: none;
 }
 
@@ -1829,7 +1831,7 @@ body {
   .rt-toolbar.mobile-docked {
     position: fixed !important;
     top: auto !important;
-    bottom: 0 !important;
+    bottom: 0;
     left: 0 !important;
     right: 0 !important;
     border-radius: 0 !important;
@@ -2247,7 +2249,8 @@ body {
   .rt-toolbar,
   #other-devices-drawer,
   #print-toast-container,
-  .print-instruction-hint {
+  .print-instruction-hint,
+  .print-instruction-hint-external {
     display: none !important;
   }
 

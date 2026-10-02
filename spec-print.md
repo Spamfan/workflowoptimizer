@@ -17,14 +17,33 @@
   disclaimer immediately underneath.  
 * **External Interactive Hint:** Tutorial hint  
   resides outside the sheet preview, situated between  
-  navigation controls and the paper viewport.  
+  navigation controls and the paper viewport. Aligns  
+  left within 8.5in document bounds and is completely  
+  suppressed from print media output.  
 * **Total Installment Pricing:** AT&T and Verizon  
   EDLPs calculate as total installment prices over  
   36 months (`$TOTAL`). T-Mobile calculates over 24  
   months as `$TOTAL ($DP + $MO/mo)`. Apple Devices  
   displays multi-carrier total pricing:  
-  `$ATT, $VZW, $TMO ($DP + $MO/mo)`. All prices and  
-  fallbacks explicitly include `$` currency signs.  
+  `$ATT, $VZW, $TMO ($DP + $MO/mo)`. All prices, downpayments,  
+  monthly rates, and fallbacks (`$___`) strictly include `# PRINT ENGINE SPECIFICATION
+### Target Files: `js/print.js`, `styles.css`
+
+---
+
+### 1. LAYOUT ARCHITECTURE
+* **Asymmetric 2-Column Layout:** High-density  
+  split layout. Left column (~42%) stacks ATT  
+  above VZW. Right column (~56%) stacks TMO  
+  above Apple Devices (wider width accommodates  
+  multi-carrier pricing).  
+* **Canonical Intake Sorting:** Carrier tables  
+  sort devices alphabetically by their original  
+  intake name (`dev.name`), never by abbreviations.  
+* **Header Architecture:** Title is bold "Recent EDLP  
+  Reports (internal use only)" with early development  
+  disclaimer immediately underneath.  
+.  
 * **Typography & Header Parity:** All sheet labels,  
   headers, and prices match device name font size  
   (`0.76rem`). Carrier titles are underlined. Column  
@@ -58,8 +77,9 @@
   spawns a toast (3s timeout, max 5 stacked) with an inline  
   yellow "Undo" button and horizontal touch swipe-to-dismiss.  
 * **Mobile RTC Toolbar:** Rich text controls dock dynamically  
-  above virtual keyboard via `visualViewport` tracking,  
-  with left-aligned dark controls.  
+  above virtual keyboard via `visualViewport` tracking with  
+  inline priority overrides (`setProperty('bottom', ..., 'important')`),  
+  featuring left-aligned dark controls.  
 * **50-Step History Stack:** In-memory stack supporting  
   up to 50 undo/redo states via compact pill controls  
   with hotkey hints (`Ctrl+Z`, `Ctrl+Y`).  
