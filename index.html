@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.13">
+<html lang="en" data-version="v0.1.14">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.13">
+  <meta name="version" content="v0.1.14">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.11">
+  <link rel="stylesheet" href="styles.css?v=0.1.12">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
   <div id="top-left-controls">
     <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.7</div>
+    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.14 <span class="badge-chevron">▾</span></div>
   </div>
 
   <div id="top-right-hub">
@@ -29,16 +29,29 @@
 
   <!-- GATEKEEPER / LOGIN VIEW -->
   <div id="login-view">
+    <div class="login-brand-header">
+      <h1 class="main-title">workflow optimizer</h1>
+      <p class="main-subtitle">an unofficial resource for WSP employees</p>
+    </div>
+
+    <div class="login-notice-banner">
+      <svg class="notice-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Heads up! This software is in early development and may not work properly; please use it carefully.</span>
+    </div>
+
     <div class="login-card">
-      <h2 class="login-title">Please enter your optimizer passcode to proceed.</h2>
+      <h2 class="login-title">Please enter the optimizer passcode given to you by the developer.</h2>
       <p class="login-desc">
-        By using this software you agree to it's terms of use as outlined below.
+        By using this software, you are agreeing to its <button id="btn-terms" class="btn-inline-link" type="button">terms of use</button>.
       </p>
       <input type="tel" id="pin-input" class="login-input" placeholder="Passcode" maxlength="6" autofocus style="-webkit-text-security: disc;">
       <div id="pin-error">Incorrect Passcode</div>
       <div class="btn-group">
         <button id="btn-enter" class="pill-btn btn-primary">Enter</button>
-        <button id="btn-terms" class="pill-btn btn-secondary">Terms of Use</button>
       </div>
     </div>
   </div>
@@ -287,6 +300,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=0.1.13"></script>
+  <script type="module" src="app.js?v=0.1.14"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.11 */
+/* Prototype Crimson - styles.css v0.1.12 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -43,20 +43,30 @@ body {
 
 .version-badge {
   font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-sub);
-  background: rgba(0, 0, 0, 0.05);
-  padding: 3px 8px;
+  font-weight: 700;
+  color: #9f1239;
+  background: #ffe4e6;
+  border: 1px solid #fecdd3;
+  padding: 3px 9px;
   border-radius: 9999px;
   cursor: pointer;
   user-select: none;
   margin-top: 2px;
-  transition: background-color 0.2s, color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .version-badge:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: var(--text-main);
+  background: #fecdd3;
+  color: #881337;
+}
+
+.badge-chevron {
+  font-size: 0.68rem;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 #top-right-hub {
@@ -185,18 +195,53 @@ body {
 /* --- GATEKEEPER / LOGIN VIEW --- */
 #login-view {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   width: 100%;
-  padding: 20px;
+  padding: 32px 16px;
+  gap: 18px;
+}
+
+.login-brand-header {
+  text-align: center;
+}
+
+.login-notice-banner {
+  background-color: #fffbeb;
+  border: 1px solid #fde047;
+  color: #854d0e;
+  border-radius: 9999px;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 580px;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.notice-svg {
+  width: 18px;
+  height: 18px;
+  stroke: #ca8a04;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .login-notice-banner {
+    border-radius: 12px;
+  }
 }
 
 .login-card {
   background-color: var(--card-bg);
   border-radius: 20px;
-  padding: 36px 28px;
-  max-width: 420px;
+  padding: 36px 32px;
+  max-width: 480px;
   width: 100%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -205,18 +250,38 @@ body {
 
 .login-title {
   font-size: 1.15rem;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  margin-bottom: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.2px;
+  margin-bottom: 12px;
   color: var(--text-main);
+  text-wrap: balance;
 }
 
 .login-desc {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 400;
   line-height: 1.5;
   color: var(--text-sub);
   margin-bottom: 24px;
+  text-wrap: balance;
+}
+
+.btn-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  display: inline;
+}
+
+.btn-inline-link:hover {
+  color: var(--primary-hover);
 }
 
 .login-input {
@@ -513,7 +578,7 @@ body {
 .manifest-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-main);
+  color: #9f1239;
 }
 
 .manifest-sub {
@@ -544,7 +609,10 @@ body {
 .manifest-table code {
   font-family: monospace;
   font-weight: 700;
-  color: var(--primary);
+  color: #9f1239;
+  background: #ffe4e6;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* --- PAIRING MODAL (M3 & ADAPTIVE) --- */

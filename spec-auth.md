@@ -26,8 +26,11 @@
 ### 3. UI ARCHITECTURE
 * **Login Shell:** Centered elevated card (`#login-view`)  
   declared statically inside `index.html`.  
-* **Card Copy:** Title prompts "Please enter your optimizer  
-  passcode to proceed." followed by non-bold terms disclaimer.  
+* **Header & Banner:** Preceded by landing brand header  
+  and amber development advisory notice banner.  
+* **Card Copy:** Title prompts "Please enter the optimizer  
+  passcode given to you by the developer." followed by  
+  disclaimer with inline terms of use link button.  
 * **Input & Feedback:** Single 6-digit passcode field;  
   inline error alert if invalid; auto-submit on 6 digits.  
 * **Terms of Use Modal:** Centered overlay card  

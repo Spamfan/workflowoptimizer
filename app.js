@@ -1,13 +1,13 @@
-// Prototype Crimson - app.js (v0.1.13)
+// Prototype Crimson - app.js (v0.1.14)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.0';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.16';
 
-export const APP_VERSION = "v0.1.13";
+export const APP_VERSION = "v0.1.14";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.13';
+  let indexVer = 'v0.1.14';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -15,7 +15,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.11';
+  let cssVer = 'v0.1.12';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -41,7 +41,7 @@ const btnBack = document.getElementById('btn-back');
 const btnPrintEdlps = document.getElementById('btn-print-edlps');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
-if (versionText) versionText.textContent = `Crimson ${APP_VERSION}`;
+if (versionText) versionText.innerHTML = `Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
 
 let currentView = 'login-view';
 let isAuthenticated = false;
@@ -184,6 +184,7 @@ if (versionText) {
     if (manifestListBody) {
       const liveVersions = getRuntimeVersions();
       manifestListBody.innerHTML = Object.entries(liveVersions)
+        .sort(([a], [b]) => a.localeCompare(b))
         .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
         .join('');
     }
