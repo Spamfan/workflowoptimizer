@@ -26,24 +26,8 @@
   months as `$TOTAL ($DP + $MO/mo)`. Apple Devices  
   displays multi-carrier total pricing:  
   `$ATT, $VZW, $TMO ($DP + $MO/mo)`. All prices, downpayments,  
-  monthly rates, and fallbacks (`$___`) strictly include `# PRINT ENGINE SPECIFICATION
-### Target Files: `js/print.js`, `styles.css`
-
----
-
-### 1. LAYOUT ARCHITECTURE
-* **Asymmetric 2-Column Layout:** High-density  
-  split layout. Left column (~42%) stacks ATT  
-  above VZW. Right column (~56%) stacks TMO  
-  above Apple Devices (wider width accommodates  
-  multi-carrier pricing).  
-* **Canonical Intake Sorting:** Carrier tables  
-  sort devices alphabetically by their original  
-  intake name (`dev.name`), never by abbreviations.  
-* **Header Architecture:** Title is bold "Recent EDLP  
-  Reports (internal use only)" with early development  
-  disclaimer immediately underneath.  
-.  
+  monthly rates, and fallbacks (`$___`) strictly include  
+  dollar signs.  
 * **Typography & Header Parity:** All sheet labels,  
   headers, and prices match device name font size  
   (`0.76rem`). Carrier titles are underlined. Column  
