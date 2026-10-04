@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.12 */
+/* Prototype Crimson - styles.css v0.1.13 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -199,9 +199,10 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
-  padding: 32px 16px;
-  gap: 18px;
+  padding: 60px 16px 24px;
+  gap: 14px;
 }
 
 .login-brand-header {
@@ -232,6 +233,11 @@ body {
 }
 
 @media (max-width: 600px) {
+  #login-view {
+    justify-content: flex-start;
+    padding-top: 54px;
+    gap: 12px;
+  }
   .login-notice-banner {
     border-radius: 12px;
   }
@@ -240,12 +246,12 @@ body {
 .login-card {
   background-color: var(--card-bg);
   border-radius: 20px;
-  padding: 36px 32px;
-  max-width: 480px;
+  padding: 28px 24px;
+  max-width: 440px;
   width: 100%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  text-align: center;
+  text-align: left;
 }
 
 .login-title {
@@ -253,18 +259,18 @@ body {
   font-weight: 600;
   line-height: 1.45;
   letter-spacing: -0.2px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: var(--text-main);
-  text-wrap: balance;
+  text-align: left;
 }
 
 .login-desc {
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 400;
   line-height: 1.5;
   color: var(--text-sub);
-  margin-bottom: 24px;
-  text-wrap: balance;
+  margin-bottom: 20px;
+  text-align: left;
 }
 
 .btn-inline-link {
@@ -284,16 +290,30 @@ body {
   color: var(--primary-hover);
 }
 
-.login-input {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 1.1rem;
-  text-align: center;
+.login-capsule {
+  display: flex;
+  align-items: center;
   border: 2px solid var(--primary);
   border-radius: 9999px;
-  margin-bottom: 14px;
-  outline: none;
   background-color: #ffffff;
+  padding: 4px 6px 4px 18px;
+  margin-bottom: 10px;
+  transition: box-shadow 0.2s;
+}
+
+.login-capsule:focus-within {
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.2);
+}
+
+.login-input {
+  flex: 1;
+  width: 100%;
+  padding: 6px 0;
+  font-size: 1.15rem;
+  text-align: center;
+  border: none;
+  outline: none;
+  background: transparent;
 }
 
 #pin-input {
@@ -304,18 +324,41 @@ body {
   letter-spacing: normal;
 }
 
-#pin-error {
-  color: var(--danger);
-  font-size: 0.9rem;
-  font-weight: 700;
-  margin-bottom: 14px;
-  display: none;
+.btn-enter-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
-.btn-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.btn-enter-arrow:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-enter-arrow:active {
+  transform: scale(0.92);
+}
+
+.btn-enter-arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+#pin-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 4px;
+  text-align: center;
+  display: none;
 }
 
 /* --- DASHBOARD VIEW --- */
@@ -2048,11 +2091,11 @@ body {
 }
 
 .print-row.hl-partial .col-item {
-  background-color: #dadddf;
+  background-color: #949494;
 }
 
 .print-row.hl-full {
-  background-color: #dadddf;
+  background-color: #949494;
 }
 
 .print-doc-footer {
@@ -2351,7 +2394,7 @@ body {
 
   .print-row.hl-partial .col-item,
   .print-row.hl-full {
-    background-color: #dadddf !important;
+    background-color: #949494 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

@@ -1,7 +1,7 @@
-// Prototype Crimson - js/auth.js (v0.1.0)
+// Prototype Crimson - js/auth.js (v0.1.1)
 // Gatekeeper Passcode Validation
 
-export const AUTH_VERSION = "v0.1.0";
+export const AUTH_VERSION = "v0.1.1";
 
 const PASSCODE_SECRET = atob('MTAyMDMw'); // "102030"
 const SESSION_PIN_KEY = "wfo_session_pin";
