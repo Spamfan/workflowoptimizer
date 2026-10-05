@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.14 */
+/* Prototype Crimson - styles.css v0.1.15 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2337,7 +2337,7 @@ body {
 /* --- PRINT RULES (GHOST PAGE DEFENSE) --- */
 @page {
   size: letter portrait;
-  margin: 0.35in 0.4in;
+  margin: 0;
 }
 
 @media print {
@@ -2362,6 +2362,10 @@ body {
   #print-toast-container,
   .print-instruction-hint,
   .print-instruction-hint-external {
+    display: none !important;
+  }
+
+  body[class*="printing-"] #print-view {
     display: none !important;
   }
 
@@ -2610,7 +2614,7 @@ body {
 
 .doc-page {
   width: 8.5in;
-  height: 10.8in;
+  height: 11in;
   background-color: #ffffff;
   overflow: hidden;
   position: absolute;

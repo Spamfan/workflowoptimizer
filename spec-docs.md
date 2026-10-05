@@ -20,3 +20,5 @@
 ### 4. Print Lifecycle & Clean-up
 * Applies targeted class `printing-[docId]` to document body.
 * `cleanupPrint()` executes on touch/click return to prevent persistent layout mutations.
+* Enforces zero `@page` margin policy (`size: letter portrait; margin: 0;`) so 8.5" × 11" pre-formatted sheets print full-bleed with no shrink scaling.
+* Suppresses `#print-view` during static doc prints (`body[class*="printing-"] #print-view { display: none !important; }`) to prevent trailing blank page ejections.
