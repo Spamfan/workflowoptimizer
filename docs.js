@@ -1,7 +1,7 @@
-// Prototype Crimson - docs.js (v0.1.0)
+// Prototype Crimson - docs.js (v0.1.1)
 // Static Document & Guide Print Engine
 
-export const DOCS_VERSION = "v0.1.0";
+export const DOCS_VERSION = "v0.1.1";
 
 const DOC_REGISTRY = [
   {
@@ -69,6 +69,20 @@ export function cleanupPrint() {
   window.removeEventListener('touchstart', cleanupPrint, true);
 }
 
+export function openDocModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'flex';
+  history.pushState({ modalId: modalEl.id }, '', '');
+}
+
+export function closeDocModal(modalEl) {
+  if (!modalEl || modalEl.style.display === 'none') return;
+  modalEl.style.display = 'none';
+  if (history.state && history.state.modalId === modalEl.id) {
+    history.back();
+  }
+}
+
 export function printDoc(docId) {
   cleanupPrint();
   document.body.classList.add(`printing-${docId}`);
@@ -130,8 +144,7 @@ function handleDocSelection(docId) {
   if (item.locked && item.modalId) {
     const modal = document.getElementById(item.modalId);
     if (modal) {
-      modal.style.display = 'flex';
-      history.pushState({ modalId: item.modalId }, '', '');
+      openDocModal(modal);
     }
     return;
   }
@@ -152,8 +165,7 @@ function openTutorialModal() {
   const tutModal = document.getElementById('doc-tutorial-modal');
   if (!tutModal) return;
   setTutorialCarrier('att');
-  tutModal.style.display = 'flex';
-  history.pushState({ modalId: 'doc-tutorial-modal' }, '', '');
+  openDocModal(tutModal);
 }
 
 function setTutorialCarrier(carrier) {
@@ -177,12 +189,12 @@ export function initDocsEngine() {
 
   if (btnVzwCancel && vzwModal) {
     btnVzwCancel.addEventListener('click', () => {
-      vzwModal.style.display = 'none';
+      closeDocModal(vzwModal);
     });
   }
   if (btnVzwShow && vzwModal) {
     btnVzwShow.addEventListener('click', () => {
-      vzwModal.style.display = 'none';
+      closeDocModal(vzwModal);
       const item = DOC_REGISTRY.find(d => d.id === 'vzwtrade');
       if (item) item.locked = false;
       const card = document.querySelector('.doc-action-card[data-doc-id="vzwtrade"]');
@@ -196,7 +208,7 @@ export function initDocsEngine() {
   }
   if (vzwModal) {
     vzwModal.addEventListener('click', (e) => {
-      if (e.target === vzwModal) vzwModal.style.display = 'none';
+      if (e.target === vzwModal) closeDocModal(vzwModal);
     });
   }
 
@@ -206,12 +218,12 @@ export function initDocsEngine() {
 
   if (btnIphoneCancel && iphoneModal) {
     btnIphoneCancel.addEventListener('click', () => {
-      iphoneModal.style.display = 'none';
+      closeDocModal(iphoneModal);
     });
   }
   if (btnIphoneShow && iphoneModal) {
     btnIphoneShow.addEventListener('click', () => {
-      iphoneModal.style.display = 'none';
+      closeDocModal(iphoneModal);
       const item = DOC_REGISTRY.find(d => d.id === 'iphonetransfer');
       if (item) item.locked = false;
       const card = document.querySelector('.doc-action-card[data-doc-id="iphonetransfer"]');
@@ -225,7 +237,7 @@ export function initDocsEngine() {
   }
   if (iphoneModal) {
     iphoneModal.addEventListener('click', (e) => {
-      if (e.target === iphoneModal) iphoneModal.style.display = 'none';
+      if (e.target === iphoneModal) closeDocModal(iphoneModal);
     });
   }
 
@@ -235,19 +247,28 @@ export function initDocsEngine() {
 
   if (btnTutClose && tutModal) {
     btnTutClose.addEventListener('click', () => {
-      tutModal.style.display = 'none';
+      closeDocModal(tutModal);
     });
   }
   if (btnTutPrint && tutModal) {
     btnTutPrint.addEventListener('click', () => {
+      closeDocModal(tutModal);
       printDoc('takehome');
     });
   }
   if (tutModal) {
     tutModal.addEventListener('click', (e) => {
-      if (e.target === tutModal) tutModal.style.display = 'none';
+      if (e.target === tutModal) closeDocModal(tutModal);
     });
   }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeDocModal(vzwModal);
+      closeDocModal(iphoneModal);
+      closeDocModal(tutModal);
+    }
+  });
 
   const tabs = document.querySelectorAll('.tut-tab-btn');
   tabs.forEach(tab => {
