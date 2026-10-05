@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.13 */
+/* Prototype Crimson - styles.css v0.1.14 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2414,4 +2414,222 @@ body {
   .print-comment-container:has(.print-comment-editor:empty) {
     display: none !important;
   }
+}
+
+/* --- STATIC DOCUMENTS VIEW & CARDS --- */
+#docs-view {
+  width: 100%;
+  max-width: 1100px;
+  padding: 80px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 24px;
+  width: 100%;
+  justify-items: center;
+}
+
+.doc-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 180px;
+}
+
+.doc-action-card {
+  width: 180px;
+  height: 233px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.doc-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+  border-color: var(--primary);
+}
+
+.doc-preview-stage {
+  width: 8.5in;
+  height: 11in;
+  transform: scale(0.22);
+  transform-origin: top left;
+  pointer-events: none;
+  background: #ffffff;
+  position: relative;
+}
+
+.doc-preview-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.doc-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(28, 30, 33, 0.85);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 8px;
+  text-align: center;
+  z-index: 10;
+}
+
+.doc-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.doc-lock-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 12;
+}
+
+.btn-doc-tutorial {
+  background: #fef08a;
+  color: #713f12;
+  border-color: #fde047;
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
+.btn-doc-tutorial:hover {
+  background: #fde047;
+  color: #58310c;
+}
+
+/* --- TUTORIAL MODAL --- */
+.tut-modal-card {
+  max-width: 600px;
+}
+
+.tut-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.tut-tabs-row {
+  display: flex;
+  gap: 6px;
+  background: #e4e6eb;
+  padding: 4px;
+  border-radius: 9999px;
+  margin-bottom: 12px;
+}
+
+.tut-tab-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.tut-tab-btn.active {
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tut-img-container {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  min-height: 180px;
+  max-height: 280px;
+}
+
+.tut-img-container img {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.tut-text-body {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-main);
+}
+
+.tut-text-body ul {
+  margin: 6px 0 6px 18px;
+  padding: 0;
+}
+
+.tut-text-body li {
+  margin-bottom: 4px;
+}
+
+/* --- STATIC PRINT ISOLATION --- */
+.static-doc-container {
+  display: none;
+}
+
+.doc-page {
+  width: 8.5in;
+  height: 10.8in;
+  background-color: #ffffff;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+@media print {
+  #docs-view {
+    display: none !important;
+  }
+
+  body.printing-takehome #doc-takehome { display: block !important; }
+  body.printing-intake #doc-intake { display: block !important; }
+  body.printing-prepaidintake #doc-prepaidintake { display: block !important; }
+  body.printing-warpcalls #doc-warpcalls { display: block !important; }
+  body.printing-vzwtrade #doc-vzwtrade { display: block !important; }
+  body.printing-iphonetransfer #doc-iphonetransfer { display: block !important; }
+  body.printing-scrappaper #doc-scrappaper { display: block !important; }
 }
