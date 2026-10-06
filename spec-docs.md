@@ -8,9 +8,9 @@
 * `takehome`: Take Home Sheet (`ths3-1.png`), tutorial enabled.
 * `intake`: Postpaid Intake Sheet (`postpaid-IS.png`).
 * `prepaidintake`: Prepaid Intake Sheet (`prepaid-IS.png`).
-* `warpcalls`: WARP Calls Guide (`https://i.imgur.com/0YAC03J.png`).
-* `vzwtrade`: Verizon Trade-in Guide (`https://i.imgur.com/1vBTDLU.png`, locked/caution gate).
-* `iphonetransfer`: iPhone Transfer Guide (`https://i.imgur.com/TVFeWTr.png`, locked/caution gate).
+* `warpcalls`: WARP Calls Guide (`warp-calls.png`).
+* `vzwtrade`: Verizon Trade-in Guide (`vzw-trade.png`, locked/caution gate).
+* `iphonetransfer`: iPhone Transfer Guide (`iphone-transfer.png`, locked/caution gate).
 * `scrappaper`: Scrap Paper cutting guide (`scrap-paper.png`).
 
 ### 3. Safety Gate Architecture

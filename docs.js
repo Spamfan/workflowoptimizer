@@ -1,7 +1,7 @@
-// Prototype Crimson - docs.js (v0.1.1)
+// Prototype Crimson - docs.js (v0.1.2)
 // Static Document & Guide Print Engine
 
-export const DOCS_VERSION = "v0.1.1";
+export const DOCS_VERSION = "v0.1.2";
 
 const DOC_REGISTRY = [
   {
@@ -28,14 +28,14 @@ const DOC_REGISTRY = [
   {
     id: 'warpcalls',
     title: 'Guide for WARP calls',
-    img: 'https://i.imgur.com/0YAC03J.png',
+    img: 'warp-calls.png',
     hasTutorial: false,
     locked: false
   },
   {
     id: 'vzwtrade',
     title: 'Verizon Trade in Guide',
-    img: 'https://i.imgur.com/1vBTDLU.png',
+    img: 'vzw-trade.png',
     hasTutorial: false,
     locked: true,
     modalId: 'vzw-trade-warning-modal'
@@ -43,7 +43,7 @@ const DOC_REGISTRY = [
   {
     id: 'iphonetransfer',
     title: 'iPhone transfer guide',
-    img: 'https://i.imgur.com/TVFeWTr.png',
+    img: 'iphone-transfer.png',
     hasTutorial: false,
     locked: true,
     modalId: 'iphone-transfer-warning-modal'
@@ -58,9 +58,9 @@ const DOC_REGISTRY = [
 ];
 
 const TUTORIAL_IMAGES = {
-  att: 'https://i.imgur.com/BnLTk4j.png',
-  vzw: 'https://i.imgur.com/cmEg0MT.png',
-  tmo: 'https://i.imgur.com/5DQ22AB.png'
+  att: 'tutorial-att.png',
+  vzw: 'tutorial-vzw.png',
+  tmo: 'tutorial-tmo.png'
 };
 
 export function cleanupPrint() {
