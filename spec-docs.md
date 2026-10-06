@@ -22,3 +22,8 @@
 * `cleanupPrint()` executes on touch/click return to prevent persistent layout mutations.
 * Enforces zero `@page` margin policy (`size: letter portrait; margin: 0;`) so 8.5" × 11" pre-formatted sheets print full-bleed with no shrink scaling.
 * Suppresses `#print-view` during static doc prints (`body[class*="printing-"] #print-view { display: none !important; }`) to prevent trailing blank page ejections.
+
+### 5. Static Asset Cache Busting
+* All document sheets and tutorial illustrations dynamically bind a version query parameter (`?v=${DOCS_VERSION}`) on image URLs during DOM generation.
+* Whenever a static document asset is updated or replaced under an existing filename, `DOCS_VERSION` in `docs.js` must be bumped by one patch version.
+* Under the Downstream Ripple Mandate, bumping `docs.js` requires updating the query string import in `app.js` and bumping `app.js` and `index.html`.

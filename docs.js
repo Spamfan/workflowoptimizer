@@ -1,7 +1,7 @@
-// Prototype Crimson - docs.js (v0.1.2)
+// Prototype Crimson - docs.js (v0.1.3)
 // Static Document & Guide Print Engine
 
-export const DOCS_VERSION = "v0.1.2";
+export const DOCS_VERSION = "v0.1.3";
 
 const DOC_REGISTRY = [
   {
@@ -105,7 +105,7 @@ export function renderDocsGrid() {
     <div class="doc-card-wrapper">
       <div class="doc-action-card ${doc.locked ? 'is-locked' : ''}" data-doc-id="${doc.id}" tabindex="0" role="button" aria-label="Print ${doc.title}">
         <div class="doc-preview-stage">
-          <img src="${doc.img}" alt="${doc.title}" class="doc-preview-img" loading="lazy">
+          <img src="${doc.img}?v=${DOCS_VERSION}" alt="${doc.title}" class="doc-preview-img" loading="lazy">
         </div>
         <div class="doc-card-overlay">
           <div class="doc-card-title">${doc.title}</div>
@@ -156,7 +156,7 @@ function initDocContainers() {
   DOC_REGISTRY.forEach(doc => {
     const container = document.getElementById(`doc-${doc.id}`);
     if (container) {
-      container.innerHTML = `<div class="doc-page"><img src="${doc.img}" alt="${doc.title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;"></div>`;
+      container.innerHTML = `<div class="doc-page"><img src="${doc.img}?v=${DOCS_VERSION}" alt="${doc.title}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;"></div>`;
     }
   });
 }
@@ -171,7 +171,7 @@ function openTutorialModal() {
 function setTutorialCarrier(carrier) {
   const tutImg = document.getElementById('tut-example-img');
   if (tutImg && TUTORIAL_IMAGES[carrier]) {
-    tutImg.src = TUTORIAL_IMAGES[carrier];
+    tutImg.src = `${TUTORIAL_IMAGES[carrier]}?v=${DOCS_VERSION}`;
   }
   const tabs = document.querySelectorAll('.tut-tab-btn');
   tabs.forEach(tab => {
