@@ -1,7 +1,7 @@
-// Prototype Crimson - docs.js (v0.1.3)
+// Prototype Crimson - docs.js (v0.1.4)
 // Static Document & Guide Print Engine
 
-export const DOCS_VERSION = "v0.1.3";
+export const DOCS_VERSION = "v0.1.4";
 
 const DOC_REGISTRY = [
   {
