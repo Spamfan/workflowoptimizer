@@ -1,6 +1,6 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `generator.js`
-### Document Version: `v0.1.0`
+### Document Version: `v0.1.1`
 
 ---
 
@@ -37,17 +37,23 @@
   * Auto-fill rule: When `plan == 'simplicity'` and `state == 'NH'`, default `taf = 8.00`. User-overridable.
 * `mo` (Monthly Estimate Total): Computed currency float.
   * Calculation: `raw = BP + Devi + taf`
-  * Even-Dollar Rounding: `mo = Math.ceil(raw / 2) * 2` (rounds up to the nearest top even integer dollar).
-* `term`: String label. Default: `"(3 yr)"` (Verizon standard 36-month installment contract).
-* `pmt` (Payment Method): String token. Default: `"checking"` (mandated for Verizon autopay discount eligibility).
-* `date` (Due Date Offset): Integer days. Default: `14` days from transaction.
+  * Monthly Total Rounding: Always rounded UP to the nearest whole integer dollar (`Math.ceil(raw)`), e.g., $25 + $3.03 + $8 = $36.03 -> `~$37/mo`.
+* `term`: String label. Default: `"(3 yr)"`.
+* `pmt` (Payment Method): String token. Default: `"CHECKING ACCT"`.
+* `date` (Due Date Offset): Integer days. Default: `20` days from activation.
 
 ---
 
-### 4. CONDITIONAL RENDERING & SUPPRESSION RULES
-* **VZW Simplicity Suppression Rule:**
-  * When `Carn == "VZW"` and `plan == "simplicity"`, the entire lower half section titled `"IMPORTANT NOTICES FOR ATT CUSTOMERS AND VERIZON CUSTOMERS NOT ON 'SIMPLICITY'"` (including delayed bill credit calculations and carrier estimate comparison circles) MUST be hidden/suppressed.
-  * Simplicity accounts receive instant promotional bill credits, rendering delayed reimbursement schedules inapplicable.
+### 4. MULTI-CARRIER SUPPRESSION & CALCULATION ENGINE
+* **VZW & T-Mobile Suppression:**
+  * When `Carn == "VZW"` or `Carn == "TMO"`, a pure white masking rectangle (`#ffffff`) covers top-sheet Y: 25.5% to 50.0%, concealing the notices and bill estimate comparison circles.
+* **AT&T Reimbursement Equations:**
+  * `Reimbursed = 10 (autopay) + (35 if act fee returned) + device credit`. Visual display rounds DOWN (`Math.floor(Reimbursed)`), formatted as `~[reimbursed]`.
+  * `Non-reimbursed`: Defaults to `$0.00` (`N/A`), user-overridable.
+  * `Bill 1 Actual = Math.ceil(Monthly + Reimbursed + NonReimbursed)`.
+  * `Bills 2 & 3 Actual = [Monthly] - X`.
+  * `Bill 1 Carrier Estimate = Bill 1 Actual` with checkmark (`✓`).
+  * `Bills 2 & 3 Carrier Estimate = Math.ceil(Monthly + 10 + device credit)` enclosed in circle with strike-through (`✕`).
 
 ---
 

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.21">
+<html lang="en" data-version="v0.1.22">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.21">
+  <meta name="version" content="v0.1.22">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.15">
+  <link rel="stylesheet" href="styles.css?v=0.1.16">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
   <div id="top-left-controls">
     <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.21 <span class="badge-chevron">▾</span></div>
+    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.22 <span class="badge-chevron">▾</span></div>
   </div>
 
   <div id="top-right-hub">
@@ -105,6 +105,19 @@
           </div>
         </div>
       </div>
+
+      <!-- Card 3: Quote & Tear-Sheet Generator -->
+      <div class="dash-card">
+        <div class="card-header">
+          <h2 class="card-title">Quote & Tear-Sheet</h2>
+        </div>
+        <div class="card-body">
+          <p class="placeholder-text">Generate customer financing quotes and Take Home Sheets.</p>
+          <div class="card-actions-row">
+            <button id="btn-open-generator" class="pill-btn btn-primary" type="button">Open Generator</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -115,6 +128,133 @@
       <p class="main-subtitle">click a document below to print</p>
     </div>
     <div id="docs-cards-container" class="docs-grid"></div>
+  </div>
+
+  <!-- GENERATOR VIEW -->
+  <div id="generator-view" style="display: none;">
+    <div class="gen-controls-bar">
+      <div class="gen-controls-left">
+        <button id="btn-gen-reset" class="pill-btn btn-reset-caution" type="button" title="Reset fields to defaults">Reset</button>
+      </div>
+      <div class="gen-carrier-selector">
+        <button type="button" class="gen-carrier-pill active" data-carrier="att">ATT</button>
+        <button type="button" class="gen-carrier-pill" data-carrier="vzw">VZW</button>
+        <button type="button" class="gen-carrier-pill" data-carrier="tmo">TMO</button>
+      </div>
+      <div class="gen-controls-right">
+        <button id="btn-gen-print" class="pill-btn btn-primary btn-print-sheet" type="button">Print Sheet</button>
+      </div>
+    </div>
+
+    <div class="gen-workspace-grid">
+      <!-- Input Panel -->
+      <div class="gen-form-pane">
+        <div class="gen-form-section">
+          <h3 class="gen-section-title">Customer Info</h3>
+          <div class="gen-field-row">
+            <label class="gen-label">Name:</label>
+            <input type="text" id="gen-input-name" class="gen-input" placeholder="Customer Name" maxlength="26">
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Number:</label>
+            <input type="tel" id="gen-input-phone" class="gen-input" placeholder="603 - 555 - 0123" maxlength="16">
+          </div>
+        </div>
+
+        <div class="gen-form-section">
+          <h3 class="gen-section-title">Monthly Plan & Device</h3>
+          <div class="gen-field-row">
+            <label class="gen-label">Plan base ($):</label>
+            <input type="number" step="0.01" id="gen-input-plan" class="gen-input" value="50">
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Device Retail/mo ($):</label>
+            <input type="number" step="0.01" id="gen-input-dev-retail" class="gen-input" placeholder="0.00">
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Device Credit/mo ($):</label>
+            <input type="number" step="0.01" id="gen-input-dev-credit" class="gen-input" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="gen-form-section">
+          <h3 class="gen-section-title">Taxes & Due Date</h3>
+          <div class="gen-field-row">
+            <label class="gen-label">State Taxes ($):</label>
+            <div class="gen-input-group">
+              <select id="gen-select-state" class="gen-select">
+                <option value="NH" selected>NH ($8.00)</option>
+                <option value="VT">VT ($9.50)</option>
+                <option value="ME">ME ($9.00)</option>
+                <option value="MA">MA ($9.25)</option>
+                <option value="OTHER">Other</option>
+              </select>
+              <input type="number" step="0.01" id="gen-input-taxes" class="gen-input gen-input-sm" value="8.00">
+            </div>
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Payment Type:</label>
+            <input type="text" id="gen-input-autopay" class="gen-input" value="CHECKING ACCT">
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">First Bill Due (days):</label>
+            <input type="number" id="gen-input-duedate" class="gen-input" value="20">
+          </div>
+        </div>
+
+        <div class="gen-form-section gen-att-only">
+          <h3 class="gen-section-title">AT&T Reimbursement Estimates</h3>
+          <div class="gen-field-row">
+            <label class="gen-checkbox-label">
+              <input type="checkbox" id="gen-check-actfee" checked>
+              <span>Activation fee returned ($35)?</span>
+            </label>
+          </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Non-reimbursed ($):</label>
+            <input type="number" step="0.01" id="gen-input-nonreimbursed" class="gen-input" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+
+      <!-- Live WYSIWYG Preview Stage -->
+      <div class="gen-preview-pane">
+        <div id="gen-paper-stage" class="gen-paper-stage">
+          <img src="ths3-1.png?v=0.1.4" alt="Take Home Sheet Base" class="gen-base-sheet">
+
+          <!-- Layer 2: White Masking Box (VZW / TMO only) -->
+          <div id="gen-preview-mask" class="gen-carrier-mask" style="display: none;"></div>
+
+          <!-- Layer 3: Coordinate Overlays (Top Half) -->
+          <div class="gen-overlay-item ov-carrier" id="ov-carrier">ATT</div>
+          <div class="gen-overlay-item ov-name" id="ov-name"></div>
+          <div class="gen-overlay-item ov-number" id="ov-number"></div>
+          <div class="gen-overlay-item ov-passcode">________</div>
+
+          <div class="gen-overlay-item ov-plan" id="ov-plan">50</div>
+          <div class="gen-overlay-item ov-device" id="ov-device">X</div>
+          <div class="gen-overlay-item ov-taxes" id="ov-taxes">8.00</div>
+          <div class="gen-overlay-item ov-monthly" id="ov-monthly">~58/mo (3 yr)</div>
+
+          <div class="gen-overlay-item ov-autopay" id="ov-autopay">CHECKING ACCT</div>
+          <div class="gen-overlay-item ov-duedate" id="ov-duedate">~20</div>
+
+          <!-- ATT Specific Coordinate Overlays -->
+          <div class="gen-overlay-item ov-reimbursed gen-att-only" id="ov-reimbursed">~50</div>
+          <div class="gen-overlay-item ov-nonreimbursed gen-att-only" id="ov-nonreimbursed">~0</div>
+          <div class="gen-overlay-item ov-bill1-actual gen-att-only" id="ov-bill1-actual">111</div>
+          <div class="gen-overlay-item ov-bill2-actual gen-att-only" id="ov-bill2-actual">58 - X</div>
+          <div class="gen-overlay-item ov-bill3-actual gen-att-only" id="ov-bill3-actual">58 - X</div>
+          <div class="gen-overlay-item ov-bill1-carrier gen-att-only" id="ov-bill1-carrier">111 ✓</div>
+          <div class="gen-overlay-item ov-bill2-carrier gen-att-only" id="ov-bill2-carrier">
+            <span class="carrier-wrong-circle">73<span class="carrier-wrong-x">✕</span></span>
+          </div>
+          <div class="gen-overlay-item ov-bill3-carrier gen-att-only" id="ov-bill3-carrier">
+            <span class="carrier-wrong-circle">73<span class="carrier-wrong-x">✕</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- SCANNER VIEW -->
@@ -396,6 +536,6 @@
   <div id="doc-iphonetransfer" class="static-doc-container"></div>
   <div id="doc-scrappaper" class="static-doc-container"></div>
 
-  <script type="module" src="app.js?v=0.1.21"></script>
+  <script type="module" src="app.js?v=0.1.22"></script>
 </body>
 </html>

@@ -1,14 +1,15 @@
-// Prototype Crimson - app.js (v0.1.21)
+// Prototype Crimson - app.js (v0.1.22)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.1';
 import { initDocsEngine, DOCS_VERSION } from './docs.js?v=0.1.4';
+import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.0';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.17';
 
-export const APP_VERSION = "v0.1.21";
+export const APP_VERSION = "v0.1.22";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.21';
+  let indexVer = 'v0.1.22';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -16,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.15';
+  let cssVer = 'v0.1.16';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -28,6 +29,7 @@ export function getRuntimeVersions() {
     "app.js": APP_VERSION,
     "auth.js": AUTH_VERSION,
     "docs.js": DOCS_VERSION,
+    "generator.js": GENERATOR_VERSION,
     "print.js": PRINT_VERSION,
     "styles.css": cssVer,
     "index.html": indexVer
@@ -39,10 +41,12 @@ const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
 const printView = document.getElementById('print-view');
 const docsView = document.getElementById('docs-view');
+const generatorView = document.getElementById('generator-view');
 const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const btnPrintEdlps = document.getElementById('btn-print-edlps');
 const btnOpenDocs = document.getElementById('btn-open-docs');
+const btnOpenGenerator = document.getElementById('btn-open-generator');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
 if (versionText) versionText.innerHTML = `Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
@@ -84,6 +88,7 @@ export function switchView(targetViewId, pushState = true) {
   if (dashboardView) dashboardView.style.display = 'none';
   if (printView) printView.style.display = 'none';
   if (docsView) docsView.style.display = 'none';
+  if (generatorView) generatorView.style.display = 'none';
 
   const targetEl = document.getElementById(targetViewId);
   if (targetEl) {
@@ -95,7 +100,7 @@ export function switchView(targetViewId, pushState = true) {
   if (currentView === 'dashboard-view') {
     if (btnLogout) btnLogout.style.display = 'inline-flex';
     if (btnBack) btnBack.style.display = 'none';
-  } else if (currentView === 'print-view' || currentView === 'docs-view') {
+  } else if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
     if (btnLogout) btnLogout.style.display = 'none';
     if (btnBack) btnBack.style.display = 'inline-flex';
   } else {
@@ -120,7 +125,7 @@ window.addEventListener('popstate', (e) => {
   if (modalDismissed) return;
 
   let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
-  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view' || dest === 'docs-view')) {
+  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view' || dest === 'docs-view' || dest === 'generator-view')) {
     dest = 'login-view';
   }
   switchView(dest, false);
@@ -162,7 +167,7 @@ if (btnLogout) btnLogout.addEventListener('click', logout);
 
 if (btnBack) {
   btnBack.addEventListener('click', () => {
-    if (currentView === 'print-view' || currentView === 'docs-view') {
+    if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
       switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
     } else {
       switchView('login-view');
@@ -172,6 +177,7 @@ if (btnBack) {
 
 initPrintEngine();
 initDocsEngine();
+initGeneratorEngine();
 
 if (btnPrintEdlps) {
   btnPrintEdlps.addEventListener('click', () => {
@@ -183,6 +189,12 @@ if (btnPrintEdlps) {
 if (btnOpenDocs) {
   btnOpenDocs.addEventListener('click', () => {
     switchView('docs-view');
+  });
+}
+
+if (btnOpenGenerator) {
+  btnOpenGenerator.addEventListener('click', () => {
+    switchView('generator-view');
   });
 }
 

@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.15 */
+/* Prototype Crimson - styles.css v0.1.16 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2636,4 +2636,294 @@ body {
   body.printing-vzwtrade #doc-vzwtrade { display: block !important; }
   body.printing-iphonetransfer #doc-iphonetransfer { display: block !important; }
   body.printing-scrappaper #doc-scrappaper { display: block !important; }
+}
+
+/* --- GENERATOR VIEW & 2-UP SHEET OVERLAY --- */
+#generator-view {
+  width: 100%;
+  max-width: 1200px;
+  padding: 68px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gen-controls-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.gen-carrier-selector {
+  display: flex;
+  background: #e4e6eb;
+  padding: 4px;
+  border-radius: 9999px;
+  gap: 4px;
+}
+
+.gen-carrier-pill {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.gen-carrier-pill.active {
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.gen-workspace-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .gen-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gen-form-pane {
+  background: var(--card-bg);
+  border-radius: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gen-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #f0f2f5;
+  padding-bottom: 12px;
+}
+
+.gen-form-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.gen-section-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.gen-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gen-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  flex: 1;
+}
+
+.gen-input {
+  flex: 1.2;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  background: #ffffff;
+}
+
+.gen-input:focus {
+  border-color: var(--primary);
+}
+
+.gen-input-sm {
+  width: 75px;
+  flex: none;
+}
+
+.gen-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1.2;
+}
+
+.gen-select {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.gen-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.gen-preview-pane {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.gen-paper-stage {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 8.5 / 11;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.gen-base-sheet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gen-carrier-mask {
+  position: absolute;
+  top: 25.5%;
+  left: 0;
+  width: 100%;
+  height: 24.5%;
+  background-color: #ffffff;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.gen-overlay-item {
+  position: absolute;
+  z-index: 10;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  color: #0b57d0;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  font-size: clamp(8px, 1.6cqw, 14px);
+}
+
+.ov-carrier { top: 1.9%; left: 3.5%; font-size: clamp(9px, 1.8cqw, 15px); }
+.ov-name { top: 1.9%; left: 12.5%; }
+.ov-number { top: 1.9%; left: 38.5%; letter-spacing: 0.5px; }
+.ov-passcode { top: 1.9%; left: 74.0%; color: #000000; letter-spacing: 2px; }
+
+.ov-plan { top: 5.8%; left: 14.5%; }
+.ov-device { top: 5.8%; left: 23.5%; }
+.ov-taxes { top: 5.8%; left: 33.5%; }
+.ov-monthly { top: 5.0%; left: 81.5%; font-size: clamp(10px, 2.0cqw, 16px); }
+
+.ov-autopay { top: 12.0%; left: 4.5%; font-size: clamp(8px, 1.5cqw, 13px); }
+.ov-duedate { top: 12.0%; left: 59.0%; }
+
+.ov-reimbursed { top: 33.0%; left: 38.5%; }
+.ov-nonreimbursed { top: 36.8%; left: 38.5%; }
+.ov-bill1-actual { top: 40.5%; left: 31.5%; }
+.ov-bill2-actual { top: 39.5%; left: 66.0%; }
+.ov-bill3-actual { top: 39.5%; left: 83.5%; }
+
+.ov-bill1-carrier { top: 44.5%; left: 32.5%; }
+.ov-bill2-carrier { top: 43.5%; left: 64.5%; }
+.ov-bill3-carrier { top: 43.5%; left: 82.5%; }
+
+.carrier-wrong-circle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0b57d0;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+}
+
+.carrier-wrong-x {
+  position: absolute;
+  font-size: 14px;
+  color: #0b57d0;
+  transform: rotate(15deg);
+}
+
+@media print {
+  body.printing-generator #top-left-controls,
+  body.printing-generator #top-right-hub,
+  body.printing-generator #dashboard-view,
+  body.printing-generator #login-view,
+  body.printing-generator #scanner-view,
+  body.printing-generator #review-view,
+  body.printing-generator #print-view,
+  body.printing-generator #docs-view,
+  body.printing-generator .gen-controls-bar,
+  body.printing-generator .gen-form-pane,
+  body.printing-generator .modal-overlay {
+    display: none !important;
+  }
+
+  body.printing-generator #generator-view {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  body.printing-generator .gen-workspace-grid {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  body.printing-generator .gen-preview-pane {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.printing-generator .gen-paper-stage {
+    max-width: 8.5in !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    max-height: 11in !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
 }
