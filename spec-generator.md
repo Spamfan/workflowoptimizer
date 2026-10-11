@@ -1,77 +1,95 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `generator.js`
-### Document Version: `v0.1.2`
+### Document Version: `v0.1.3`
 
 ---
 
 ### 1. OVERVIEW & SCOPE
 * **Purpose:** Provides a rapid, kiosk-optimized customer quote and onboarding tear-sheet generator for wireless device financing and rate plan estimates.
-* **Initial Target Scope:** Exclusively scoped to Verizon Wireless (VZW) single-line accounts on the "Simplicity" rate plan, with architectural hooks for AT&T (ATT) and T-Mobile (TMO) multi-carrier expansion.
-* **Core Output:** Renders an interactive digital replica of the physical counter handout that compiles into a 2-up printable tear-sheet (2 handouts per 8.5" x 11" page).
+* **Multi-Carrier Scope:** Supports AT&T (`att`), Verizon (`vzw`), and T-Mobile (`tmo`) single-line and multi-line customer setups.
+* **Core Output:** Compiles a 2-up printable tear-sheet (2 handouts per 8.5" x 11" page) using base sheet asset `ths3-1.png`.
+* **Top-Half Population Rule:** Dynamic DOM overlays populate strictly on the top half. The bottom half remains 100% blank pre-printed lines to preserve paper for manual handwriting.
+* **Print Typography:** Rendered overlays print in high-contrast solid black (`#000000`).
 
 ---
 
 ### 2. SECURITY & ZERO-KNOWLEDGE ARCHITECTURE
 * **Passcode / PIN Strict Exclusion:**
-  * The customer PIN / Passcode must NEVER be entered into the UI, DOM inputs, memory objects, or browser storage.
-  * The digital interface displays a disabled or blank physical placeholder line for PIN/Passcode.
-  * The physical print layout renders an empty underline (`________`) designated strictly for post-print manual customer handwriting.
+  * The customer PIN / Passcode must NEVER be entered into UI inputs, DOM attributes, state objects, or browser storage.
+  * The digital interface omits the field entirely; the physical print output renders an untouched underline designated strictly for customer manual pen-entry.
 * **PII & Storage Policy:**
-  * Customer Name (`Name`) and Phone Number (`Number`) remain ephemeral to the active session.
-  * Non-PII configuration defaults (Carrier, State, Autopay instrument, Due date offset) persist in browser storage under key `localStorage['wfo_bill_gen']`.
+  * Customer Name and Phone Number remain ephemeral to the active session.
+  * Non-PII configuration defaults (Carrier, State, Autopay instrument, Due date days) persist in state and local storage.
 
 ---
 
-### 3. DATA SCHEMA & FIELD DEFINITIONS
-* `Carn` (Carrier): String token. Default: `"VZW"`. Extensible to `"ATT"`, `"TMO"`.
-* `Name` (Customer Name): String, ceiling: 22 characters. Format: First and Last Name or First Name + Last Initial.
-* `Number` (Phone Number): String, strictly 10 digits. Masking toggle optional in UI; strictly unmasked on physical print output (`XXX-XXX-XXXX` or 10 digits literal).
-* `BP` (Base Plan): Currency float. Default: `25.00` (Simplicity rate plan).
-  * Lookup triggers:
-    * `BP == 25.00` -> Plan identified as `simplicity`
-    * `BP == 65.00` -> Plan identified as `welcome`
-    * `BP == 80.00` -> Plan identified as `plus`
-    * `BP == 90.00` -> Plan identified as `ultimate`
-* `Devi` (Device Installment): Currency float. Default: `0.00`. Monthly financing installment.
-* `taf` (Taxes & Fees): Currency float.
-  * Auto-fill rule: When `plan == 'simplicity'` and `state == 'NH'`, default `taf = 8.00`. User-overridable.
-* `mo` (Monthly Estimate Total): Computed currency float.
-  * Calculation: `raw = BP + Devi + taf`
-  * Monthly Total Rounding: Always rounded UP to the nearest whole integer dollar (`Math.ceil(raw)`), e.g., $25 + $3.03 + $8 = $36.03 -> `~$37/mo`.
-* `term`: String label. Default: `"(3 yr)"`.
-* `pmt` (Payment Method): String token. Default: `"CHECKING ACCT"`.
-* `date` (Due Date Offset): Integer days. Default: `20` days from activation.
+### 3. CARRIER PROFILE MATRIX & DEFAULTS
+* Selecting a carrier pill re-applies default profile values while permitting user overrides:
+  * **AT&T (`att`):**
+    * Base Plan: `$50.00`
+    * Term: `3` (displays `3` inside `(___yr)`)
+    * Autopay: `CHECKING ACCT`
+    * First Bill Due: `20` days
+    * Section Suppression: Disabled (Reimbursement section visible)
+  * **Verizon (`vzw`):**
+    * Base Plan: `$25.00`
+    * Term: `3` (displays `3` inside `(___yr)`)
+    * Autopay: `CHECKING ACCT`
+    * First Bill Due: `14` days
+    * Section Suppression: Enabled (`#ffffff` mask active by default)
+  * **T-Mobile (`tmo`):**
+    * Base Plan: `$25.00`
+    * Term: `2` (displays `2` inside `(___yr)`)
+    * Autopay: `DEBIT`
+    * First Bill Due: `20` days
+    * Section Suppression: Enabled (`#ffffff` mask active by default)
 
 ---
 
-### 4. MULTI-CARRIER SUPPRESSION & CALCULATION ENGINE
-* **VZW & T-Mobile Suppression:**
-  * When `Carn == "VZW"` or `Carn == "TMO"`, a pure white masking rectangle (`#ffffff`) covers top-sheet Y: 25.5% to 50.0%, concealing the notices and bill estimate comparison circles.
-* **AT&T Reimbursement Equations:**
-  * `Reimbursed = 10 (autopay) + (35 if act fee returned) + device credit`. Visual display rounds DOWN (`Math.floor(Reimbursed)`), formatted as `~[reimbursed]`.
-  * `Non-reimbursed`: Defaults to `$0.00` (`N/A`), user-overridable.
-  * `Bill 1 Actual = Math.ceil(Monthly + Reimbursed + NonReimbursed)`.
-  * `Bills 2 & 3 Actual = [Monthly] - X`.
-  * `Bill 1 Carrier Estimate = Bill 1 Actual` with checkmark (`✓`).
-  * `Bills 2 & 3 Carrier Estimate = Math.ceil(Monthly + 10 + device credit)` enclosed in circle with strike-through (`✕`).
+### 4. DATA SCHEMA & PRECISION COORDINATE LAYOUT
+* `carrier`: String token (`att`, `vzw`, `tmo`).
+* `customerName`: String (up to 26 chars). Renders directly on `___ for` line; empty string leaves line blank.
+* `phoneNumber`: 10 digits parsed into 3 discrete coordinate slots over underlines (`area`, `prefix`, `line`). Pre-printed dashes remain untouched.
+* `planCost`: Currency float rendered above `PLAN(S)`.
+* `deviceRetailMonthly` / `deviceMonthlyCredit`: Computes net installment `deviceNet = Math.max(0, retail - credit)`. If `$0.00` or empty, renders `N/A`; if `> 0`, renders decimal currency.
+* `state` & `taxes`: State tax defaults: NH (`$8.00`), ME (`$9.00`), VT (`$10.00`), MA (`$10.00`), NY (`$15.00`), OTHER (`$8.00`).
+* `monthlyTotal`: `Math.ceil(planCost + deviceNet + taxes)` rendered directly before `/mo`.
+* `term`: Renders inside `(___yr)` (e.g. `3` or `2`).
+* `autopayMethod`: Renders on line before `and paperless billing to email`.
+* `dueDateDays`: Integer days rendered before `days or date selected for autopay`.
 
 ---
 
-### 5. UI LAYOUT & PRINT MEDIA SPECIFICATION
+### 5. SECTION SUPPRESSION & MASKING OVERRIDES
+* **Default Suppression:** For `vzw` and `tmo`, a solid white masking rectangle (`#ffffff`) covers top-sheet Y: 25.5% to 50.0%, concealing notices and comparison circles.
+* **Manual Override Toggle:** A "White-out bill notices?" checkbox (`maskNotices`) allows unmasking VZW and TMO sections. When unchecked, the white mask hides, allowing reps to handwrite on the raw pre-printed lines.
+* **AT&T Visibility:** Always shows the full notice and calculation overlays.
+
+---
+
+### 6. AT&T 4-BILL CALCULATION ENGINE
+* `reimbursedActual = autopayCredit ($10) + (actFeeReturned ? 35 : 0) + deviceDiscount`.
+* `reimbursedDisplay = Math.floor(reimbursedActual)`. Renders before `is reimbursed...`.
+* `nonReimbursedActual`: Defaults to `$0.00` (`N/A`). Overridable by rep.
+* `bill1Actual = Math.ceil(monthlyTotal + reimbursedActual + nonReimbursedActual)`.
+* `bill2Actual`, `bill3Actual`, `bill4Actual`: Rendered as `${monthlyTotal}⁻ˣ` (superscript `-X`).
+* `carrierBill1 = ${bill1Actual} ✓`.
+* `carrierSubsequent = Math.ceil(monthlyTotal + autopayCredit + deviceDiscount)`. Rendered inside pre-printed oval strikethrough graphics labeled "wrong".
+
+---
+
+### 7. UI LAYOUT & PRINT MEDIA SPECIFICATION
 * **Interactive UI:**
-  * Form layout visually matches the physical tear-sheet layout.
-  * Modifiable fields render as light gray pill inputs matching M3 tokens.
-  * Any gray field is user-editable; default auto-fills populate automatically upon field dependency updates (e.g., changing BP updates plan type; changing plan/state updates taf).
-* **2-Up Print Format:**
-  * Optimized for standard US Letter (8.5" x 11") portrait orientation via `@media print`.
-  * Top half: Tear-sheet Copy 1.
-  * Bisecting center line: Horizontal dashed scissor cut line (`- - - - - - - - - - - - - - - - - - - - - - - - - - - -`).
-  * Bottom half: Tear-sheet Copy 2.
-  * Underlines, callout boxes, and typography render with crisp, high-contrast print borders.
+  * Form layout on left pane (`.gen-form-pane`); live WYSIWYG sheet on right (`.gen-preview-pane`).
+  * Inputs adhere to M3 pill styling tokens.
+* **Print Media Rules:**
+  * Isolated via `@media print` with class `body.printing-generator`.
+  * Renders standard US Letter (8.5" x 11") portrait orientation with zero margins.
+  * Single-page constraint with `page-break-after: avoid; break-after: avoid`.
 
 ---
 
-### 6. INTEGRATION BOUNDARIES
+### 8. INTEGRATION BOUNDARIES & CACHE BUSTING
 * **Module Ownership:** `generator.js` manages state calculation, input binding, and template population.
-* **Document Engine Handoff:** Integrates directly with `docs.js` via modal launch or direct print dispatch (`window.print()`).
-* **Cache Busting:** Future integration into `app.js` and `index.html` must follow query-string pinning rules (`./generator.js?v=0.1.0`).
+* **Document Engine Handoff:** Dispatches print jobs directly via `window.print()`.
+* **Cache Busting:** Downstream consumers `app.js` and `index.html` pin version query strings (`./generator.js?v=0.1.1`).
