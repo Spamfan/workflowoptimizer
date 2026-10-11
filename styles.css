@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.18 */
+/* Prototype Crimson - styles.css v0.1.19 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2806,6 +2806,8 @@ body {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--border);
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .gen-base-sheet {
@@ -2847,34 +2849,36 @@ body {
   vertical-align: super;
 }
 
-.ov-carrier { top: 3.1%; left: 6.0%; font-size: clamp(9px, 1.7cqw, 14px); }
-.ov-name { top: 3.1%; left: 16.0%; }
-.ov-num-area { top: 3.1%; left: 39.5%; }
-.ov-num-prefix { top: 3.1%; left: 45.8%; }
-.ov-num-line { top: 3.1%; left: 52.8%; }
+.ov-carrier { top: 3.1%; left: 2.5%; text-align: left; font-size: clamp(9px, 1.7cqw, 14px); }
+.ov-name { top: 3.1%; left: 13.0%; text-align: left; max-width: 17.5%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ov-num-area { top: 3.1%; left: 48.5%; transform: translateX(-50%); text-align: center; }
+.ov-num-prefix { top: 3.1%; left: 57.5%; transform: translateX(-50%); text-align: center; }
+.ov-num-line { top: 3.1%; left: 67.5%; transform: translateX(-50%); text-align: center; }
 .ov-passcode { top: 3.1%; left: 74.0%; letter-spacing: 2px; }
 
-.ov-plan { top: 6.8%; left: 15.5%; }
-.ov-device { top: 6.8%; left: 24.8%; }
-.ov-taxes { top: 6.8%; left: 34.0%; }
-.ov-monthly { top: 6.2%; left: 78.8%; font-size: clamp(9px, 1.8cqw, 15px); }
-.ov-term { top: 6.2%; left: 89.2%; }
+.ov-plan { top: 6.8%; left: 18.5%; transform: translateX(-50%); text-align: center; }
+.ov-device { top: 6.8%; left: 29.2%; transform: translateX(-50%); text-align: center; }
+.ov-taxes { top: 6.8%; left: 39.8%; transform: translateX(-50%); text-align: center; }
+.ov-monthly { top: 6.2%; left: 89.2%; transform: translateX(-50%); text-align: center; font-size: clamp(9px, 1.8cqw, 15px); }
+.ov-term { top: 6.2%; left: 96.8%; transform: translateX(-50%); text-align: center; }
 
-.ov-autopay { top: 13.5%; left: 5.5%; font-size: clamp(8px, 1.4cqw, 12px); }
-.ov-duedate { top: 13.5%; left: 58.8%; }
+.ov-autopay { top: 13.5%; left: 5.2%; text-align: left; font-size: clamp(8px, 1.4cqw, 12px); }
+.ov-duedate { top: 13.5%; left: 67.2%; transform: translateX(-50%); text-align: center; }
 
-.ov-reimbursed { top: 33.6%; left: 38.8%; }
-.ov-nonreimbursed { top: 37.4%; left: 38.8%; }
+.ov-reimbursed { top: 33.6%; left: 45.5%; transform: translateX(-50%); text-align: center; }
+.ov-nonreimbursed { top: 37.4%; left: 45.5%; transform: translateX(-50%); text-align: center; }
 
-.ov-bill1-actual { top: 41.2%; left: 32.5%; }
-.ov-bill2-actual { top: 41.2%; left: 50.0%; }
-.ov-bill3-actual { top: 41.2%; left: 67.5%; }
-.ov-bill4-actual { top: 41.2%; left: 85.0%; }
+.ov-bill1-actual { top: 41.2%; left: 39.5%; transform: translateX(-50%); text-align: center; }
+.ov-bill2-actual { top: 41.2%; left: 59.0%; transform: translateX(-50%); text-align: center; }
+.ov-bill3-actual { top: 41.2%; left: 78.5%; transform: translateX(-50%); text-align: center; }
+.ov-bill4-actual { top: 41.2%; left: 96.5%; transform: translateX(-50%); text-align: center; }
 
-.ov-bill1-carrier { top: 45.6%; left: 33.0%; }
-.ov-bill2-carrier { top: 45.6%; left: 49.5%; }
-.ov-bill3-carrier { top: 45.6%; left: 67.0%; }
-.ov-bill4-carrier { top: 45.6%; left: 84.5%; }
+.ov-bill-drop { display: inline-block; margin-left: 2px; vertical-align: baseline; font-size: 0.85em; }
+
+.ov-bill1-carrier { top: 45.6%; left: 39.5%; transform: translateX(-50%); text-align: center; }
+.ov-bill2-carrier { top: 45.6%; left: 58.0%; transform: translateX(-50%); text-align: center; }
+.ov-bill3-carrier { top: 45.6%; left: 76.5%; transform: translateX(-50%); text-align: center; }
+.ov-bill4-carrier { top: 45.6%; left: 95.0%; transform: translateX(-50%); text-align: center; }
 
 .carrier-wrong-circle {
   position: relative;
@@ -2934,6 +2938,7 @@ body {
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
+    padding: 0 !important;
     page-break-after: avoid;
     break-after: avoid;
   }

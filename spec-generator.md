@@ -1,6 +1,6 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `generator.js`
-### Document Version: `v0.1.3`
+### Document Version: `v0.1.4`
 
 ---
 
@@ -8,6 +8,7 @@
 * **Purpose:** Provides a rapid, kiosk-optimized customer quote and onboarding tear-sheet generator for wireless device financing and rate plan estimates.
 * **Multi-Carrier Scope:** Supports AT&T (`att`), Verizon (`vzw`), and T-Mobile (`tmo`) single-line and multi-line customer setups.
 * **Core Output:** Compiles a 2-up printable tear-sheet (2 handouts per 8.5" x 11" page) using base sheet asset `ths3-1.png`.
+* **Zero-Margin Baked Layout Mandate:** Outer 0.35"–0.4" sheet margins are pre-baked directly into `ths3-1.png`. The stage container and print rules enforce strictly `margin: 0; padding: 0; border: none;` to maintain exact 1:1 coordinate registration.
 * **Top-Half Population Rule:** Dynamic DOM overlays populate strictly on the top half. The bottom half remains 100% blank pre-printed lines to preserve paper for manual handwriting.
 * **Print Typography:** Rendered overlays print in high-contrast solid black (`#000000`).
 
@@ -47,16 +48,17 @@
 ---
 
 ### 4. DATA SCHEMA & PRECISION COORDINATE LAYOUT
-* `carrier`: String token (`att`, `vzw`, `tmo`).
-* `customerName`: String (up to 26 chars). Renders directly on `___ for` line; empty string leaves line blank.
-* `phoneNumber`: 10 digits parsed into 3 discrete coordinate slots over underlines (`area`, `prefix`, `line`). Pre-printed dashes remain untouched.
-* `planCost`: Currency float rendered above `PLAN(S)`.
-* `deviceRetailMonthly` / `deviceMonthlyCredit`: Computes net installment `deviceNet = Math.max(0, retail - credit)`. If `$0.00` or empty, renders `N/A`; if `> 0`, renders decimal currency.
-* `state` & `taxes`: State tax defaults: NH (`$8.00`), ME (`$9.00`), VT (`$10.00`), MA (`$10.00`), NY (`$15.00`), OTHER (`$8.00`).
-* `monthlyTotal`: `Math.ceil(planCost + deviceNet + taxes)` rendered directly before `/mo`.
-* `term`: Renders inside `(___yr)` (e.g. `3` or `2`).
-* `autopayMethod`: Renders on line before `and paperless billing to email`.
-* `dueDateDays`: Integer days rendered before `days or date selected for autopay`.
+* `carrier`: Left-anchored on pre-printed carrier underline.
+* `customerName`: Left-anchored on `___ for` line with `max-width: 17.5%` and auto-scaling font size for names $> 18$ characters.
+* `phoneNumber`: 10 digits parsed into 3 discrete mid-point centered slots (`ov-num-area`, `ov-num-prefix`, `ov-num-line`) centered over respective blank underlines. Pre-printed dashes remain untouched.
+* `planCost`: Mid-point centered over `PLAN(S)` blank.
+* `deviceRetailMonthly` / `deviceMonthlyCredit`: Computes net installment `deviceNet = Math.max(0, retail - credit)`. Mid-point centered over `DEVICE(S)` blank.
+* `state` & `taxes`: State tax defaults. Mid-point centered over `TAXES/FEES` blank.
+* `monthlyTotal`: `Math.ceil(planCost + deviceNet + taxes)` mid-point centered before `/mo`.
+* `term`: Mid-point centered inside `(___yr)` (e.g. `3` or `2`).
+* `autopayMethod`: Left-anchored on line before `and paperless billing to email`.
+* `dueDateDays`: Mid-point centered before `days or date selected for autopay`.
+* `ov-bill-drop`: Minus-X suffix `⁻ˣ` anchored directly beneath the vertical dashed arrow terminus for AT&T Bills 2, 3, and 4.
 
 ---
 
@@ -92,4 +94,4 @@
 ### 8. INTEGRATION BOUNDARIES & CACHE BUSTING
 * **Module Ownership:** `generator.js` manages state calculation, input binding, and template population.
 * **Document Engine Handoff:** Dispatches print jobs directly via `window.print()`.
-* **Cache Busting:** Downstream consumers `app.js` and `index.html` pin version query strings (`./generator.js?v=0.1.1`).
+* **Cache Busting:** Downstream consumers `app.js` and `index.html` pin version query strings (`./generator.js?v=0.1.2`, `styles.css?v=0.1.19`).

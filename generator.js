@@ -1,7 +1,7 @@
-// Prototype Crimson - generator.js (v0.1.1)
+// Prototype Crimson - generator.js (v0.1.2)
 // Customer Quote & 2-Up Take Home Sheet Generator Engine
 
-export const GENERATOR_VERSION = "v0.1.1";
+export const GENERATOR_VERSION = "v0.1.2";
 
 const STATE_TAX_DEFAULTS = {
   NH: 8.00,
@@ -97,7 +97,16 @@ export function updatePreview() {
 
   const carrierProfile = CARRIER_PROFILES[genState.carrier] || CARRIER_PROFILES.att;
   setEl('ov-carrier', carrierProfile.name);
-  setEl('ov-name', genState.customerName || '');
+  const nameEl = document.getElementById('ov-name');
+  if (nameEl) {
+    nameEl.textContent = genState.customerName || '';
+    const nameLen = (genState.customerName || '').length;
+    if (nameLen > 18) {
+      nameEl.style.fontSize = `${Math.max(0.62, 0.95 - (nameLen - 18) * 0.035)}em`;
+    } else {
+      nameEl.style.fontSize = '';
+    }
+  }
 
   const digits = (genState.phoneNumber || '').replace(/\D/g, '');
   setEl('ov-num-area', digits.length >= 3 ? digits.slice(0, 3) : digits);
@@ -119,9 +128,9 @@ export function updatePreview() {
     setEl('ov-reimbursed', `${calc.reimbursedDisplay}`);
     setEl('ov-nonreimbursed', calc.nonReimbursedActual > 0 ? calc.nonReimbursedActual.toFixed(0) : 'N/A');
     setEl('ov-bill1-actual', `${calc.bill1Actual}`);
-    setEl('ov-bill2-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
-    setEl('ov-bill3-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
-    setEl('ov-bill4-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
+    setEl('ov-bill2-actual', `${calc.monthlyTotal}<span class="ov-bill-drop">-X</span>`);
+    setEl('ov-bill3-actual', `${calc.monthlyTotal}<span class="ov-bill-drop">-X</span>`);
+    setEl('ov-bill4-actual', `${calc.monthlyTotal}<span class="ov-bill-drop">-X</span>`);
     setEl('ov-bill1-carrier', `${calc.carrierBill1} ✓`);
     setEl('ov-bill2-carrier', `${calc.carrierSubsequent}`);
     setEl('ov-bill3-carrier', `${calc.carrierSubsequent}`);
