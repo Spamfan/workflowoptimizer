@@ -1,20 +1,21 @@
-// Prototype Crimson - generator.js (v0.1.0)
+// Prototype Crimson - generator.js (v0.1.1)
 // Customer Quote & 2-Up Take Home Sheet Generator Engine
 
-export const GENERATOR_VERSION = "v0.1.0";
+export const GENERATOR_VERSION = "v0.1.1";
 
 const STATE_TAX_DEFAULTS = {
   NH: 8.00,
-  VT: 9.50,
   ME: 9.00,
-  MA: 9.25,
+  VT: 10.00,
+  MA: 10.00,
+  NY: 15.00,
   OTHER: 8.00
 };
 
-const CARRIER_PLAN_DEFAULTS = {
-  att: 50.00,
-  vzw: 25.00,
-  tmo: 25.00
+const CARRIER_PROFILES = {
+  att: { name: 'AT&T', planCost: 50.00, term: '3', autopay: 'CHECKING ACCT', dueDate: 20, maskNotices: false },
+  vzw: { name: 'VZW', planCost: 25.00, term: '3', autopay: 'CHECKING ACCT', dueDate: 14, maskNotices: true },
+  tmo: { name: 'T-Mobile', planCost: 25.00, term: '2', autopay: 'DEBIT', dueDate: 20, maskNotices: true }
 };
 
 export const genState = {
@@ -24,10 +25,12 @@ export const genState = {
   planCost: 50.00,
   deviceRetailMonthly: 0.00,
   deviceMonthlyCredit: 0.00,
+  term: '3',
   state: 'NH',
   taxes: 8.00,
   autopayMethod: 'CHECKING ACCT',
   dueDateDays: 20,
+  maskNotices: false,
   autopayCredit: 10.00,
   actFeeReturned: true,
   nonReimbursed: 0.00
@@ -70,60 +73,76 @@ export function updatePreview() {
     pill.classList.toggle('active', pill.dataset.carrier === genState.carrier);
   });
 
-  // Section visibility (ATT shows notices; VZW/TMO white-outs)
+  // Section visibility (ATT shows notices; non-ATT shows mask toggle)
   const attSections = document.querySelectorAll('.gen-att-only');
   attSections.forEach(el => {
     el.style.display = genState.carrier === 'att' ? 'flex' : 'none';
   });
 
+  const nonAttSections = document.querySelectorAll('.gen-non-att-only');
+  nonAttSections.forEach(el => {
+    el.style.display = genState.carrier === 'att' ? 'none' : 'flex';
+  });
+
   const previewMask = document.getElementById('gen-preview-mask');
   if (previewMask) {
-    previewMask.style.display = genState.carrier === 'att' ? 'none' : 'block';
+    previewMask.style.display = (genState.carrier !== 'att' && genState.maskNotices) ? 'block' : 'none';
   }
 
   // Coordinate overlay text updates
   const setEl = (id, text) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = text;
+    if (el) el.innerHTML = text;
   };
 
-  const carrierTag = genState.carrier.toUpperCase();
-  setEl('ov-carrier', carrierTag);
-  setEl('ov-name', genState.customerName || '________________');
-  setEl('ov-number', genState.phoneNumber || '___ - ___ - ____');
+  const carrierProfile = CARRIER_PROFILES[genState.carrier] || CARRIER_PROFILES.att;
+  setEl('ov-carrier', carrierProfile.name);
+  setEl('ov-name', genState.customerName || '');
+
+  const digits = (genState.phoneNumber || '').replace(/\D/g, '');
+  setEl('ov-num-area', digits.length >= 3 ? digits.slice(0, 3) : digits);
+  setEl('ov-num-prefix', digits.length > 3 ? digits.slice(3, 6) : '');
+  setEl('ov-num-line', digits.length > 6 ? digits.slice(6, 10) : '');
+
   setEl('ov-plan', genState.planCost > 0 ? genState.planCost.toFixed(0) : '0');
 
-  const devNetText = calc.deviceNet > 0 ? calc.deviceNet.toFixed(2) : 'X';
+  const devNetText = calc.deviceNet > 0 ? calc.deviceNet.toFixed(2) : 'N/A';
   setEl('ov-device', devNetText);
   setEl('ov-taxes', genState.taxes.toFixed(2));
-  setEl('ov-monthly', `~${calc.monthlyTotal}/mo (3 yr)`);
+  setEl('ov-monthly', `${calc.monthlyTotal}`);
+  setEl('ov-term', `${genState.term || '3'}`);
   setEl('ov-autopay', genState.autopayMethod);
-  setEl('ov-duedate', `~${genState.dueDateDays}`);
+  setEl('ov-duedate', `${genState.dueDateDays}`);
 
   // ATT notices overlays
   if (genState.carrier === 'att') {
-    setEl('ov-reimbursed', `~${calc.reimbursedDisplay}`);
-    setEl('ov-nonreimbursed', `~${calc.nonReimbursedActual > 0 ? calc.nonReimbursedActual.toFixed(0) : '0'}`);
+    setEl('ov-reimbursed', `${calc.reimbursedDisplay}`);
+    setEl('ov-nonreimbursed', calc.nonReimbursedActual > 0 ? calc.nonReimbursedActual.toFixed(0) : 'N/A');
     setEl('ov-bill1-actual', `${calc.bill1Actual}`);
-    setEl('ov-bill2-actual', `${calc.monthlyTotal} - X`);
-    setEl('ov-bill3-actual', `${calc.monthlyTotal} - X`);
+    setEl('ov-bill2-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
+    setEl('ov-bill3-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
+    setEl('ov-bill4-actual', `${calc.monthlyTotal}<sup>-X</sup>`);
     setEl('ov-bill1-carrier', `${calc.carrierBill1} ✓`);
     setEl('ov-bill2-carrier', `${calc.carrierSubsequent}`);
     setEl('ov-bill3-carrier', `${calc.carrierSubsequent}`);
+    setEl('ov-bill4-carrier', `${calc.carrierSubsequent}`);
   }
 }
 
 export function resetGenerator() {
+  const profile = CARRIER_PROFILES.att;
   genState.carrier = 'att';
   genState.customerName = '';
   genState.phoneNumber = '';
-  genState.planCost = CARRIER_PLAN_DEFAULTS.att;
+  genState.planCost = profile.planCost;
   genState.deviceRetailMonthly = 0.00;
   genState.deviceMonthlyCredit = 0.00;
+  genState.term = profile.term;
   genState.state = 'NH';
   genState.taxes = STATE_TAX_DEFAULTS.NH;
-  genState.autopayMethod = 'CHECKING ACCT';
-  genState.dueDateDays = 20;
+  genState.autopayMethod = profile.autopay;
+  genState.dueDateDays = profile.dueDate;
+  genState.maskNotices = profile.maskNotices;
   genState.autopayCredit = 10.00;
   genState.actFeeReturned = true;
   genState.nonReimbursed = 0.00;
@@ -147,10 +166,12 @@ function syncInputsFromState() {
   setVal('gen-input-plan', genState.planCost);
   setVal('gen-input-dev-retail', genState.deviceRetailMonthly || '');
   setVal('gen-input-dev-credit', genState.deviceMonthlyCredit || '');
+  setVal('gen-input-term', genState.term);
   setVal('gen-select-state', genState.state);
   setVal('gen-input-taxes', genState.taxes);
   setVal('gen-input-autopay', genState.autopayMethod);
   setVal('gen-input-duedate', genState.dueDateDays);
+  setChecked('gen-check-mask-notices', genState.maskNotices);
   setChecked('gen-check-actfee', genState.actFeeReturned);
   setVal('gen-input-nonreimbursed', genState.nonReimbursed || '');
 }
@@ -176,7 +197,12 @@ export function initGeneratorEngine() {
       const carrier = btn.dataset.carrier;
       if (!carrier) return;
       genState.carrier = carrier;
-      genState.planCost = CARRIER_PLAN_DEFAULTS[carrier] || 25.00;
+      const profile = CARRIER_PROFILES[carrier] || CARRIER_PROFILES.att;
+      genState.planCost = profile.planCost;
+      genState.term = profile.term;
+      genState.autopayMethod = profile.autopay;
+      genState.dueDateDays = profile.dueDate;
+      genState.maskNotices = profile.maskNotices;
       syncInputsFromState();
       updatePreview();
     });
@@ -212,6 +238,16 @@ export function initGeneratorEngine() {
 
   bindInput('gen-input-dev-credit', 'input', (e) => {
     genState.deviceMonthlyCredit = parseFloat(e.target.value) || 0;
+    updatePreview();
+  });
+
+  bindInput('gen-input-term', 'input', (e) => {
+    genState.term = e.target.value;
+    updatePreview();
+  });
+
+  bindInput('gen-check-mask-notices', 'change', (e) => {
+    genState.maskNotices = e.target.checked;
     updatePreview();
   });
 

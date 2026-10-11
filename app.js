@@ -1,15 +1,15 @@
-// Prototype Crimson - app.js (v0.1.22)
+// Prototype Crimson - app.js (v0.1.23)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.1';
 import { initDocsEngine, DOCS_VERSION } from './docs.js?v=0.1.4';
-import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.0';
+import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.1';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.17';
 
-export const APP_VERSION = "v0.1.22";
+export const APP_VERSION = "v0.1.23";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.22';
+  let indexVer = 'v0.1.23';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -17,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.16';
+  let cssVer = 'v0.1.17';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);

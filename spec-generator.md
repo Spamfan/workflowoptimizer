@@ -1,6 +1,6 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `generator.js`
-### Document Version: `v0.1.1`
+### Document Version: `v0.1.2`
 
 ---
 

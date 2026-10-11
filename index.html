@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.22">
+<html lang="en" data-version="v0.1.23">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.22">
+  <meta name="version" content="v0.1.23">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.16">
+  <link rel="stylesheet" href="styles.css?v=0.1.17">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -175,6 +175,10 @@
             <label class="gen-label">Device Credit/mo ($):</label>
             <input type="number" step="0.01" id="gen-input-dev-credit" class="gen-input" placeholder="0.00">
           </div>
+          <div class="gen-field-row">
+            <label class="gen-label">Financing Term (yr):</label>
+            <input type="text" id="gen-input-term" class="gen-input" value="3" maxlength="6">
+          </div>
         </div>
 
         <div class="gen-form-section">
@@ -184,9 +188,10 @@
             <div class="gen-input-group">
               <select id="gen-select-state" class="gen-select">
                 <option value="NH" selected>NH ($8.00)</option>
-                <option value="VT">VT ($9.50)</option>
                 <option value="ME">ME ($9.00)</option>
-                <option value="MA">MA ($9.25)</option>
+                <option value="VT">VT ($10.00)</option>
+                <option value="MA">MA ($10.00)</option>
+                <option value="NY">NY ($15.00)</option>
                 <option value="OTHER">Other</option>
               </select>
               <input type="number" step="0.01" id="gen-input-taxes" class="gen-input gen-input-sm" value="8.00">
@@ -199,6 +204,16 @@
           <div class="gen-field-row">
             <label class="gen-label">First Bill Due (days):</label>
             <input type="number" id="gen-input-duedate" class="gen-input" value="20">
+          </div>
+        </div>
+
+        <div class="gen-form-section gen-non-att-only" style="display: none;">
+          <h3 class="gen-section-title">Notices Suppression</h3>
+          <div class="gen-field-row">
+            <label class="gen-checkbox-label">
+              <input type="checkbox" id="gen-check-mask-notices" checked>
+              <span>White-out bill notices?</span>
+            </label>
           </div>
         </div>
 
@@ -226,32 +241,33 @@
           <div id="gen-preview-mask" class="gen-carrier-mask" style="display: none;"></div>
 
           <!-- Layer 3: Coordinate Overlays (Top Half) -->
-          <div class="gen-overlay-item ov-carrier" id="ov-carrier">ATT</div>
+          <div class="gen-overlay-item ov-carrier" id="ov-carrier">AT&T</div>
           <div class="gen-overlay-item ov-name" id="ov-name"></div>
-          <div class="gen-overlay-item ov-number" id="ov-number"></div>
-          <div class="gen-overlay-item ov-passcode">________</div>
+          <div class="gen-overlay-item ov-num-area" id="ov-num-area"></div>
+          <div class="gen-overlay-item ov-num-prefix" id="ov-num-prefix"></div>
+          <div class="gen-overlay-item ov-num-line" id="ov-num-line"></div>
+          <div class="gen-overlay-item ov-passcode" id="ov-passcode"></div>
 
           <div class="gen-overlay-item ov-plan" id="ov-plan">50</div>
-          <div class="gen-overlay-item ov-device" id="ov-device">X</div>
+          <div class="gen-overlay-item ov-device" id="ov-device">N/A</div>
           <div class="gen-overlay-item ov-taxes" id="ov-taxes">8.00</div>
-          <div class="gen-overlay-item ov-monthly" id="ov-monthly">~58/mo (3 yr)</div>
+          <div class="gen-overlay-item ov-monthly" id="ov-monthly">58</div>
+          <div class="gen-overlay-item ov-term" id="ov-term">3</div>
 
           <div class="gen-overlay-item ov-autopay" id="ov-autopay">CHECKING ACCT</div>
-          <div class="gen-overlay-item ov-duedate" id="ov-duedate">~20</div>
+          <div class="gen-overlay-item ov-duedate" id="ov-duedate">20</div>
 
           <!-- ATT Specific Coordinate Overlays -->
-          <div class="gen-overlay-item ov-reimbursed gen-att-only" id="ov-reimbursed">~50</div>
-          <div class="gen-overlay-item ov-nonreimbursed gen-att-only" id="ov-nonreimbursed">~0</div>
-          <div class="gen-overlay-item ov-bill1-actual gen-att-only" id="ov-bill1-actual">111</div>
-          <div class="gen-overlay-item ov-bill2-actual gen-att-only" id="ov-bill2-actual">58 - X</div>
-          <div class="gen-overlay-item ov-bill3-actual gen-att-only" id="ov-bill3-actual">58 - X</div>
-          <div class="gen-overlay-item ov-bill1-carrier gen-att-only" id="ov-bill1-carrier">111 ✓</div>
-          <div class="gen-overlay-item ov-bill2-carrier gen-att-only" id="ov-bill2-carrier">
-            <span class="carrier-wrong-circle">73<span class="carrier-wrong-x">✕</span></span>
-          </div>
-          <div class="gen-overlay-item ov-bill3-carrier gen-att-only" id="ov-bill3-carrier">
-            <span class="carrier-wrong-circle">73<span class="carrier-wrong-x">✕</span></span>
-          </div>
+          <div class="gen-overlay-item ov-reimbursed gen-att-only" id="ov-reimbursed">45</div>
+          <div class="gen-overlay-item ov-nonreimbursed gen-att-only" id="ov-nonreimbursed">N/A</div>
+          <div class="gen-overlay-item ov-bill1-actual gen-att-only" id="ov-bill1-actual">103</div>
+          <div class="gen-overlay-item ov-bill2-actual gen-att-only" id="ov-bill2-actual">58<sup>-X</sup></div>
+          <div class="gen-overlay-item ov-bill3-actual gen-att-only" id="ov-bill3-actual">58<sup>-X</sup></div>
+          <div class="gen-overlay-item ov-bill4-actual gen-att-only" id="ov-bill4-actual">58<sup>-X</sup></div>
+          <div class="gen-overlay-item ov-bill1-carrier gen-att-only" id="ov-bill1-carrier">103 ✓</div>
+          <div class="gen-overlay-item ov-bill2-carrier gen-att-only" id="ov-bill2-carrier">68</div>
+          <div class="gen-overlay-item ov-bill3-carrier gen-att-only" id="ov-bill3-carrier">68</div>
+          <div class="gen-overlay-item ov-bill4-carrier gen-att-only" id="ov-bill4-carrier">68</div>
         </div>
       </div>
     </div>
@@ -536,6 +552,6 @@
   <div id="doc-iphonetransfer" class="static-doc-container"></div>
   <div id="doc-scrappaper" class="static-doc-container"></div>
 
-  <script type="module" src="app.js?v=0.1.22"></script>
+  <script type="module" src="app.js?v=0.1.23"></script>
 </body>
 </html>
