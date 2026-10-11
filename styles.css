@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.17 */
+/* Prototype Crimson - styles.css v0.1.18 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2833,37 +2833,48 @@ body {
 .gen-overlay-item {
   position: absolute;
   z-index: 10;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
-  color: #0b57d0;
+  color: #000000;
   line-height: 1;
   user-select: none;
   pointer-events: none;
-  font-size: clamp(8px, 1.6cqw, 14px);
+  font-size: clamp(8px, 1.5cqw, 13px);
 }
 
-.ov-carrier { top: 1.9%; left: 3.5%; font-size: clamp(9px, 1.8cqw, 15px); }
-.ov-name { top: 1.9%; left: 12.5%; }
-.ov-number { top: 1.9%; left: 38.5%; letter-spacing: 0.5px; }
-.ov-passcode { top: 1.9%; left: 74.0%; color: #000000; letter-spacing: 2px; }
+.gen-overlay-item sup {
+  font-size: 0.65em;
+  vertical-align: super;
+}
 
-.ov-plan { top: 5.8%; left: 14.5%; }
-.ov-device { top: 5.8%; left: 23.5%; }
-.ov-taxes { top: 5.8%; left: 33.5%; }
-.ov-monthly { top: 5.0%; left: 81.5%; font-size: clamp(10px, 2.0cqw, 16px); }
+.ov-carrier { top: 3.1%; left: 6.0%; font-size: clamp(9px, 1.7cqw, 14px); }
+.ov-name { top: 3.1%; left: 16.0%; }
+.ov-num-area { top: 3.1%; left: 39.5%; }
+.ov-num-prefix { top: 3.1%; left: 45.8%; }
+.ov-num-line { top: 3.1%; left: 52.8%; }
+.ov-passcode { top: 3.1%; left: 74.0%; letter-spacing: 2px; }
 
-.ov-autopay { top: 12.0%; left: 4.5%; font-size: clamp(8px, 1.5cqw, 13px); }
-.ov-duedate { top: 12.0%; left: 59.0%; }
+.ov-plan { top: 6.8%; left: 15.5%; }
+.ov-device { top: 6.8%; left: 24.8%; }
+.ov-taxes { top: 6.8%; left: 34.0%; }
+.ov-monthly { top: 6.2%; left: 78.8%; font-size: clamp(9px, 1.8cqw, 15px); }
+.ov-term { top: 6.2%; left: 89.2%; }
 
-.ov-reimbursed { top: 33.0%; left: 38.5%; }
-.ov-nonreimbursed { top: 36.8%; left: 38.5%; }
-.ov-bill1-actual { top: 40.5%; left: 31.5%; }
-.ov-bill2-actual { top: 39.5%; left: 66.0%; }
-.ov-bill3-actual { top: 39.5%; left: 83.5%; }
+.ov-autopay { top: 13.5%; left: 5.5%; font-size: clamp(8px, 1.4cqw, 12px); }
+.ov-duedate { top: 13.5%; left: 58.8%; }
 
-.ov-bill1-carrier { top: 44.5%; left: 32.5%; }
-.ov-bill2-carrier { top: 43.5%; left: 64.5%; }
-.ov-bill3-carrier { top: 43.5%; left: 82.5%; }
+.ov-reimbursed { top: 33.6%; left: 38.8%; }
+.ov-nonreimbursed { top: 37.4%; left: 38.8%; }
+
+.ov-bill1-actual { top: 41.2%; left: 32.5%; }
+.ov-bill2-actual { top: 41.2%; left: 50.0%; }
+.ov-bill3-actual { top: 41.2%; left: 67.5%; }
+.ov-bill4-actual { top: 41.2%; left: 85.0%; }
+
+.ov-bill1-carrier { top: 45.6%; left: 33.0%; }
+.ov-bill2-carrier { top: 45.6%; left: 49.5%; }
+.ov-bill3-carrier { top: 45.6%; left: 67.0%; }
+.ov-bill4-carrier { top: 45.6%; left: 84.5%; }
 
 .carrier-wrong-circle {
   position: relative;
