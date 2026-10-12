@@ -1,4 +1,4 @@
-// Prototype Crimson - app.js (v0.1.25)
+// Prototype Crimson - app.js (v0.1.26)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.1';
@@ -6,10 +6,10 @@ import { initDocsEngine, DOCS_VERSION } from './docs.js?v=0.1.4';
 import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.3';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.17';
 
-export const APP_VERSION = "v0.1.25";
+export const APP_VERSION = "v0.1.26";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.25';
+  let indexVer = 'v0.1.26';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -45,8 +45,6 @@ const generatorView = document.getElementById('generator-view');
 const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const btnPrintEdlps = document.getElementById('btn-print-edlps');
-const btnOpenDocs = document.getElementById('btn-open-docs');
-const btnOpenGenerator = document.getElementById('btn-open-generator');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
 if (versionText) versionText.innerHTML = `Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
@@ -189,115 +187,84 @@ async function fetchPing() {
   }
 }
 
-if (pingAccordionToggle && pingAccordionContent) {
-  pingAccordionToggle.addEventListener('click', () => {
-    const isExpanded = pingAccordionContent.style.display === 'flex';
-    if (isExpanded) {
-      pingAccordionContent.style.display = 'none';
-      if (pingAccordionChevron) pingAccordionChevron.textContent = '▾';
-    } else {
-      pingAccordionContent.style.display = 'flex';
-      if (pingAccordionChevron) pingAccordionChevron.textContent = '▴';
-    }
-  });
-}
-
-if (btnCheckAgain) {
-  btnCheckAgain.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fetchPing();
-  });
+function togglePingAccordion() {
+  if (!pingAccordionContent) return;
+  const isExpanded = pingAccordionContent.style.display === 'flex';
+  pingAccordionContent.style.display = isExpanded ? 'none' : 'flex';
+  if (pingAccordionChevron) pingAccordionChevron.textContent = isExpanded ? '▾' : '▴';
 }
 
 if (relativeTimeTimer) clearInterval(relativeTimeTimer);
 relativeTimeTimer = setInterval(updateRelativeTimeDisplay, 10000);
 
-if (btnLogout) btnLogout.addEventListener('click', logout);
-
-
-if (btnBack) {
-  btnBack.addEventListener('click', () => {
-    if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
-      switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
-    } else {
-      switchView('login-view');
-    }
-  });
+function handleNavBack() {
+  if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
+    switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
+  } else {
+    switchView('login-view');
+  }
 }
 
 initPrintEngine();
 initDocsEngine();
 initGeneratorEngine();
 
-if (btnPrintEdlps) {
-  btnPrintEdlps.addEventListener('click', () => {
-    switchView('print-view');
-    openPrintPreview('');
-  });
+
+
+function showManifestModal() {
+  const listBody = document.getElementById('manifest-list-body');
+  if (listBody) {
+    const liveVersions = getRuntimeVersions();
+    listBody.innerHTML = Object.entries(liveVersions)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
+      .join('');
+  }
+  openModal(document.getElementById('manifest-modal'));
 }
 
-if (btnOpenDocs) {
-  btnOpenDocs.addEventListener('click', () => {
-    switchView('docs-view');
-  });
-}
-
-if (btnOpenGenerator) {
-  btnOpenGenerator.addEventListener('click', () => {
-    switchView('generator-view');
-  });
-}
-
-// Modals: Manifest & Terms
-const manifestModal = document.getElementById('manifest-modal');
-const manifestListBody = document.getElementById('manifest-list-body');
-const btnManifestClose = document.getElementById('btn-manifest-close');
-
-if (versionText) {
-  versionText.addEventListener('click', () => {
-    if (manifestListBody) {
-      const liveVersions = getRuntimeVersions();
-      manifestListBody.innerHTML = Object.entries(liveVersions)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
-        .join('');
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal-overlay')) {
+    if (e.target.id === 'print-reset-modal') {
+      e.target.style.display = 'none';
+    } else {
+      closeModal(e.target);
     }
-    openModal(manifestModal);
-  });
-}
+    return;
+  }
 
-if (btnManifestClose) btnManifestClose.addEventListener('click', () => { closeModal(manifestModal); });
-if (manifestModal) {
-  manifestModal.addEventListener('click', (e) => {
-    if (e.target === manifestModal) closeModal(manifestModal);
-  });
-}
+  const actionEl = e.target.closest('[data-action]');
+  if (!actionEl) return;
 
-const termsModal = document.getElementById('terms-modal');
-const btnTerms = document.getElementById('btn-terms');
-const btnTermsClose = document.getElementById('btn-terms-close');
-
-if (btnTerms) btnTerms.addEventListener('click', () => { openModal(termsModal); });
-if (btnTermsClose) btnTermsClose.addEventListener('click', () => { closeModal(termsModal); });
-if (termsModal) {
-  termsModal.addEventListener('click', (e) => {
-    if (e.target === termsModal) closeModal(termsModal);
-  });
-}
-
-const printResetModal = document.getElementById('print-reset-modal');
-if (printResetModal) {
-  printResetModal.addEventListener('click', (e) => {
-    if (e.target === printResetModal) {
-      printResetModal.style.display = 'none';
+  const { action, viewTarget, modalTarget, actionIntent } = actionEl.dataset;
+  if (action === 'view') {
+    if (viewTarget) switchView(viewTarget);
+    if (actionIntent === 'print-edlps') openPrintPreview('');
+  } else if (action === 'open-modal') {
+    if (modalTarget === 'manifest-modal') {
+      showManifestModal();
+    } else {
+      const modalEl = document.getElementById(modalTarget);
+      if (modalEl) openModal(modalEl);
     }
-  });
-}
+  } else if (action === 'close-modal') {
+    const modalEl = actionEl.closest('.modal-overlay');
+    if (modalEl) closeModal(modalEl);
+  } else if (action === 'nav-back') {
+    handleNavBack();
+  } else if (action === 'logout') {
+    logout();
+  } else if (action === 'toggle-ping-accordion') {
+    togglePingAccordion();
+  } else if (action === 'check-ping') {
+    fetchPing();
+  }
+});
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    closeModal(termsModal);
-    closeModal(manifestModal);
+    closeModal(document.getElementById('terms-modal'));
+    closeModal(document.getElementById('manifest-modal'));
     const resetModal = document.getElementById('print-reset-modal');
     if (resetModal) resetModal.style.display = 'none';
   }

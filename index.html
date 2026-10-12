@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.25">
+<html lang="en" data-version="v0.1.26">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.25">
+  <meta name="version" content="v0.1.26">
   <title>Workflow Optimizer</title>
   <link rel="stylesheet" href="styles.css?v=0.1.21">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -12,9 +12,9 @@
 
   <!-- Top Bar Navigation -->
   <div id="top-left-controls">
-    <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
-    <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.25 <span class="badge-chevron">▾</span></div>
+    <button id="btn-back" class="pill-btn btn-back" data-action="nav-back" style="display: none;">← BACK</button>
+    <button id="btn-logout" class="pill-btn btn-logout" data-action="logout" style="display: none;">LOG OUT</button>
+    <div id="version-text" class="version-badge" data-action="open-modal" data-modal-target="manifest-modal" title="Tap to inspect module versions">Crimson v0.1.26 <span class="badge-chevron">▾</span></div>
   </div>
 
   <div id="top-right-hub">
@@ -46,7 +46,7 @@
     <div class="login-card">
       <h2 class="login-title">Please enter the optimizer passcode given to you by the developer.</h2>
       <p class="login-desc">
-        By using this software, you are agreeing to its <button id="btn-terms" class="btn-inline-link" type="button">terms of use</button>.
+        By using this software, you are agreeing to its <button id="btn-terms" class="btn-inline-link" data-action="open-modal" data-modal-target="terms-modal" type="button">terms of use</button>.
       </p>
       <div class="login-capsule">
         <input type="tel" id="pin-input" class="login-input" placeholder="Passcode" maxlength="6" autofocus style="-webkit-text-security: disc;">
@@ -76,17 +76,17 @@
         </div>
         <div class="card-body">
           <div class="ping-meta-container">
-            <button id="ping-accordion-toggle" class="ping-accordion-toggle" type="button" tabindex="-1">
+            <button id="ping-accordion-toggle" class="ping-accordion-toggle" data-action="toggle-ping-accordion" type="button" tabindex="-1">
               <span id="ping-last-checked-text">Checked for price updates just now</span>
               <span id="ping-accordion-chevron" class="ping-chevron">▾</span>
             </button>
             <div id="ping-accordion-content" class="ping-accordion-content" style="display: none;">
               <span id="ping-status-text" class="ping-sub-status">Ping status: connected.</span>
-              <button id="btn-check-again" class="btn-text-action" type="button">Check again</button>
+              <button id="btn-check-again" class="btn-text-action" data-action="check-ping" type="button">Check again</button>
             </div>
           </div>
           <div class="card-actions-row" style="margin-top: 14px;">
-            <button id="btn-print-edlps" class="pill-btn btn-primary" type="button">Print EDLPs</button>
+            <button id="btn-print-edlps" class="pill-btn btn-primary" data-action="view" data-view-target="print-view" data-action-intent="print-edlps" type="button">Print EDLPs</button>
           </div>
         </div>
       </div>
@@ -99,7 +99,7 @@
         <div class="card-body">
           <p class="placeholder-text">Print intake sheets, customer guides, and reference materials.</p>
           <div class="card-actions-row" style="margin-top: 14px;">
-            <button id="btn-open-docs" class="pill-btn btn-primary" type="button">Browse Documents</button>
+            <button id="btn-open-docs" class="pill-btn btn-primary" data-action="view" data-view-target="docs-view" type="button">Browse Documents</button>
           </div>
         </div>
       </div>
@@ -112,7 +112,7 @@
         <div class="card-body">
           <p class="placeholder-text">Pre-fill and print a custom take home sheet.</p>
           <div class="card-actions-row" style="margin-top: 14px;">
-            <button id="btn-open-generator" class="pill-btn btn-primary" type="button">Open Generator</button>
+            <button id="btn-open-generator" class="pill-btn btn-primary" data-action="view" data-view-target="generator-view" type="button">Open Generator</button>
           </div>
         </div>
       </div>
@@ -440,7 +440,7 @@
         <tbody id="manifest-list-body"></tbody>
       </table>
       <div class="modal-actions">
-        <button id="btn-manifest-close" class="pill-btn btn-primary" style="width: auto;">Done</button>
+        <button id="btn-manifest-close" class="pill-btn btn-primary" data-action="close-modal" style="width: auto;">Done</button>
       </div>
     </div>
   </div>
@@ -450,7 +450,7 @@
     <div class="modal-card">
       <p>Terms of use have not been made yet.</p>
       <div class="modal-actions">
-        <button id="btn-terms-close" class="pill-btn btn-primary" style="width: auto;">Okay</button>
+        <button id="btn-terms-close" class="pill-btn btn-primary" data-action="close-modal" style="width: auto;">Okay</button>
       </div>
     </div>
   </div>
@@ -550,6 +550,6 @@
   <div id="doc-iphonetransfer" class="static-doc-container"></div>
   <div id="doc-scrappaper" class="static-doc-container"></div>
 
-  <script type="module" src="app.js?v=0.1.25"></script>
+  <script type="module" src="app.js?v=0.1.26"></script>
 </body>
 </html>
