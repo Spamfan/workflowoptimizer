@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.20 */
+/* Prototype Crimson - styles.css v0.1.21 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -197,11 +197,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  padding: 60px 16px 24px;
+  padding: 68px 16px 24px;
   gap: 14px;
 }
 
@@ -214,13 +214,14 @@ body {
   border: 1px solid #fde047;
   color: #854d0e;
   border-radius: 9999px;
-  padding: 8px 18px;
+  padding: 8px 16px;
   font-size: 0.82rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: 580px;
+  max-width: 440px;
+  width: 100%;
   text-align: left;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -234,7 +235,6 @@ body {
 
 @media (max-width: 600px) {
   #login-view {
-    justify-content: flex-start;
     padding-top: 54px;
     gap: 12px;
   }
@@ -539,31 +539,77 @@ body {
   }
 }
 
-.ping-display-box {
-  background-color: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
+/* Card Ping Metadata Accordion */
+.ping-meta-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
 }
 
-.ping-label {
-  font-size: 0.95rem;
-  font-weight: 600;
+.ping-accordion-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+
+.ping-accordion-toggle:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+.ping-chevron {
+  color: #8a8d91;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.ping-accordion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.ping-sub-status {
+  font-size: 0.82rem;
   color: var(--text-sub);
 }
 
-.ping-value {
-  font-size: 1.2rem;
-  font-weight: 800;
+.btn-text-action {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  display: inline-block;
+  width: fit-content;
+}
+
+.btn-text-action:hover {
   color: var(--primary);
 }
 
-.ping-status {
-  font-size: 0.8rem;
-  color: var(--text-sub);
+.btn-text-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  text-decoration: none;
 }
 
 .placeholder-text {

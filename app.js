@@ -1,4 +1,4 @@
-// Prototype Crimson - app.js (v0.1.24)
+// Prototype Crimson - app.js (v0.1.25)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.1';
@@ -6,10 +6,10 @@ import { initDocsEngine, DOCS_VERSION } from './docs.js?v=0.1.4';
 import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.3';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.17';
 
-export const APP_VERSION = "v0.1.24";
+export const APP_VERSION = "v0.1.25";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.24';
+  let indexVer = 'v0.1.25';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -17,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.20';
+  let cssVer = 'v0.1.21';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -132,36 +132,86 @@ window.addEventListener('popstate', (e) => {
 });
 
 
-// Live Ping Engine
-const btnRefresh = document.getElementById('btn-refresh-ping');
-const refreshSvg = document.getElementById('refresh-svg');
-const pingValueEl = document.getElementById('ping-value');
-const pingStatusEl = document.getElementById('ping-status');
-let statusTimer = null;
+// Live Ping Engine & Accordion Controller
+const pingAccordionToggle = document.getElementById('ping-accordion-toggle');
+const pingAccordionContent = document.getElementById('ping-accordion-content');
+const pingLastCheckedText = document.getElementById('ping-last-checked-text');
+const pingAccordionChevron = document.getElementById('ping-accordion-chevron');
+const pingStatusText = document.getElementById('ping-status-text');
+const btnCheckAgain = document.getElementById('btn-check-again');
+let lastPingTimestamp = null;
+let relativeTimeTimer = null;
 
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return 'never';
+  const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSec < 10) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  return `${diffHours}h ago`;
+}
+
+function updateRelativeTimeDisplay() {
+  if (!pingLastCheckedText) return;
+  if (!lastPingTimestamp) {
+    pingLastCheckedText.textContent = 'Checked for price updates just now';
+    return;
+  }
+  const relStr = formatRelativeTime(lastPingTimestamp);
+  pingLastCheckedText.textContent = `Checked for price updates ${relStr}`;
+}
 
 async function fetchPing() {
-  if (statusTimer) clearTimeout(statusTimer);
-  if (refreshSvg) refreshSvg.classList.add('spinning');
-  if (pingStatusEl) pingStatusEl.textContent = 'Checking...';
-
+  if (btnCheckAgain) {
+    btnCheckAgain.disabled = true;
+    btnCheckAgain.textContent = 'Checking...';
+  }
+  if (pingStatusText) pingStatusText.textContent = 'Ping status: connecting...';
 
   try {
     const data = await fetchCatalog();
     cachedStats = data;
-    if (pingValueEl) pingValueEl.textContent = data.ping !== undefined ? String(data.ping) : 'Connected.';
-    if (pingStatusEl) pingStatusEl.textContent = 'Refresh complete';
-    statusTimer = setTimeout(() => { if (pingStatusEl) pingStatusEl.textContent = ''; }, 2000);
+    lastPingTimestamp = Date.now();
+    updateRelativeTimeDisplay();
+    if (pingStatusText) {
+      const pingVal = data.ping !== undefined ? String(data.ping) : 'connected';
+      pingStatusText.textContent = `Ping status: ${pingVal}.`;
+    }
   } catch (err) {
-    if (pingValueEl) pingValueEl.textContent = 'Error';
-    if (pingStatusEl) pingStatusEl.textContent = 'Error';
+    if (pingStatusText) pingStatusText.textContent = 'Ping status: error';
   } finally {
-    setTimeout(() => { if (refreshSvg) refreshSvg.classList.remove('spinning'); }, 300);
+    if (btnCheckAgain) {
+      btnCheckAgain.disabled = false;
+      btnCheckAgain.textContent = 'Check again';
+    }
   }
 }
 
+if (pingAccordionToggle && pingAccordionContent) {
+  pingAccordionToggle.addEventListener('click', () => {
+    const isExpanded = pingAccordionContent.style.display === 'flex';
+    if (isExpanded) {
+      pingAccordionContent.style.display = 'none';
+      if (pingAccordionChevron) pingAccordionChevron.textContent = '▾';
+    } else {
+      pingAccordionContent.style.display = 'flex';
+      if (pingAccordionChevron) pingAccordionChevron.textContent = '▴';
+    }
+  });
+}
 
-if (btnRefresh) btnRefresh.addEventListener('click', fetchPing);
+if (btnCheckAgain) {
+  btnCheckAgain.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fetchPing();
+  });
+}
+
+if (relativeTimeTimer) clearInterval(relativeTimeTimer);
+relativeTimeTimer = setInterval(updateRelativeTimeDisplay, 10000);
+
 if (btnLogout) btnLogout.addEventListener('click', logout);
 
 
@@ -257,12 +307,14 @@ window.addEventListener('keydown', (e) => {
 initAuth({
   onSuccess: () => {
     isAuthenticated = true;
-    if (cardPrintTitle) cardPrintTitle.textContent = "Print EDLPs";
+    if (cardPrintTitle) cardPrintTitle.textContent = "Recent EDLP Reports";
     if (btnPrintEdlps) btnPrintEdlps.disabled = false;
     switchView('dashboard-view');
     fetchPing();
   }
 });
+
+if (cardPrintTitle) cardPrintTitle.textContent = "Recent EDLP Reports";
 
 history.replaceState({ view: 'login-view' }, '', '');
 switchView('login-view', false);

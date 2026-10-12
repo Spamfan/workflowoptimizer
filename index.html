@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.24">
+<html lang="en" data-version="v0.1.25">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.24">
+  <meta name="version" content="v0.1.25">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.20">
+  <link rel="stylesheet" href="styles.css?v=0.1.21">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
   <div id="top-left-controls">
     <button id="btn-back" class="pill-btn btn-back" style="display: none;">← BACK</button>
     <button id="btn-logout" class="pill-btn btn-logout" style="display: none;">LOG OUT</button>
-    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.24 <span class="badge-chevron">▾</span></div>
+    <div id="version-text" class="version-badge" title="Tap to inspect module versions">Crimson v0.1.25 <span class="badge-chevron">▾</span></div>
   </div>
 
   <div id="top-right-hub">
@@ -69,51 +69,49 @@
     </div>
 
     <div class="dashboard-grid">
-      <!-- Card 1: Print EDLPs -->
+      <!-- Card 1: Recent EDLP Reports -->
       <div class="dash-card">
         <div class="card-header">
-          <h2 id="card-print-title" class="card-title">Print EDLPs</h2>
-          <div class="card-header-actions">
-            <span id="ping-status" class="ping-status"></span>
-            <button id="btn-refresh-ping" class="icon-btn" title="Refresh Ping">
-              <svg id="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-              </svg>
-            </button>
-          </div>
+          <h2 id="card-print-title" class="card-title">Recent EDLP Reports</h2>
         </div>
         <div class="card-body">
-          <div class="card-actions-row">
-            <button id="btn-print-edlps" class="pill-btn btn-action-print">Print EDLPs</button>
+          <div class="ping-meta-container">
+            <button id="ping-accordion-toggle" class="ping-accordion-toggle" type="button" tabindex="-1">
+              <span id="ping-last-checked-text">Checked for price updates just now</span>
+              <span id="ping-accordion-chevron" class="ping-chevron">▾</span>
+            </button>
+            <div id="ping-accordion-content" class="ping-accordion-content" style="display: none;">
+              <span id="ping-status-text" class="ping-sub-status">Ping status: connected.</span>
+              <button id="btn-check-again" class="btn-text-action" type="button">Check again</button>
+            </div>
           </div>
-          <div class="ping-display-box">
-            <span class="ping-label">Live Ping Value:</span>
-            <span id="ping-value" class="ping-value">--</span>
+          <div class="card-actions-row" style="margin-top: 14px;">
+            <button id="btn-print-edlps" class="pill-btn btn-primary" type="button">Print EDLPs</button>
           </div>
         </div>
       </div>
 
-      <!-- Card 2: Documents & Guides -->
+      <!-- Card 2: Print something else -->
       <div class="dash-card">
         <div class="card-header">
-          <h2 class="card-title">Documents & Guides</h2>
+          <h2 class="card-title">Print something else</h2>
         </div>
         <div class="card-body">
           <p class="placeholder-text">Print intake sheets, customer guides, and reference materials.</p>
-          <div class="card-actions-row">
+          <div class="card-actions-row" style="margin-top: 14px;">
             <button id="btn-open-docs" class="pill-btn btn-primary" type="button">Browse Documents</button>
           </div>
         </div>
       </div>
 
-      <!-- Card 3: Quote & Tear-Sheet Generator -->
+      <!-- Card 3: Bill generator (beta) -->
       <div class="dash-card">
         <div class="card-header">
-          <h2 class="card-title">Quote & Tear-Sheet</h2>
+          <h2 class="card-title">Bill generator (beta)</h2>
         </div>
         <div class="card-body">
-          <p class="placeholder-text">Generate customer financing quotes and Take Home Sheets.</p>
-          <div class="card-actions-row">
+          <p class="placeholder-text">Pre-fill and print a custom take home sheet.</p>
+          <div class="card-actions-row" style="margin-top: 14px;">
             <button id="btn-open-generator" class="pill-btn btn-primary" type="button">Open Generator</button>
           </div>
         </div>
@@ -552,6 +550,6 @@
   <div id="doc-iphonetransfer" class="static-doc-container"></div>
   <div id="doc-scrappaper" class="static-doc-container"></div>
 
-  <script type="module" src="app.js?v=0.1.24"></script>
+  <script type="module" src="app.js?v=0.1.25"></script>
 </body>
 </html>
