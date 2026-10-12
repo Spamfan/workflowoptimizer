@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.19 */
+/* Prototype Crimson - styles.css v0.1.20 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2801,6 +2801,7 @@ body {
   width: 100%;
   max-width: 600px;
   aspect-ratio: 8.5 / 11;
+  container-type: inline-size;
   background: #ffffff;
   border-radius: 4px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
@@ -2816,7 +2817,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: fill;
   z-index: 1;
   pointer-events: none;
 }
@@ -2839,63 +2840,203 @@ body {
   font-weight: 700;
   color: #000000;
   line-height: 1;
+  white-space: nowrap;
   user-select: none;
   pointer-events: none;
-  font-size: clamp(8px, 1.5cqw, 13px);
 }
 
-.gen-overlay-item sup {
-  font-size: 0.65em;
-  vertical-align: super;
+#ov-carrier {
+  top: 3.60%;
+  left: 2.40%;
+  font-size: 2.00cqi;
+  transform: translateY(-50%);
+  text-align: left;
 }
 
-.ov-carrier { top: 3.1%; left: 2.5%; text-align: left; font-size: clamp(9px, 1.7cqw, 14px); }
-.ov-name { top: 3.1%; left: 13.0%; text-align: left; max-width: 17.5%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ov-num-area { top: 3.1%; left: 48.5%; transform: translateX(-50%); text-align: center; }
-.ov-num-prefix { top: 3.1%; left: 57.5%; transform: translateX(-50%); text-align: center; }
-.ov-num-line { top: 3.1%; left: 67.5%; transform: translateX(-50%); text-align: center; }
-.ov-passcode { top: 3.1%; left: 74.0%; letter-spacing: 2px; }
-
-.ov-plan { top: 6.8%; left: 18.5%; transform: translateX(-50%); text-align: center; }
-.ov-device { top: 6.8%; left: 29.2%; transform: translateX(-50%); text-align: center; }
-.ov-taxes { top: 6.8%; left: 39.8%; transform: translateX(-50%); text-align: center; }
-.ov-monthly { top: 6.2%; left: 89.2%; transform: translateX(-50%); text-align: center; font-size: clamp(9px, 1.8cqw, 15px); }
-.ov-term { top: 6.2%; left: 96.8%; transform: translateX(-50%); text-align: center; }
-
-.ov-autopay { top: 13.5%; left: 5.2%; text-align: left; font-size: clamp(8px, 1.4cqw, 12px); }
-.ov-duedate { top: 13.5%; left: 67.2%; transform: translateX(-50%); text-align: center; }
-
-.ov-reimbursed { top: 33.6%; left: 45.5%; transform: translateX(-50%); text-align: center; }
-.ov-nonreimbursed { top: 37.4%; left: 45.5%; transform: translateX(-50%); text-align: center; }
-
-.ov-bill1-actual { top: 41.2%; left: 39.5%; transform: translateX(-50%); text-align: center; }
-.ov-bill2-actual { top: 41.2%; left: 59.0%; transform: translateX(-50%); text-align: center; }
-.ov-bill3-actual { top: 41.2%; left: 78.5%; transform: translateX(-50%); text-align: center; }
-.ov-bill4-actual { top: 41.2%; left: 96.5%; transform: translateX(-50%); text-align: center; }
-
-.ov-bill-drop { display: inline-block; margin-left: 2px; vertical-align: baseline; font-size: 0.85em; }
-
-.ov-bill1-carrier { top: 45.6%; left: 39.5%; transform: translateX(-50%); text-align: center; }
-.ov-bill2-carrier { top: 45.6%; left: 58.0%; transform: translateX(-50%); text-align: center; }
-.ov-bill3-carrier { top: 45.6%; left: 76.5%; transform: translateX(-50%); text-align: center; }
-.ov-bill4-carrier { top: 45.6%; left: 95.0%; transform: translateX(-50%); text-align: center; }
-
-.carrier-wrong-circle {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #0b57d0;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
+#ov-name {
+  top: 3.40%;
+  left: 10.70%;
+  font-size: 2.00cqi;
+  transform: translateY(-50%);
+  text-align: left;
+  max-width: 26%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.carrier-wrong-x {
-  position: absolute;
-  font-size: 14px;
-  color: #0b57d0;
-  transform: rotate(15deg);
+#ov-num-area {
+  top: 3.50%;
+  left: 40.40%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-num-prefix {
+  top: 3.50%;
+  left: 48.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-num-line {
+  top: 3.50%;
+  left: 57.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-passcode {
+  top: 3.50%;
+  left: 74.00%;
+  font-size: 2.00cqi;
+  transform: translateY(-50%);
+  display: none;
+}
+
+#ov-plan {
+  top: 7.20%;
+  left: 16.30%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-device {
+  top: 7.30%;
+  left: 26.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-taxes {
+  top: 7.30%;
+  left: 35.40%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-monthly {
+  top: 7.20%;
+  left: 82.50%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-term {
+  top: 7.20%;
+  left: 90.80%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-autopay {
+  top: 14.00%;
+  left: 3.60%;
+  font-size: 1.55cqi;
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+#ov-duedate {
+  top: 13.80%;
+  left: 60.50%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-reimbursed {
+  top: 34.60%;
+  left: 40.80%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-nonreimbursed {
+  top: 38.00%;
+  left: 40.80%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill1-actual {
+  top: 42.20%;
+  left: 35.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill2-actual {
+  top: 42.10%;
+  left: 53.50%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill3-actual {
+  top: 42.00%;
+  left: 71.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill4-actual {
+  top: 42.00%;
+  left: 89.50%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.ov-bill-drop {
+  display: inline-block;
+  font-size: 0.78em;
+  margin-left: 1px;
+  vertical-align: baseline;
+}
+
+#ov-bill1-carrier {
+  top: 46.20%;
+  left: 34.90%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill2-carrier {
+  top: 46.30%;
+  left: 53.40%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill3-carrier {
+  top: 46.30%;
+  left: 70.50%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#ov-bill4-carrier {
+  top: 46.20%;
+  left: 89.00%;
+  font-size: 2.00cqi;
+  transform: translate(-50%, -50%);
+  text-align: center;
 }
 
 @media print {

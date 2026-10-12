@@ -1,7 +1,7 @@
-// Prototype Crimson - generator.js (v0.1.2)
+// Prototype Crimson - generator.js (v0.1.3)
 // Customer Quote & 2-Up Take Home Sheet Generator Engine
 
-export const GENERATOR_VERSION = "v0.1.2";
+export const GENERATOR_VERSION = "v0.1.3";
 
 const STATE_TAX_DEFAULTS = {
   NH: 8.00,
@@ -102,7 +102,7 @@ export function updatePreview() {
     nameEl.textContent = genState.customerName || '';
     const nameLen = (genState.customerName || '').length;
     if (nameLen > 18) {
-      nameEl.style.fontSize = `${Math.max(0.62, 0.95 - (nameLen - 18) * 0.035)}em`;
+      nameEl.style.fontSize = `${Math.max(1.25, 2.00 - (nameLen - 18) * 0.08)}cqi`;
     } else {
       nameEl.style.fontSize = '';
     }

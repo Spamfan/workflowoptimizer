@@ -1,6 +1,6 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `generator.js`
-### Document Version: `v0.1.4`
+### Document Version: `v0.1.5`
 
 ---
 
@@ -48,17 +48,31 @@
 ---
 
 ### 4. DATA SCHEMA & PRECISION COORDINATE LAYOUT
-* `carrier`: Left-anchored on pre-printed carrier underline.
-* `customerName`: Left-anchored on `___ for` line with `max-width: 17.5%` and auto-scaling font size for names $> 18$ characters.
-* `phoneNumber`: 10 digits parsed into 3 discrete mid-point centered slots (`ov-num-area`, `ov-num-prefix`, `ov-num-line`) centered over respective blank underlines. Pre-printed dashes remain untouched.
-* `planCost`: Mid-point centered over `PLAN(S)` blank.
-* `deviceRetailMonthly` / `deviceMonthlyCredit`: Computes net installment `deviceNet = Math.max(0, retail - credit)`. Mid-point centered over `DEVICE(S)` blank.
-* `state` & `taxes`: State tax defaults. Mid-point centered over `TAXES/FEES` blank.
-* `monthlyTotal`: `Math.ceil(planCost + deviceNet + taxes)` mid-point centered before `/mo`.
-* `term`: Mid-point centered inside `(___yr)` (e.g. `3` or `2`).
-* `autopayMethod`: Left-anchored on line before `and paperless billing to email`.
-* `dueDateDays`: Mid-point centered before `days or date selected for autopay`.
-* `ov-bill-drop`: Minus-X suffix `⁻ˣ` anchored directly beneath the vertical dashed arrow terminus for AT&T Bills 2, 3, and 4.
+* Container Environment: `.gen-paper-stage` enforces `container-type: inline-size; aspect-ratio: 8.5 / 11;`. Overlays scale via `cqi` units for 1:1 screen-to-print parity.
+* `carrier` (`ov-carrier`): `top: 3.60%; left: 2.40%; font-size: 2.00cqi; transform: translateY(-50%);` (Left-anchored).
+* `customerName` (`ov-name`): `top: 3.40%; left: 10.70%; font-size: 2.00cqi; transform: translateY(-50%); max-width: 26%;` with dynamic `cqi` scaling down to `1.25cqi` for strings $> 18$ characters.
+* `phoneNumber`: Centered mid-points:
+  * `ov-num-area`: `top: 3.50%; left: 40.40%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-num-prefix`: `top: 3.50%; left: 48.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-num-line`: `top: 3.50%; left: 57.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `planCost` (`ov-plan`): `top: 7.20%; left: 16.30%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `deviceNet` (`ov-device`): `top: 7.30%; left: 26.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `taxes` (`ov-taxes`): `top: 7.30%; left: 35.40%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `monthlyTotal` (`ov-monthly`): `top: 7.20%; left: 82.50%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `term` (`ov-term`): `top: 7.20%; left: 90.80%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* `autopayMethod` (`ov-autopay`): `top: 14.00%; left: 3.60%; font-size: 1.55cqi; transform: translateY(-50%);` (Left-anchored).
+* `dueDateDays` (`ov-duedate`): `top: 13.80%; left: 60.50%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+* AT&T 4-Bill Overlays:
+  * `ov-reimbursed`: `top: 34.60%; left: 40.80%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-nonreimbursed`: `top: 38.00%; left: 40.80%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill1-actual`: `top: 42.20%; left: 35.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill2-actual`: `top: 42.10%; left: 53.50%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill3-actual`: `top: 42.00%; left: 71.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill4-actual`: `top: 42.00%; left: 89.50%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill1-carrier`: `top: 46.20%; left: 34.90%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill2-carrier`: `top: 46.30%; left: 53.40%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill3-carrier`: `top: 46.30%; left: 70.50%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
+  * `ov-bill4-carrier`: `top: 46.20%; left: 89.00%; font-size: 2.00cqi; transform: translate(-50%, -50%);`
 
 ---
 

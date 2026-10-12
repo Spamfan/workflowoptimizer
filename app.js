@@ -3,7 +3,7 @@
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './auth.js?v=0.1.1';
 import { initDocsEngine, DOCS_VERSION } from './docs.js?v=0.1.4';
-import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.2';
+import { initGeneratorEngine, GENERATOR_VERSION } from './generator.js?v=0.1.3';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './print.js?v=0.1.17';
 
 export const APP_VERSION = "v0.1.24";
@@ -17,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.19';
+  let cssVer = 'v0.1.20';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
