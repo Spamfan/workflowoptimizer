@@ -1,6 +1,6 @@
 # WORKFLOW OPTIMIZER (WFO)
 ### Prototype Crimson
-### Living Design Document (LDD) V27
+### Living Design Document (LDD) V28
 
 ---
 
@@ -35,6 +35,8 @@
 * **LDD Version Integer Bump:** Any edit to a  
   Living Design Document strictly increments  
   its integer version (`V(N)` → `V(N+1)`).  
+  The root filename remains unversioned  
+  (`md-project.md`).  
 * **Version Ceiling Guard:** Submodules must  
   remain within pre-1.0 (`v0.x.x`). LLMs are  
   strictly barred from bumping any version  
@@ -111,7 +113,7 @@ Find
 Replace with
 ...
 
-### TARGET FILE: app.js
+### TARGET FILE: js-app.js
 
 Patch 1/1
 Find start
@@ -195,11 +197,11 @@ Replace with
   "barcode scanner." The word "gun" is  
   prohibited in all UI, comments, and copy.  
 * **Cache-Busting & Downstream Ripple Mandate:**  
-  Submodule imports in `app.js` must pin version  
-  query strings (`import { ... } from './sub.js?v=X.X.X'`).  
-  Any version bump to a submodule (`auth.js`, `print.js`,  
-  `docs.js`) or stylesheet (`styles.css`) strictly mandates  
-  updating downstream query strings in `app.js`  
+  Submodule imports in `js-app.js` must pin version  
+  query strings (`import { ... } from './js-sub.js?v=X.X.X'`).  
+  Any version bump to a submodule (`js-auth.js`, `js-print.js`,  
+  `js-docs.js`) or stylesheet (`styles.css`) strictly mandates  
+  updating downstream query strings in `js-app.js`  
   and `index.html`. Both downstream consumers  
   must be included in the sprint whenever any  
   submodule or stylesheet bumps.  
@@ -209,8 +211,8 @@ Replace with
   same filename mandates a submodule version bump  
   to invalidate browser/CDN caching.  
 * **Print Engine Taxonomy Boundary:**  
-  `print.js` is strictly the EDLP shelf-tag price  
-  engine. `docs.js` is strictly the static document  
+  `js-print.js` is strictly the EDLP shelf-tag price  
+  engine. `js-docs.js` is strictly the static document  
   and PDF printing engine.  
 * **WMPC Kiosk:** Optimized for restricted  
   browser kiosk display (1024x768 minimum).  
@@ -218,7 +220,7 @@ Replace with
   obfuscated via base64 (atob('MTAyMDMw')).  
   Store number input is deprecated; report  
   state and overrides persist via unified storage.  
-* **Data Ordering:** Catalog devices in `stats.json`,  
+* **Data Ordering:** Catalog devices in `data-stats.json`,  
   print engine tables, and inventory editing tools  
   must maintain strict alphabetical ordering by  
   full intake `name` (not display abbreviations).  
@@ -243,6 +245,30 @@ Replace with
 * **`styles.css`:** `v0.1.21`  
 
 #### File Tree
+* `data-stats.json`
+* `doc-blank.png`
+* `doc-intake-post.png`
+* `doc-intake-pre.png`
+* `doc-ip-transfer.png`
+* `doc-ths.png`
+* `doc-vzw-trade.png`
+* `doc-warp.png`
+* `img-tut-att.png`
+* `img-tut-tmo.png`
+* `img-tut-vzw.png`
+* `index.html`
+* `js-app.js`
+* `js-auth.js`
+* `js-docs.js`
+* `js-generator.js`
+* `js-print.js`
+* `md-project.md`
+* `md-spec-auth.md`
+* `md-spec-data.md`
+* `md-spec-docs.md`
+* `md-spec-generator.md`
+* `md-spec-print.md`
+* `styles.css`
 
 ---
 
