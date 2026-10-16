@@ -34,7 +34,10 @@
 * **Input & Feedback:** Single 6-digit passcode field;  
   inline error alert if invalid; auto-submit on 6 digits.  
 * **Terms of Use Modal:** Centered overlay card  
-  (`#terms-modal`) informing that terms are pending,  
+  (`#terms-modal`) containing the 5-point terms and  
+  disclaimers (unofficial status, as-is disclaimer,  
+  user responsibility, company policy adherence  
+  including non-use, zero customer credential entry)  
   with standard acknowledgement button.  
 * **Universal 4-Way Dismissal:** All modals dismiss  
   via close button, backdrop click, Escape key,  
