@@ -1,4 +1,4 @@
-// Prototype Crimson - js-app.js (v0.1.28)
+// Prototype Crimson - js-app.js (v0.1.29)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './js-auth.js?v=0.1.2';
@@ -6,10 +6,10 @@ import { initDocsEngine, DOCS_VERSION } from './js-docs.js?v=0.1.5';
 import { initGeneratorEngine, GENERATOR_VERSION } from './js-generator.js?v=0.1.4';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './js-print.js?v=0.1.18';
 
-export const APP_VERSION = "v0.1.28";
+export const APP_VERSION = "v0.1.29";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.28';
+  let indexVer = 'v0.1.29';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -17,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.21';
+  let cssVer = 'v0.1.22';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -47,7 +47,36 @@ const btnBack = document.getElementById('btn-back');
 const btnPrintEdlps = document.getElementById('btn-print-edlps');
 const cardPrintTitle = document.getElementById('card-print-title');
 const versionText = document.getElementById('version-text');
-if (versionText) versionText.innerHTML = `Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
+const btnManageReports = document.getElementById('btn-manage-reports');
+
+export const DEV_MODE_STORAGE_KEY = 'crimson_dev_mode';
+
+export function isDevMode() {
+  return localStorage.getItem(DEV_MODE_STORAGE_KEY) === 'true';
+}
+
+export function syncDevModeUI() {
+  const devActive = isDevMode();
+  if (versionText) {
+    const devBadgeHtml = devActive
+      ? `<span class="dev-badge-icon" title="Developer Mode Enabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
+      : '';
+    versionText.innerHTML = `${devBadgeHtml}Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
+  }
+  const manageBtn = document.getElementById('btn-manage-reports');
+  if (manageBtn) {
+    manageBtn.style.display = devActive ? 'inline-flex' : 'none';
+  }
+  const toggleDevEl = document.getElementById('toggle-dev-mode');
+  if (toggleDevEl) {
+    toggleDevEl.checked = devActive;
+  }
+}
+
+export function setDevMode(enabled) {
+  localStorage.setItem(DEV_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
+  syncDevModeUI();
+}
 
 let currentView = 'login-view';
 let isAuthenticated = false;
@@ -130,18 +159,19 @@ window.addEventListener('popstate', (e) => {
 });
 
 
-// Live Ping Engine & Accordion Controller
-const pingAccordionToggle = document.getElementById('ping-accordion-toggle');
-const pingAccordionContent = document.getElementById('ping-accordion-content');
+// Live Price Update Trigger & Timestamp Engine
+const btnPingTrigger = document.getElementById('btn-ping-trigger');
+const pingIcon = document.getElementById('ping-icon');
 const pingLastCheckedText = document.getElementById('ping-last-checked-text');
-const pingAccordionChevron = document.getElementById('ping-accordion-chevron');
-const pingStatusText = document.getElementById('ping-status-text');
-const btnCheckAgain = document.getElementById('btn-check-again');
 let lastPingTimestamp = null;
 let relativeTimeTimer = null;
+let isFetchingPing = false;
+
+const SVG_SPIN = `<svg class="spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>`;
+const SVG_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
 function formatRelativeTime(timestamp) {
-  if (!timestamp) return 'never';
+  if (!timestamp) return 'just now';
   const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (diffSec < 10) return 'just now';
   if (diffSec < 60) return `${diffSec}s ago`;
@@ -152,46 +182,60 @@ function formatRelativeTime(timestamp) {
 }
 
 function updateRelativeTimeDisplay() {
-  if (!pingLastCheckedText) return;
+  if (!pingLastCheckedText || isFetchingPing) return;
   if (!lastPingTimestamp) {
     pingLastCheckedText.textContent = 'Checked for price updates just now';
+    if (pingIcon) {
+      pingIcon.innerHTML = SVG_CHECK;
+      pingIcon.style.display = 'inline-flex';
+    }
     return;
   }
+  const diffSec = Math.max(0, Math.floor((Date.now() - lastPingTimestamp) / 1000));
   const relStr = formatRelativeTime(lastPingTimestamp);
   pingLastCheckedText.textContent = `Checked for price updates ${relStr}`;
+  if (pingIcon) {
+    if (diffSec < 60) {
+      pingIcon.innerHTML = SVG_CHECK;
+      pingIcon.style.display = 'inline-flex';
+    } else {
+      pingIcon.innerHTML = '';
+      pingIcon.style.display = 'none';
+    }
+  }
 }
 
 async function fetchPing() {
-  if (btnCheckAgain) {
-    btnCheckAgain.disabled = true;
-    btnCheckAgain.textContent = 'Checking...';
+  if (isFetchingPing) return;
+  isFetchingPing = true;
+  if (pingIcon) {
+    pingIcon.innerHTML = SVG_SPIN;
+    pingIcon.style.display = 'inline-flex';
   }
-  if (pingStatusText) pingStatusText.textContent = 'Ping status: connecting...';
+  if (pingLastCheckedText) {
+    pingLastCheckedText.textContent = 'Checking for price updates...';
+  }
 
   try {
     const data = await fetchCatalog();
     cachedStats = data;
     lastPingTimestamp = Date.now();
     updateRelativeTimeDisplay();
-    if (pingStatusText) {
-      const pingVal = data.ping !== undefined ? String(data.ping) : 'connected';
-      pingStatusText.textContent = `Ping status: ${pingVal}.`;
-    }
   } catch (err) {
-    if (pingStatusText) pingStatusText.textContent = 'Ping status: error';
-  } finally {
-    if (btnCheckAgain) {
-      btnCheckAgain.disabled = false;
-      btnCheckAgain.textContent = 'Check again';
+    if (pingLastCheckedText) pingLastCheckedText.textContent = 'Unable to check price updates';
+    if (pingIcon) {
+      pingIcon.innerHTML = '';
+      pingIcon.style.display = 'none';
     }
+  } finally {
+    isFetchingPing = false;
   }
 }
 
-function togglePingAccordion() {
-  if (!pingAccordionContent) return;
-  const isExpanded = pingAccordionContent.style.display === 'flex';
-  pingAccordionContent.style.display = isExpanded ? 'none' : 'flex';
-  if (pingAccordionChevron) pingAccordionChevron.textContent = isExpanded ? '▾' : '▴';
+if (btnPingTrigger) {
+  btnPingTrigger.addEventListener('click', () => {
+    fetchPing();
+  });
 }
 
 if (relativeTimeTimer) clearInterval(relativeTimeTimer);
@@ -219,6 +263,10 @@ function showManifestModal() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([mod, ver]) => `<tr><td>${mod}</td><td style="text-align: right;"><code>${ver}</code></td></tr>`)
       .join('');
+  }
+  const toggleDevEl = document.getElementById('toggle-dev-mode');
+  if (toggleDevEl) {
+    toggleDevEl.checked = isDevMode();
   }
   openModal(document.getElementById('manifest-modal'));
 }
@@ -254,12 +302,15 @@ document.addEventListener('click', (e) => {
     handleNavBack();
   } else if (action === 'logout') {
     logout();
-  } else if (action === 'toggle-ping-accordion') {
-    togglePingAccordion();
-  } else if (action === 'check-ping') {
-    fetchPing();
   }
 });
+
+const toggleDevModeInput = document.getElementById('toggle-dev-mode');
+if (toggleDevModeInput) {
+  toggleDevModeInput.addEventListener('change', (e) => {
+    setDevMode(e.target.checked);
+  });
+}
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -283,5 +334,6 @@ initAuth({
 
 if (cardPrintTitle) cardPrintTitle.textContent = "Recent EDLP Reports";
 
+syncDevModeUI();
 history.replaceState({ view: 'login-view' }, '', '');
 switchView('login-view', false);
