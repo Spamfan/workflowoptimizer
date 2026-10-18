@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.22 */
+/* Prototype Crimson - styles.css v0.1.23 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -63,23 +63,7 @@ body {
   color: #881337;
 }
 
-.dev-badge-icon {
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: #10b981;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 2px;
-}
 
-.dev-badge-icon svg {
-  width: 11px;
-  height: 11px;
-  stroke: #ffffff;
-}
 
 .badge-chevron {
   font-size: 0.68rem;
@@ -618,6 +602,8 @@ body {
   padding: 14px 2px 6px;
   border-top: 1px solid var(--border);
   margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .manifest-toggle-label {

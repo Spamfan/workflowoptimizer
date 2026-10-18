@@ -1,6 +1,6 @@
 # WORKFLOW OPTIMIZER (WFO)
 ### Prototype Crimson
-### Living Design Document (LDD) V30
+### Living Design Document (LDD) V31
 
 ---
 
@@ -41,6 +41,15 @@
   remain within pre-1.0 (`v0.x.x`). LLMs are  
   strictly barred from bumping any version  
   to `v1.0.0+` without explicit PL sign-off.  
+* **Spec-Sync Concurrent Mandate:** SP and TS  
+  must explicitly incorporate and plan edits  
+  to all applicable markdown specs alongside  
+  code edits so specs update concurrently.  
+* **TS Pre-Flight Patch Audit:** During Tech  
+  Spec, the LLM must pre-audit all proposed  
+  patches against Mode A constraints (anchors  
+  2–4 lines, standard ≤15 lines, range payload  
+  ≤40 lines, zero bridging) before execution.  
 
 #### Delivery Pathways (Mode A vs Mode B)
 
@@ -235,14 +244,14 @@ Replace with
 ### 6. BASELINE FLOOR & FILE TREE
 
 #### Version Floor
-* **App (Prototype Crimson):** `v0.1.29`  
-* **`index.html`:** `v0.1.29`  
-* **`js-app.js`:** `v0.1.29`  
+* **App (Prototype Crimson):** `v0.1.30`  
+* **`index.html`:** `v0.1.30`  
+* **`js-app.js`:** `v0.1.30`  
 * **`js-auth.js`:** `v0.1.2`  
 * **`js-docs.js`:** `v0.1.5`  
 * **`js-generator.js`:** `v0.1.4`  
 * **`js-print.js`:** `v0.1.18`  
-* **`styles.css`:** `v0.1.22`  
+* **`styles.css`:** `v0.1.23`  
 
 #### File Tree
 * `data-stats.json`

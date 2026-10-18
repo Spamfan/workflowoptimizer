@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-version="v0.1.29">
+<html lang="en" data-version="v0.1.30">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="version" content="v0.1.29">
+  <meta name="version" content="v0.1.30">
   <title>Workflow Optimizer</title>
-  <link rel="stylesheet" href="styles.css?v=0.1.22">
+  <link rel="stylesheet" href="styles.css?v=0.1.23">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -75,13 +75,13 @@
           <h2 id="card-print-title" class="card-title">Recent EDLP Reports</h2>
         </div>
         <div class="card-body">
-          <p class="card-desc-text">View and print EDLPs for your store's devices, manually updated by other OSL workers. This tool is only for internal use and may give inaccurate numbers, always verify costs directly in ESP before closing a sale.</p>
           <div class="card-status-row">
             <button id="btn-ping-trigger" class="btn-status-trigger" type="button" title="Click to refresh prices">
               <span id="ping-icon" class="ping-status-icon"></span>
               <span id="ping-last-checked-text">Checked for price updates just now</span>
             </button>
           </div>
+          <p class="card-desc-text">View and print EDLPs for your store's devices, manually updated by other OSL workers. This tool is only for internal use and may give inaccurate numbers, always verify costs directly in ESP before closing a sale.</p>
           <div class="card-actions-col">
             <button id="btn-manage-reports" class="pill-btn btn-dev-manage" type="button" style="display: none;">Manage Reports (Developer)</button>
             <button id="btn-print-edlps" class="pill-btn btn-primary" data-action="view" data-view-target="print-view" data-action-intent="print-edlps" type="button">Print EDLPs</button>
@@ -436,13 +436,13 @@
         </thead>
         <tbody id="manifest-list-body"></tbody>
       </table>
-      <div class="manifest-toggle-row">
+      <label class="manifest-toggle-row" for="toggle-dev-mode">
         <span class="manifest-toggle-label">Developer Mode</span>
-        <label class="toggle-switch" aria-label="Toggle Developer Mode">
+        <span class="toggle-switch">
           <input type="checkbox" id="toggle-dev-mode">
           <span class="toggle-slider"></span>
-        </label>
-      </div>
+        </span>
+      </label>
       <div class="modal-actions">
         <button id="btn-manifest-close" class="pill-btn btn-primary btn-modal-full" data-action="close-modal">Done</button>
       </div>
@@ -564,6 +564,6 @@
   <div id="doc-iphonetransfer" class="static-doc-container"></div>
   <div id="doc-scrappaper" class="static-doc-container"></div>
 
-  <script type="module" src="js-app.js?v=0.1.29"></script>
+  <script type="module" src="js-app.js?v=0.1.30"></script>
 </body>
 </html>

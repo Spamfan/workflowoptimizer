@@ -1,4 +1,4 @@
-// Prototype Crimson - js-app.js (v0.1.29)
+// Prototype Crimson - js-app.js (v0.1.30)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './js-auth.js?v=0.1.2';
@@ -6,10 +6,10 @@ import { initDocsEngine, DOCS_VERSION } from './js-docs.js?v=0.1.5';
 import { initGeneratorEngine, GENERATOR_VERSION } from './js-generator.js?v=0.1.4';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './js-print.js?v=0.1.18';
 
-export const APP_VERSION = "v0.1.29";
+export const APP_VERSION = "v0.1.30";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.29';
+  let indexVer = 'v0.1.30';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -17,7 +17,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.22';
+  let cssVer = 'v0.1.23';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -58,10 +58,8 @@ export function isDevMode() {
 export function syncDevModeUI() {
   const devActive = isDevMode();
   if (versionText) {
-    const devBadgeHtml = devActive
-      ? `<span class="dev-badge-icon" title="Developer Mode Enabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>`
-      : '';
-    versionText.innerHTML = `${devBadgeHtml}Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
+    const prefix = devActive ? 'DEV-' : '';
+    versionText.innerHTML = `${prefix}Crimson ${APP_VERSION} <span class="badge-chevron">▾</span>`;
   }
   const manageBtn = document.getElementById('btn-manage-reports');
   if (manageBtn) {
@@ -173,8 +171,7 @@ const SVG_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-
 function formatRelativeTime(timestamp) {
   if (!timestamp) return 'just now';
   const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (diffSec < 10) return 'just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 60) return 'just now';
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffHours = Math.floor(diffMin / 60);
@@ -217,18 +214,19 @@ async function fetchPing() {
   }
 
   try {
-    const data = await fetchCatalog();
+    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
+    const [data] = await Promise.all([fetchCatalog(), minDelay]);
     cachedStats = data;
     lastPingTimestamp = Date.now();
+    isFetchingPing = false;
     updateRelativeTimeDisplay();
   } catch (err) {
+    isFetchingPing = false;
     if (pingLastCheckedText) pingLastCheckedText.textContent = 'Unable to check price updates';
     if (pingIcon) {
       pingIcon.innerHTML = '';
       pingIcon.style.display = 'none';
     }
-  } finally {
-    isFetchingPing = false;
   }
 }
 
