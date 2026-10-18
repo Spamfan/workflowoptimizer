@@ -3,10 +3,13 @@
 
 ---
 
-### 1. DATA TRANSPORT
-* **Direct Fetch:** `js-app.js` loads `data-stats.json`  
+### 1. DATA TRANSPORT & SYNC
+* **Direct Fetch (Read):** `js-app.js` loads `data-stats.json`  
   using cache-busting timestamp:  
   `fetch('./data-stats.json?t=' + Date.now())`  
+* **Direct Commit (Write):** Updates commit directly to  
+  GitHub via REST API (`PUT /repos/{owner}/{repo}/contents/data-stats.json`)  
+  using fine-grained PAT stored in `localStorage`.  
 * **Offline Defense:** Retain last successful  
   payload in memory during session.  
 
@@ -32,3 +35,15 @@
   alphabetical ordering by full intake `name`.  
 * **Matching:** Used by `js-print.js` to normalize labels  
   prior to table generation.  
+
+---
+
+### 4. CARRIER EXCLUSIVITY & NULLABILITY
+* **Supported Carriers:** Valid positive numeric value or `0`.  
+* **Unsupported / Omitted Carriers:** Value set strictly  
+  to `null` (`attMO: null`, `vzwMO: null`, or `tmoDP: null,`  
+  `tmoMOADP: null, tmoMO: null`). `js-print.js` automatically  
+  omits unsupported items from carrier tables.  
+* **T-Mobile Sub-Keys:** `tmoMO` represents monthly cost  
+  with $0 down payment. `tmoDP` is down payment, and  
+  `tmoMOADP` is monthly payment after down payment.  

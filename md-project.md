@@ -1,6 +1,6 @@
 # WORKFLOW OPTIMIZER (WFO)
 ### Prototype Crimson
-### Living Design Document (LDD) V31
+### Living Design Document (LDD) V32
 
 ---
 
@@ -250,6 +250,7 @@ Replace with
 * **`js-auth.js`:** `v0.1.2`  
 * **`js-docs.js`:** `v0.1.5`  
 * **`js-generator.js`:** `v0.1.4`  
+* **`js-manager.js`:** `v0.1.0`  
 * **`js-print.js`:** `v0.1.18`  
 * **`styles.css`:** `v0.1.23`  
 
@@ -270,12 +271,14 @@ Replace with
 * `js-auth.js`
 * `js-docs.js`
 * `js-generator.js`
+* `js-manager.js`
 * `js-print.js`
 * `md-project.md`
 * `md-spec-auth.md`
 * `md-spec-data.md`
 * `md-spec-docs.md`
 * `md-spec-generator.md`
+* `md-spec-manager.md`
 * `md-spec-print.md`
 * `styles.css`
 
@@ -290,6 +293,7 @@ the corresponding spec from root:
 * `md-spec-auth.md` -> `js-auth.js`, `index.html`  
 * `md-spec-docs.md` -> `js-docs.js`, `styles.css`  
 * `md-spec-generator.md` -> `js-generator.js`, `js-docs.js`  
+* `md-spec-manager.md` -> `js-manager.js`, `index.html`  
 * `md-spec-print.md` -> `js-print.js`, `styles.css`  
 * `md-spec-data.md` -> `data-stats.json`, `js-app.js`  
 
