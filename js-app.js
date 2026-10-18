@@ -1,12 +1,13 @@
-// Prototype Crimson - js-app.js (v0.1.30)
+// Prototype Crimson - js-app.js (v0.1.31)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './js-auth.js?v=0.1.2';
 import { initDocsEngine, DOCS_VERSION } from './js-docs.js?v=0.1.5';
 import { initGeneratorEngine, GENERATOR_VERSION } from './js-generator.js?v=0.1.4';
+import { initManagerEngine, openManagerView, MANAGER_VERSION } from './js-manager.js?v=0.1.0';
 import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './js-print.js?v=0.1.18';
 
-export const APP_VERSION = "v0.1.30";
+export const APP_VERSION = "v0.1.31";
 
 export function getRuntimeVersions() {
   let indexVer = 'v0.1.30';
@@ -30,6 +31,7 @@ export function getRuntimeVersions() {
     "js-auth.js": AUTH_VERSION,
     "js-docs.js": DOCS_VERSION,
     "js-generator.js": GENERATOR_VERSION,
+    "js-manager.js": MANAGER_VERSION,
     "js-print.js": PRINT_VERSION,
     "styles.css": cssVer,
     "index.html": indexVer
@@ -42,6 +44,7 @@ const dashboardView = document.getElementById('dashboard-view');
 const printView = document.getElementById('print-view');
 const docsView = document.getElementById('docs-view');
 const generatorView = document.getElementById('generator-view');
+const managerView = document.getElementById('manager-view');
 const btnLogout = document.getElementById('btn-logout');
 const btnBack = document.getElementById('btn-back');
 const btnPrintEdlps = document.getElementById('btn-print-edlps');
@@ -114,6 +117,7 @@ export function switchView(targetViewId, pushState = true) {
   if (printView) printView.style.display = 'none';
   if (docsView) docsView.style.display = 'none';
   if (generatorView) generatorView.style.display = 'none';
+  if (managerView) managerView.style.display = 'none';
 
   const targetEl = document.getElementById(targetViewId);
   if (targetEl) {
@@ -125,7 +129,7 @@ export function switchView(targetViewId, pushState = true) {
   if (currentView === 'dashboard-view') {
     if (btnLogout) btnLogout.style.display = 'inline-flex';
     if (btnBack) btnBack.style.display = 'none';
-  } else if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
+  } else if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view' || currentView === 'manager-view') {
     if (btnLogout) btnLogout.style.display = 'none';
     if (btnBack) btnBack.style.display = 'inline-flex';
   } else {
@@ -150,7 +154,7 @@ window.addEventListener('popstate', (e) => {
   if (modalDismissed) return;
 
   let dest = (e.state && e.state.view) ? e.state.view : 'login-view';
-  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view' || dest === 'docs-view' || dest === 'generator-view')) {
+  if (!isAuthenticated && (dest === 'dashboard-view' || dest === 'print-view' || dest === 'docs-view' || dest === 'generator-view' || dest === 'manager-view')) {
     dest = 'login-view';
   }
   switchView(dest, false);
@@ -240,7 +244,7 @@ if (relativeTimeTimer) clearInterval(relativeTimeTimer);
 relativeTimeTimer = setInterval(updateRelativeTimeDisplay, 10000);
 
 function handleNavBack() {
-  if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view') {
+  if (currentView === 'print-view' || currentView === 'docs-view' || currentView === 'generator-view' || currentView === 'manager-view') {
     switchView(isAuthenticated ? 'dashboard-view' : 'login-view');
   } else {
     switchView('login-view');
@@ -250,6 +254,14 @@ function handleNavBack() {
 initPrintEngine();
 initDocsEngine();
 initGeneratorEngine();
+initManagerEngine();
+
+if (btnManageReports) {
+  btnManageReports.addEventListener('click', () => {
+    openManagerView();
+    switchView('manager-view');
+  });
+}
 
 
 

@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.23 */
+/* Prototype Crimson - styles.css v0.1.24 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -3103,3 +3103,40 @@ body {
     break-after: avoid;
   }
 }
+
+/* --- MANAGER VIEW & CONTROLS --- */
+#manager-view { width: 100%; max-width: 1280px; padding: 68px 16px 60px; display: flex; flex-direction: column; align-items: center; }
+.mgr-controls-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.mgr-search-input { flex: 1; min-width: 180px; padding: 8px 14px; font-size: 0.88rem; border: 1.5px solid var(--border); border-radius: 9999px; outline: none; background: #fff; }
+.mgr-carrier-filters { display: flex; gap: 6px; background: #e4e6eb; padding: 4px; border-radius: 9999px; }
+.mgr-filter-chip { font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; padding: 4px 10px; cursor: pointer; user-select: none; }
+.mgr-actions-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-cloud-status { font-size: 0.82rem; padding: 6px 14px; background: #fff; border: 1.5px solid var(--border); color: var(--text-main); }
+.btn-cloud-status.status-synced { border-color: #10b981; color: #047857; }
+.btn-cloud-status.status-pending { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+.btn-cloud-status.status-noconfig { background: #fffbeb; border-color: #f59e0b; color: #b45309; }
+.btn-cloud-status.status-error { background: #fef2f2; border-color: var(--danger); color: var(--danger); }
+/* --- MANAGER TABLE & ROW STYLES --- */
+.mgr-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background: #fff; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+.mgr-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; white-space: nowrap; }
+.mgr-table th, .mgr-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #f0f2f5; }
+.mgr-table th { background: #f8fafc; font-weight: 700; font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; }
+.col-dev-sticky { position: sticky; left: 0; background: #fff; z-index: 5; text-align: left !important; min-width: 170px; font-weight: 700; box-shadow: 2px 0 5px rgba(0,0,0,0.04); }
+.mgr-table th.col-dev-sticky { background: #f8fafc; z-index: 6; }
+.group-att { background: rgba(14, 165, 233, 0.08); }
+.group-vzw { background: rgba(239, 68, 68, 0.08); }
+.group-tmo { background: rgba(236, 72, 153, 0.08); }
+.mgr-input-wrap { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #fff; }
+.mgr-num-input { width: 52px; border: none; padding: 4px; text-align: center; font-size: 0.82rem; font-weight: 600; outline: none; }
+.mgr-lock-btn { background: #f0f2f5; border: none; border-left: 1px solid var(--border); padding: 0 5px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; user-select: none; }
+.mgr-lock-btn.locked { background: #cbd5e1; color: #0f172a; }
+.mgr-carrier-toggle { cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 9999px; border: 1px solid var(--border); background: #f0f2f5; margin-right: 4px; }
+.mgr-carrier-toggle.active { background: #10b981; color: #fff; border-color: #10b981; }
+.mgr-carrier-toggle.inactive { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.mgr-warn-badge { color: #f59e0b; font-size: 0.85rem; margin-left: 3px; display: none; cursor: help; }
+.mgr-warn-badge.visible { display: inline-block; }
+.mgr-bic-drawer { background: #f8fafc; padding: 8px 12px; display: none; border-top: 1px dashed var(--border); font-size: 0.8rem; }
+.mgr-bic-drawer.open { display: flex; gap: 14px; align-items: center; }
+.mgr-form-group { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.mgr-form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
+@media print { #manager-view, #mgr-settings-modal, #mgr-add-modal { display: none !important; } }

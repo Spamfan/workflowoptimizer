@@ -19,9 +19,10 @@
   UI renders token as password input; Base64-obfuscated in storage.  
 * **Sequence:** (1) GET current `sha` and ref -> (2) Canonical alphabetical  
   sort by `dev.name` -> (3) Safe Base64 encoding -> (4) PUT commit payload.  
-* **Feedback Pill:** M3 status indicator transitions: Idle (`Synced`) ->  
-  In-Flight (`Committing...`) -> Success (`✓ Committed [sha]` with 4s fade) ->  
-  Alert (`⚠️ Error / SHA mismatch`).  
+* **Cloud Status Pill:** M3 capsule indicator transitions: `☁️ Connect GitHub`  
+  (missing PAT) -> `☁️ Synced` (idle) -> `☁️ [N] Pending` (dirty rows) ->  
+  `☁️ Committing...` -> `✓ Committed` (4s auto-fade). Clicking pill opens  
+  settings modal. Supports both bulk commit and individual row-level commit.  
 
 ---
 
@@ -31,6 +32,8 @@
   (`attMO: null`, `vzwMO: null`, `tmoDP: null, tmoMOADP: null, tmoMO: null`).  
   `js-print.js` automatically purges `null` devices from carrier tables.  
 * **Active State:** Toggling carrier ON re-enables inputs and restores pricing.  
+* **BIC Drawer & Add Device:** Expandable row drawer exposes `attBIC`, `vzwBIC`,  
+  and `tmoBIC`. Add Device modal slugifies name into key and initializes defaults.  
 
 ---
 
