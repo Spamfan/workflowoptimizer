@@ -594,9 +594,9 @@
       "abbr": "STYL26",
       "vzwMO": 7.31,
       "attMO": 6,
-      "tmoDP": 0,
-      "tmoMOADP": 0,
-      "tmoMO": 0,
+      "tmoDP": 80,
+      "tmoMOADP": 8.33,
+      "tmoMO": 11.67,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
