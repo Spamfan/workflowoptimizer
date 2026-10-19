@@ -17,7 +17,7 @@
       "name": "Flip 4 5G",
       "abbr": "Flip 4 5G",
       "vzwMO": 0,
-      "attMO": 0,
+      "attMO": 27.75,
       "tmoDP": 25,
       "tmoMOADP": 1,
       "tmoMO": 2.04,
@@ -373,18 +373,6 @@
       "vzwBIC": null,
       "tmoBIC": null
     },
-    "iphone16e": {
-      "name": "iPhone 16e",
-      "abbr": "IP16e",
-      "vzwMO": 12.47,
-      "attMO": 12.47,
-      "tmoDP": 341,
-      "tmoMOADP": 4.5,
-      "tmoMO": 18.71,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
     "iphone16plus": {
       "name": "iPhone 16 Plus",
       "abbr": "IP16+",
@@ -421,6 +409,18 @@
       "vzwBIC": null,
       "tmoBIC": null
     },
+    "iphone16e": {
+      "name": "iPhone 16e",
+      "abbr": "IP16e",
+      "vzwMO": 12.47,
+      "attMO": 12.47,
+      "tmoDP": 341,
+      "tmoMOADP": 4.5,
+      "tmoMO": 18.71,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
     "iphone17": {
       "name": "iPhone 17",
       "abbr": "IP17",
@@ -429,18 +429,6 @@
       "tmoDP": 663,
       "tmoMOADP": 9,
       "tmoMO": 36.63,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
-    "iphone17e": {
-      "name": "iPhone 17e",
-      "abbr": "IP17e",
-      "vzwMO": 15.25,
-      "attMO": 15.25,
-      "tmoDP": 487,
-      "tmoMOADP": 6.75,
-      "tmoMO": 27.04,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
@@ -465,6 +453,18 @@
       "tmoDP": 867,
       "tmoMOADP": 11.75,
       "tmoMO": 47.88,
+      "attBIC": null,
+      "vzwBIC": null,
+      "tmoBIC": null
+    },
+    "iphone17e": {
+      "name": "iPhone 17e",
+      "abbr": "IP17e",
+      "vzwMO": 15.25,
+      "attMO": 15.25,
+      "tmoDP": 487,
+      "tmoMOADP": 6.75,
+      "tmoMO": 27.04,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
