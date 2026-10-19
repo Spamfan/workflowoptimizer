@@ -1,6 +1,6 @@
 # WORKFLOW OPTIMIZER (WFO)
 ### Prototype Crimson
-### Living Design Document (LDD) V33
+### Living Design Document (LDD) V34
 
 ---
 
@@ -244,15 +244,15 @@ Replace with
 ### 6. BASELINE FLOOR & FILE TREE
 
 #### Version Floor
-* **App (Prototype Crimson):** `v0.1.31`  
-* **`index.html`:** `v0.1.31`  
-* **`js-app.js`:** `v0.1.31`  
+* **App (Prototype Crimson):** `v0.1.32`  
+* **`index.html`:** `v0.1.32`  
+* **`js-app.js`:** `v0.1.32`  
 * **`js-auth.js`:** `v0.1.2`  
 * **`js-docs.js`:** `v0.1.5`  
 * **`js-generator.js`:** `v0.1.4`  
-* **`js-manager.js`:** `v0.1.0`  
-* **`js-print.js`:** `v0.1.18`  
-* **`styles.css`:** `v0.1.24`  
+* **`js-manager.js`:** `v0.1.1`  
+* **`js-print.js`:** `v0.1.19`  
+* **`styles.css`:** `v0.1.25`  
 
 #### File Tree
 * `data-stats.json`

@@ -19,19 +19,27 @@
   UI renders token as password input; Base64-obfuscated in storage.  
 * **Sequence:** (1) GET current `sha` and ref -> (2) Canonical alphabetical  
   sort by `dev.name` -> (3) Safe Base64 encoding -> (4) PUT commit payload.  
-* **Cloud Status Pill:** M3 capsule indicator transitions: `☁️ Connect GitHub`  
-  (missing PAT) -> `☁️ Synced` (idle) -> `☁️ [N] Pending` (dirty rows) ->  
-  `☁️ Committing...` -> `✓ Committed` (4s auto-fade). Clicking pill opens  
-  settings modal. Supports both bulk commit and individual row-level commit.  
+* **Cloud Status Pill:** M3 capsule indicator with clean inline SVGs:  
+  Connect GitHub (missing PAT) -> Synced (idle) -> [N] Pending (dirty rows) ->  
+  Committing... -> Committed (4s auto-fade). Clicking pill opens settings  
+  modal. Supports both bulk commit and individual row-level commit.  
+* **Traceability Bar:** Renders short commit SHA (7 chars) with direct  
+  hyperlink to GitHub, relative commit timestamp, staged diff inspector,  
+  and a "Verify Live Deploy" check that audits live GitHub Pages assets  
+  against the latest memory catalog.  
+* **Instant Session Hydration:** Commits directly notify `js-app.js`  
+  and `js-print.js` to update in-memory catalog caches immediately.  
 
 ---
 
 ### 3. CARRIER EXCLUSIVITY & AVAILABILITY
 * **Carrier Toggles:** Each device row has toggles for ATT, VZW, TMO.  
-* **Disabled State:** Toggling carrier OFF sets pricing keys to `null`  
+* **Disabled State:** Toggling carrier OFF sets pricing keys strictly to `null`  
   (`attMO: null`, `vzwMO: null`, `tmoDP: null, tmoMOADP: null, tmoMO: null`).  
   `js-print.js` automatically purges `null` devices from carrier tables.  
 * **Active State:** Toggling carrier ON re-enables inputs and restores pricing.  
+* **Strict Null vs 0 Ingestion:** Blank/empty inputs parse cleanly as `null` or  
+  default zero when active; toggled off states are guaranteed pure `null`.  
 * **BIC Drawer & Add Device:** Expandable row drawer exposes `attBIC`, `vzwBIC`,  
   and `tmoBIC`. Add Device modal slugifies name into key and initializes defaults.  
 

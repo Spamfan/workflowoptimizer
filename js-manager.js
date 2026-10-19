@@ -1,12 +1,15 @@
-// Prototype Crimson - js-manager.js (v0.1.0)
+// Prototype Crimson - js-manager.js (v0.1.1)
 // Catalog & Installment Manager Subsystem
 
-import { fetchCatalog } from './js-app.js?v=0.1.31';
+import { fetchCatalog, setCachedCatalog } from './js-app.js?v=0.1.32';
+import { updatePrintCatalogCache } from './js-print.js?v=0.1.19';
 
-export const MANAGER_VERSION = "v0.1.0";
+export const MANAGER_VERSION = "v0.1.1";
 const STORAGE_GH_KEY = 'crimson_gh_config';
+const STORAGE_LAST_COMMIT_KEY = 'crimson_last_commit';
 
 let workingCatalog = {};
+let originalCatalog = {};
 const dirtyKeys = new Set();
 const rowLocks = new Map();
 
@@ -22,29 +25,36 @@ export function saveGhConfig(cfg) {
 
 function updateCloudStatus(status = 'idle') {
   const pill = document.getElementById('btn-cloud-status');
+  const textEl = document.getElementById('cloud-status-text');
   if (!pill) return;
   const cfg = getGhConfig();
+
+  const svgCloud = `<svg class="svg-icon icon-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`;
+  const svgSynced = `<svg class="svg-icon icon-synced" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="9 13 12 16 16 11"/></svg>`;
+  const svgSpinner = `<svg class="svg-icon icon-pending spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>`;
+  const svgAlert = `<svg class="svg-icon icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
   if (!cfg.token) {
     pill.className = 'pill-btn btn-cloud-status status-noconfig';
-    pill.textContent = '☁️ Connect GitHub';
+    pill.innerHTML = `${svgCloud} <span id="cloud-status-text">Connect GitHub</span>`;
     return;
   }
   if (status === 'committing') {
     pill.className = 'pill-btn btn-cloud-status status-committing';
-    pill.textContent = '☁️ Committing...';
+    pill.innerHTML = `${svgSpinner} <span id="cloud-status-text">Committing...</span>`;
     return;
   }
   if (status === 'error') {
     pill.className = 'pill-btn btn-cloud-status status-error';
-    pill.textContent = '⚠️ Commit Error';
+    pill.innerHTML = `${svgAlert} <span id="cloud-status-text">Commit Error</span>`;
     return;
   }
   if (dirtyKeys.size > 0) {
     pill.className = 'pill-btn btn-cloud-status status-pending';
-    pill.textContent = `☁️ ${dirtyKeys.size} Pending`;
+    pill.innerHTML = `${svgSpinner} <span id="cloud-status-text">${dirtyKeys.size} Pending</span>`;
   } else {
     pill.className = 'pill-btn btn-cloud-status status-synced';
-    pill.textContent = '☁️ Synced';
+    pill.innerHTML = `${svgSynced} <span id="cloud-status-text">Synced</span>`;
   }
 }
 
@@ -230,6 +240,14 @@ function renderManagerTable() {
   document.querySelectorAll('.group-tmo').forEach(el => el.style.display = showTmo ? '' : 'none');
 }
 
+function parseNumOrNull(val) {
+  if (val === null || val === undefined) return null;
+  const trimmed = String(val).trim();
+  if (trimmed === '') return null;
+  const num = parseFloat(trimmed);
+  return isNaN(num) ? null : num;
+}
+
 function scrapeRow(key, rowEl, bicDrawerEl) {
   const d = workingCatalog[key] || {};
   d.abbr = rowEl.querySelector('.mgr-input-abbr').value.trim();
@@ -238,13 +256,16 @@ function scrapeRow(key, rowEl, bicDrawerEl) {
   const vzwActive = rowEl.querySelector('.mgr-carrier-toggle[data-carrier="vzw"]').classList.contains('active');
   const tmoActive = rowEl.querySelector('.mgr-carrier-toggle[data-carrier="tmo"]').classList.contains('active');
 
-  d.attMO = attActive ? (parseFloat(rowEl.querySelector('.mgr-att-mo').value) || 0) : null;
-  d.vzwMO = vzwActive ? (parseFloat(rowEl.querySelector('.mgr-vzw-mo').value) || 0) : null;
+  d.attMO = attActive ? (parseNumOrNull(rowEl.querySelector('.mgr-att-mo').value) ?? 0) : null;
+  d.vzwMO = vzwActive ? (parseNumOrNull(rowEl.querySelector('.mgr-vzw-mo').value) ?? 0) : null;
 
   if (tmoActive) {
-    d.tmoMO = parseFloat(rowEl.querySelector('.mgr-tmo-red').value) || 0;
-    d.tmoDP = parseFloat(rowEl.querySelector('.mgr-tmo-dp').value) || 0;
-    d.tmoMOADP = parseFloat(rowEl.querySelector('.mgr-tmo-mo').value) || 0;
+    const rVal = parseNumOrNull(rowEl.querySelector('.mgr-tmo-red').value);
+    const dpVal = parseNumOrNull(rowEl.querySelector('.mgr-tmo-dp').value);
+    const moVal = parseNumOrNull(rowEl.querySelector('.mgr-tmo-mo').value);
+    d.tmoMO = rVal ?? 0;
+    d.tmoDP = dpVal ?? 0;
+    d.tmoMOADP = moVal ?? 0;
   } else {
     d.tmoMO = null;
     d.tmoDP = null;
@@ -252,14 +273,41 @@ function scrapeRow(key, rowEl, bicDrawerEl) {
   }
 
   if (bicDrawerEl) {
-    const aB = bicDrawerEl.querySelector('.mgr-bic-att').value;
-    const vB = bicDrawerEl.querySelector('.mgr-bic-vzw').value;
-    const tB = bicDrawerEl.querySelector('.mgr-bic-tmo').value;
-    d.attBIC = aB !== '' ? parseFloat(aB) : null;
-    d.vzwBIC = vB !== '' ? parseFloat(vB) : null;
-    d.tmoBIC = tB !== '' ? parseFloat(tB) : null;
+    d.attBIC = parseNumOrNull(bicDrawerEl.querySelector('.mgr-bic-att').value);
+    d.vzwBIC = parseNumOrNull(bicDrawerEl.querySelector('.mgr-bic-vzw').value);
+    d.tmoBIC = parseNumOrNull(bicDrawerEl.querySelector('.mgr-bic-tmo').value);
   }
   return d;
+}
+
+function getLastCommitInfo() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_LAST_COMMIT_KEY) || 'null'); }
+  catch { return null; }
+}
+
+function saveLastCommitInfo(info) {
+  try { localStorage.setItem(STORAGE_LAST_COMMIT_KEY, JSON.stringify(info)); }
+  catch {}
+  renderTraceBar();
+}
+
+function renderTraceBar() {
+  const linkEl = document.getElementById('mgr-last-commit-link');
+  const timeEl = document.getElementById('mgr-trace-time');
+  const info = getLastCommitInfo();
+  if (!info) {
+    if (linkEl) { linkEl.textContent = 'None'; linkEl.removeAttribute('href'); }
+    if (timeEl) timeEl.textContent = '';
+    return;
+  }
+  if (linkEl) {
+    linkEl.textContent = info.sha ? info.sha.substring(0, 7) : 'View Commit';
+    linkEl.href = info.url || '#';
+  }
+  if (timeEl && info.timestamp) {
+    const mins = Math.max(0, Math.floor((Date.now() - info.timestamp) / 60000));
+    timeEl.textContent = mins < 1 ? '• just now' : `• ${mins}m ago`;
+  }
 }
 
 export async function commitCatalog(targetKey = null) {
@@ -318,6 +366,21 @@ export async function commitCatalog(targetKey = null) {
     });
 
     if (!putRes.ok) throw new Error(`Commit failed: ${putRes.statusText}`);
+    const putData = await putRes.json();
+    const commitSha = putData?.commit?.sha || sha;
+    const commitUrl = `https://github.com/${cfg.user}/${cfg.repo}/commit/${commitSha}`;
+
+    saveLastCommitInfo({
+      sha: commitSha,
+      url: commitUrl,
+      timestamp: Date.now()
+    });
+
+    // Instant In-Memory Cross-Module Sync
+    const newCatalog = { ping: "working properly", devices: sorted };
+    setCachedCatalog(newCatalog);
+    updatePrintCatalogCache(newCatalog);
+    originalCatalog = JSON.parse(JSON.stringify(sorted));
 
     if (targetKey) dirtyKeys.delete(targetKey);
     else dirtyKeys.clear();
@@ -325,26 +388,95 @@ export async function commitCatalog(targetKey = null) {
     const pill = document.getElementById('btn-cloud-status');
     if (pill) {
       pill.className = 'pill-btn btn-cloud-status status-synced';
-      pill.textContent = '✓ Committed';
+      pill.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span id="cloud-status-text">Committed</span>`;
       setTimeout(() => updateCloudStatus('idle'), 4000);
     }
-  } catch (err) {
     updateCloudStatus('error');
     alert(`GitHub Commit Error: ${err.message}`);
   }
 }
 
+function scrapeAllRows() {
+  const rows = document.querySelectorAll('#mgr-tbody tr:not(.mgr-bic-container)');
+  rows.forEach(r => {
+    const k = r.dataset.key;
+    const bicDrawer = r.nextElementSibling?.querySelector('.mgr-bic-drawer');
+    scrapeRow(k, r, bicDrawer);
+  });
+}
+
 export async function openManagerView() {
   try {
     const stats = await fetchCatalog();
+    originalCatalog = JSON.parse(JSON.stringify(stats.devices || {}));
     workingCatalog = JSON.parse(JSON.stringify(stats.devices || {}));
     dirtyKeys.clear();
     rowLocks.clear();
     updateCloudStatus();
+    renderTraceBar();
     renderManagerTable();
   } catch (e) {
     alert('Unable to load catalog: ' + e.message);
   }
+}
+
+async function verifyLiveDeploy() {
+  const badge = document.getElementById('mgr-deploy-status');
+  if (!badge) return;
+  badge.style.display = 'inline-flex';
+  badge.className = 'mgr-deploy-badge pending';
+  badge.innerHTML = `<svg class="svg-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg> <span>Checking Pages...</span>`;
+
+  try {
+    const res = await fetch('./data-stats.json?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const live = await res.json();
+    const liveDevs = live.devices || {};
+
+    let isLive = true;
+    for (const k of Object.keys(originalCatalog)) {
+      if (!liveDevs[k] || JSON.stringify(liveDevs[k]) !== JSON.stringify(originalCatalog[k])) {
+        isLive = false;
+        break;
+      }
+    }
+
+    if (isLive) {
+      badge.className = 'mgr-deploy-badge live';
+      badge.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span>Live on GitHub Pages</span>`;
+    } else {
+      badge.className = 'mgr-deploy-badge pending';
+      badge.innerHTML = `<svg class="svg-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span>Deploying (~1m)</span>`;
+    }
+  } catch (err) {
+    badge.className = 'mgr-deploy-badge alert';
+    badge.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <span>Check Failed</span>`;
+  }
+}
+
+function showDiffModal() {
+  const modal = document.getElementById('mgr-diff-modal');
+  const pre = document.getElementById('mgr-diff-pre');
+  if (!modal || !pre) return;
+  scrapeAllRows();
+
+  const diffs = [];
+  const allKeys = new Set([...Object.keys(originalCatalog), ...Object.keys(workingCatalog)]);
+
+  for (const k of allKeys) {
+    const orig = originalCatalog[k];
+    const curr = workingCatalog[k];
+    if (!orig && curr) {
+      diffs.push(`+ [ADDED] ${curr.name} (${k}):\n  ${JSON.stringify(curr, null, 2)}`);
+    } else if (orig && !curr) {
+      diffs.push(`- [DELETED] ${orig.name} (${k})`);
+    } else if (JSON.stringify(orig) !== JSON.stringify(curr)) {
+      diffs.push(`~ [MODIFIED] ${curr.name} (${k}):\n  FROM: ${JSON.stringify(orig)}\n  TO:   ${JSON.stringify(curr)}`);
+    }
+  }
+
+  pre.textContent = diffs.length > 0 ? diffs.join('\n\n') : 'No pending memory changes detected.';
+  modal.style.display = 'flex';
 }
 
 export function initManagerEngine() {
@@ -523,5 +655,13 @@ export function initManagerEngine() {
   // Publish All
   document.getElementById('btn-mgr-publish')?.addEventListener('click', () => {
     commitCatalog();
+  });
+
+  // Trace & Deploy Verifier
+  document.getElementById('btn-mgr-check-deploy')?.addEventListener('click', verifyLiveDeploy);
+  document.getElementById('btn-mgr-diff')?.addEventListener('click', showDiffModal);
+  document.getElementById('btn-close-diff')?.addEventListener('click', () => {
+    const m = document.getElementById('mgr-diff-modal');
+    if (m) m.style.display = 'none';
   });
 }

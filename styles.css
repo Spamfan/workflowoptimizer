@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.24 */
+/* Prototype Crimson - styles.css v0.1.25 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -3111,11 +3111,37 @@ body {
 .mgr-carrier-filters { display: flex; gap: 6px; background: #e4e6eb; padding: 4px; border-radius: 9999px; }
 .mgr-filter-chip { font-size: 0.82rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 4px; padding: 4px 10px; cursor: pointer; user-select: none; }
 .mgr-actions-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.btn-cloud-status { font-size: 0.82rem; padding: 6px 14px; background: #fff; border: 1.5px solid var(--border); color: var(--text-main); }
+.btn-cloud-status { font-size: 0.82rem; padding: 6px 14px; background: #fff; border: 1.5px solid var(--border); color: var(--text-main); display: inline-flex; align-items: center; gap: 6px; }
 .btn-cloud-status.status-synced { border-color: #10b981; color: #047857; }
+.btn-cloud-status.status-synced svg { stroke: #10b981; }
 .btn-cloud-status.status-pending { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+.btn-cloud-status.status-pending svg { stroke: var(--primary); }
 .btn-cloud-status.status-noconfig { background: #fffbeb; border-color: #f59e0b; color: #b45309; }
+.btn-cloud-status.status-noconfig svg { stroke: #f59e0b; }
 .btn-cloud-status.status-error { background: #fef2f2; border-color: var(--danger); color: var(--danger); }
+.btn-cloud-status.status-error svg { stroke: var(--danger); }
+
+/* --- MANAGER TRACEABILITY DECK --- */
+.mgr-trace-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 6px 14px; margin-bottom: 12px; font-size: 0.8rem; gap: 10px; flex-wrap: wrap; }
+.mgr-trace-left { display: flex; align-items: center; gap: 6px; color: var(--text-sub); font-weight: 600; }
+.mgr-trace-label { font-weight: 700; color: var(--text-main); }
+.mgr-last-commit-link { color: var(--primary); font-family: monospace; font-weight: 700; text-decoration: underline; }
+.mgr-trace-time { color: var(--text-sub); font-size: 0.75rem; }
+.mgr-trace-right { display: flex; align-items: center; gap: 8px; }
+.mgr-btn-sm { padding: 4px 10px; font-size: 0.76rem; height: 30px; }
+.mgr-btn-sm svg { width: 14px; height: 14px; }
+.mgr-deploy-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 9999px; }
+.mgr-deploy-badge.live { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.mgr-deploy-badge.pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.mgr-deploy-badge.alert { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.mgr-deploy-badge svg { width: 12px; height: 12px; }
+
+/* --- MANAGER DIFF MODAL --- */
+.mgr-diff-card { max-width: 680px; width: 95%; max-height: 85vh; }
+.mgr-diff-subtitle { font-size: 0.82rem; color: var(--text-sub); margin-bottom: 10px; }
+.mgr-diff-container { max-height: 55vh; overflow-y: auto; background: #1e1e1e; border-radius: 8px; padding: 12px; }
+.mgr-diff-pre { color: #d4d4d4; font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; margin: 0; }
+
 /* --- MANAGER TABLE & ROW STYLES --- */
 .mgr-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background: #fff; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
 .mgr-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; white-space: nowrap; }
@@ -3139,4 +3165,4 @@ body {
 .mgr-bic-drawer.open { display: flex; gap: 14px; align-items: center; }
 .mgr-form-group { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; text-align: left; }
 .mgr-form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
-@media print { #manager-view, #mgr-settings-modal, #mgr-add-modal { display: none !important; } }
+@media print { #manager-view, #mgr-settings-modal, #mgr-add-modal, #mgr-diff-modal { display: none !important; } }

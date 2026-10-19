@@ -10,6 +10,11 @@
 * **Direct Commit (Write):** Updates commit directly to  
   GitHub via REST API (`PUT /repos/{owner}/{repo}/contents/data-stats.json`)  
   using fine-grained PAT stored in `localStorage`.  
+* **Instant Session Hydration:** Commits directly inject  
+  the newly sorted catalog into `setCachedCatalog()` (`js-app.js`)  
+  and `updatePrintCatalogCache()` (`js-print.js`) to provide  
+  instant in-memory sync across the current active tab without  
+  waiting for GitHub Pages redeployment.  
 * **Offline Defense:** Retain last successful  
   payload in memory during session.  
 
@@ -44,6 +49,9 @@
   to `null` (`attMO: null`, `vzwMO: null`, or `tmoDP: null,`  
   `tmoMOADP: null, tmoMO: null`). `js-print.js` automatically  
   omits unsupported items from carrier tables.  
+* **Zero vs. Null Distinction:** `0` represents a free device  
+  ($0/mo promotion on installment) and renders as `$0`. `null`  
+  represents an unsupported/unoffered carrier offering.  
 * **T-Mobile Sub-Keys:** `tmoMO` represents monthly cost  
-  with $0 down payment. `tmoDP` is down payment, and  
-  `tmoMOADP` is monthly payment after down payment.  
+  with $0 down payment ($Total = MO \times 24$). `tmoDP` is down payment,  
+  and `tmoMOADP` is monthly payment after down payment ($Total = DP + (MOADP \times 24)$).  

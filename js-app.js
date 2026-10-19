@@ -1,16 +1,16 @@
-// Prototype Crimson - js-app.js (v0.1.31)
+// Prototype Crimson - js-app.js (v0.1.32)
 // Master Router, Unified View Coordinator & Lifecycle Controller
 
 import { initAuth, getSessionPin, logout, AUTH_VERSION } from './js-auth.js?v=0.1.2';
 import { initDocsEngine, DOCS_VERSION } from './js-docs.js?v=0.1.5';
 import { initGeneratorEngine, GENERATOR_VERSION } from './js-generator.js?v=0.1.4';
-import { initManagerEngine, openManagerView, MANAGER_VERSION } from './js-manager.js?v=0.1.0';
-import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './js-print.js?v=0.1.18';
+import { initManagerEngine, openManagerView, MANAGER_VERSION } from './js-manager.js?v=0.1.1';
+import { initPrintEngine, openPrintPreview, PRINT_VERSION } from './js-print.js?v=0.1.19';
 
-export const APP_VERSION = "v0.1.31";
+export const APP_VERSION = "v0.1.32";
 
 export function getRuntimeVersions() {
-  let indexVer = 'v0.1.30';
+  let indexVer = 'v0.1.32';
   const metaVer = document.querySelector('meta[name="version"]');
   if (metaVer && metaVer.content) {
     indexVer = metaVer.content;
@@ -18,7 +18,7 @@ export function getRuntimeVersions() {
     indexVer = document.documentElement.dataset.version;
   }
 
-  let cssVer = 'v0.1.23';
+  let cssVer = 'v0.1.25';
   const cssLink = document.querySelector('link[rel="stylesheet"][href*="styles.css"]');
   if (cssLink) {
     const match = cssLink.getAttribute('href').match(/v=([^&]+)/);
@@ -94,6 +94,12 @@ export async function fetchCatalog() {
     if (cachedStats) return cachedStats;
     throw err;
   }
+}
+
+export function setCachedCatalog(newData) {
+  cachedStats = newData;
+  lastPingTimestamp = Date.now();
+  updateRelativeTimeDisplay();
 }
 
 

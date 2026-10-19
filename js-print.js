@@ -1,9 +1,14 @@
-// Prototype Crimson - js-print.js (v0.1.18)
+// Prototype Crimson - js-print.js (v0.1.19)
 // Print Likely EDLP Price Engine
 
-export const PRINT_VERSION = "v0.1.18";
+export const PRINT_VERSION = "v0.1.19";
 
 let sessionCatalogCache = null;
+
+export function updatePrintCatalogCache(newData) {
+  sessionCatalogCache = newData;
+  catalogData = newData;
+}
 
 async function fetchStatsCatalog() {
   try {
@@ -178,40 +183,10 @@ function getTmoPrice(dev) {
   return `$${total} (${dpStr} + ${moStr}/mo)`;
 }
 
-const DEFAULT_VISIBLE_KEYS = {
-  att: new Set(['classic', 'galaxya175g', 'galaxya235g', 'galaxys25plus5g', 'galaxys25ultra5g', 'galaxys26fe5g', 'galaxys26ultra5g', 'motog5g2026', 'motogpower2026', 'motogstylus2025', 'motogstylus2026']),
-  vzw: new Set(['galaxya175g', 'galaxys26fe5g', 'galaxys26ultra5g', 'motog5g2026', 'motogplay2026', 'motogpower2026', 'motogstylus2026', 'tclflip3']),
-  tmo: new Set(['flip45g', 'galaxya175g', 'motog5g2026', 'motogplay2026']),
-  apple: new Set(['iphone17', 'iphone17pro', 'iphone17promax', 'iphone17e', 'iphone18pro', 'iphone18promax', 'iphoneair'])
-};
-
 function applyDefaultVisibleKeys(catalog) {
   hiddenItemKeys.clear();
-  const devices = (catalog && catalog.devices) ? catalog.devices : {};
-
-  for (const [key, dev] of Object.entries(devices)) {
-    const displayName = dev.abbr || dev.name || key;
-    const fullName = (dev?.name || displayName || '').toLowerCase();
-    const abbr = (dev?.abbr || '').toLowerCase();
-    const isApple = fullName.includes('iphone') || fullName.includes('somm') || abbr.startsWith('ip') || abbr.startsWith('se');
-
-    if (isApple) {
-      const uid = `apple_${key}`;
-      if ((getAttPrice(dev) || getVzwPrice(dev) || getTmoPrice(dev)) && !DEFAULT_VISIBLE_KEYS.apple.has(key)) {
-        hiddenItemKeys.add(uid);
-      }
-    } else {
-      if (getAttPrice(dev) && !DEFAULT_VISIBLE_KEYS.att.has(key)) {
-        hiddenItemKeys.add(`att_${key}`);
-      }
-      if (getVzwPrice(dev) && !DEFAULT_VISIBLE_KEYS.vzw.has(key)) {
-        hiddenItemKeys.add(`vzw_${key}`);
-      }
-      if (getTmoPrice(dev) && !DEFAULT_VISIBLE_KEYS.tmo.has(key)) {
-        hiddenItemKeys.add(`tmo_${key}`);
-      }
-    }
-  }
+  // All devices with active catalog pricing render directly by default.
+  // Inactive/null carrier entries are pruned automatically during row rendering.
 }
 
 // Global Keydown Handler for Undo / Redo in Print View

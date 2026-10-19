@@ -32,10 +32,10 @@
   headers, and prices match device name font size  
   (`0.76rem`). Carrier titles are underlined. Column  
   header is strictly "Device name".  
-* **Store Defaults Factory Whitelist:** Unedited  
-  initial load and "Reset list to defaults" restore  
-  the curated baseline store active list, moving all  
-  other catalog entries into the "Other devices" drawer.  
+* **Dynamic Catalog Visibility:** Elimination of hardcoded  
+  whitelists. All devices with active catalog pricing populate  
+  the active report directly on load. Unoffered or `null`  
+  carrier entries are omitted automatically from tables.  
 * **Apple Segregation:** All iPhones segregate  
   strictly into the Apple Devices table (checked via  
   canonical name and root abbreviations); zero  
@@ -44,7 +44,9 @@
   ATT -> VZW -> TMO.  
 * **Legacy Filter:** Purge obsolete iPhone 11/12/13.  
 * **Canonical Catalog Target:** Device intake data loads  
-  from `data-stats.json` directly via `js-print.js`.  
+  from `data-stats.json` directly via `js-print.js` or  
+  via direct session injection (`updatePrintCatalogCache()`)  
+  originating from the Manager interface.  
 
 ---
 
