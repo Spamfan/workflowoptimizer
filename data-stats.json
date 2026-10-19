@@ -313,42 +313,6 @@
       "vzwBIC": null,
       "tmoBIC": null
     },
-    "iphone13": {
-      "name": "iPhone 13",
-      "abbr": "IP13",
-      "vzwMO": 0,
-      "attMO": 0,
-      "tmoDP": 0,
-      "tmoMOADP": 0,
-      "tmoMO": 0,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
-    "iphone14": {
-      "name": "iPhone 14",
-      "abbr": "IP14",
-      "vzwMO": 5.53,
-      "attMO": 5.53,
-      "tmoDP": 0,
-      "tmoMOADP": 0,
-      "tmoMO": 0,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
-    "iphone14plus": {
-      "name": "iPhone 14 Plus",
-      "abbr": "IP14+",
-      "vzwMO": 5.53,
-      "attMO": 5.53,
-      "tmoDP": 0,
-      "tmoMOADP": 0,
-      "tmoMO": 0,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
     "iphone15": {
       "name": "iPhone 15",
       "abbr": "IP15",
@@ -733,23 +697,11 @@
       "vzwBIC": null,
       "tmoBIC": null
     },
-    "sommiphone17e": {
-      "name": "SOMM iPhone 17e",
-      "abbr": "IP17e (SOMM)",
-      "vzwMO": 15.25,
-      "attMO": 15.25,
-      "tmoDP": 487,
-      "tmoMOADP": 6.75,
-      "tmoMO": 27.04,
-      "attBIC": null,
-      "vzwBIC": null,
-      "tmoBIC": null
-    },
     "tclflip3": {
       "name": "TCL Flip 3",
       "abbr": "Flip3",
       "vzwMO": 2.06,
-      "attMO": 0,
+      "attMO": null,
       "tmoDP": 0,
       "tmoMOADP": 0,
       "tmoMO": 0,
