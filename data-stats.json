@@ -16,8 +16,8 @@
     "flip45g": {
       "name": "Flip 4 5G",
       "abbr": "Flip 4 5G",
-      "vzwMO": 0,
-      "attMO": 27.75,
+      "vzwMO": null,
+      "attMO": null,
       "tmoDP": 25,
       "tmoMOADP": 1,
       "tmoMO": 2.04,
