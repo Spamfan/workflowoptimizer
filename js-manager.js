@@ -1,10 +1,10 @@
-// Prototype Crimson - js-manager.js (v0.1.1)
+// Prototype Crimson - js-manager.js (v0.1.2)
 // Catalog & Installment Manager Subsystem
 
-import { fetchCatalog, setCachedCatalog } from './js-app.js?v=0.1.32';
+import { fetchCatalog, setCachedCatalog } from './js-app.js?v=0.1.33';
 import { updatePrintCatalogCache } from './js-print.js?v=0.1.19';
 
-export const MANAGER_VERSION = "v0.1.1";
+export const MANAGER_VERSION = "v0.1.2";
 const STORAGE_GH_KEY = 'crimson_gh_config';
 const STORAGE_LAST_COMMIT_KEY = 'crimson_last_commit';
 
@@ -391,6 +391,7 @@ export async function commitCatalog(targetKey = null) {
       pill.innerHTML = `<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span id="cloud-status-text">Committed</span>`;
       setTimeout(() => updateCloudStatus('idle'), 4000);
     }
+  } catch (err) {
     updateCloudStatus('error');
     alert(`GitHub Commit Error: ${err.message}`);
   }
