@@ -28,11 +28,11 @@
     "flip4v2": {
       "name": "Flip 4v2",
       "abbr": "Flip 4v2",
-      "vzwMO": 0,
-      "attMO": 0,
+      "vzwMO": null,
+      "attMO": null,
       "tmoDP": 0,
       "tmoMOADP": 0,
-      "tmoMO": 41.63,
+      "tmoMO": 0,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
@@ -40,8 +40,8 @@
     "flip4": {
       "name": "Flip4",
       "abbr": "Flip4",
-      "vzwMO": 0,
-      "attMO": 1,
+      "vzwMO": null,
+      "attMO": null,
       "tmoDP": 0,
       "tmoMOADP": 0,
       "tmoMO": 0,
