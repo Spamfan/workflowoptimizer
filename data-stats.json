@@ -412,8 +412,8 @@
     "iphoneduo": {
       "name": "iPhone Duo",
       "abbr": "IP DUO",
-      "vzwMO": 0,
-      "attMO": 0,
+      "vzwMO": null,
+      "attMO": 99999,
       "tmoDP": null,
       "tmoMOADP": null,
       "tmoMO": null,
