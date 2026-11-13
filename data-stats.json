@@ -328,7 +328,7 @@
     "iphone17": {
       "name": "iPhone 17",
       "abbr": "IP17",
-      "vzwMO": 24.42,
+      "vzwMO": 25.81,
       "attMO": 25.81,
       "tmoDP": 663,
       "tmoMOADP": 9,
@@ -340,7 +340,7 @@
     "iphone17pro": {
       "name": "iPhone 17 Pro",
       "abbr": "IP17PR",
-      "vzwMO": 29.14,
+      "vzwMO": 30.53,
       "attMO": 30.53,
       "tmoDP": 791,
       "tmoMOADP": 10.75,
@@ -352,7 +352,7 @@
     "iphone17promax": {
       "name": "iPhone 17 Pro Max",
       "abbr": "IP17PM",
-      "vzwMO": 31.92,
+      "vzwMO": 33.31,
       "attMO": 33.31,
       "tmoDP": 867,
       "tmoMOADP": 11.75,
@@ -364,7 +364,7 @@
     "iphone17e": {
       "name": "iPhone 17e",
       "abbr": "IP17e",
-      "vzwMO": 15.25,
+      "vzwMO": 18.03,
       "attMO": 18.03,
       "tmoDP": 487,
       "tmoMOADP": 6.75,
