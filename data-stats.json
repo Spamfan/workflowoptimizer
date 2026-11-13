@@ -268,7 +268,7 @@
     "iphone16": {
       "name": "iPhone 16",
       "abbr": "IP16",
-      "vzwMO": 20.25,
+      "vzwMO": 21.64,
       "attMO": 21.64,
       "tmoDP": 473,
       "tmoMOADP": 6.5,
@@ -280,7 +280,7 @@
     "iphone16plus": {
       "name": "iPhone 16 Plus",
       "abbr": "IP16+",
-      "vzwMO": 22.19,
+      "vzwMO": 23.03,
       "attMO": 23.03,
       "tmoDP": 549,
       "tmoMOADP": 7.5,
@@ -304,7 +304,7 @@
     "iphone16promax": {
       "name": "iPhone 16 Pro Max",
       "abbr": "IP16PM",
-      "vzwMO": 27.75,
+      "vzwMO": 30.53,
       "attMO": 30.53,
       "tmoDP": 0,
       "tmoMOADP": 0,
