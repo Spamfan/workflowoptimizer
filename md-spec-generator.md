@@ -1,15 +1,15 @@
 # BILL GENERATOR SPECIFICATION
 ### Subsystem: `js-generator.js`
-### Document Version: `v0.1.6`
+### Document Version: `v0.1.7`
 
 ---
 
 ### 1. OVERVIEW & SCOPE
 * **Purpose:** Provides a rapid, kiosk-optimized customer quote and onboarding tear-sheet generator for wireless device financing and rate plan estimates.
 * **Multi-Carrier Scope:** Supports AT&T (`att`), Verizon (`vzw`), and T-Mobile (`tmo`) single-line and multi-line customer setups.
-* **Core Output:** Compiles a 2-up printable tear-sheet (2 handouts per 8.5" x 11" page) layering `doc-ths.png` (top half) over `doc-generator-bottom.png` (bottom half).
-* **Zero-Margin Baked Layout Mandate:** Outer 0.35"–0.4" sheet margins are pre-baked directly into the sheet assets. The stage container and print rules enforce strictly `margin: 0; padding: 0; border: none;` to maintain exact 1:1 coordinate registration.
-* **Top-Half Population Rule:** Dynamic DOM overlays populate strictly on the top half (`doc-ths.png` clipped to top 50%). The bottom half renders `doc-generator-bottom.png` separated by a 50% dashed black center divider (`z-index: 20`).
+* **Core Output:** Compiles a 2-up printable tear-sheet (2 handouts per 8.5" x 11" page) using a single pre-composited base sheet `doc-generator-back.png` (top half THS layout, baked center cut line, and bottom half prepaid/postpaid intake quarters).
+* **Zero-Margin Baked Layout Mandate:** Outer 0.35"–0.4" sheet margins are pre-baked directly into `doc-generator-back.png`. The stage container and print rules enforce strictly `margin: 0; padding: 0; border: none;` to maintain exact 1:1 coordinate registration.
+* **Top-Half Population Rule:** Dynamic DOM overlays populate strictly on the top half of `doc-generator-back.png`. No top-50% image clipping or DOM center divider element is used.
 * **Print Typography:** Rendered overlays print in high-contrast solid black (`#000000`).
 
 ---
@@ -77,7 +77,7 @@
 ---
 
 ### 5. SECTION SUPPRESSION & MASKING OVERRIDES
-* **Layer Z-Stack:** `doc-generator-bottom.png` (`z-index: 1`, full 8.5x11 base), `doc-ths.png` (`z-index: 2`, `clip-path: inset(0 0 50% 0)`), `#gen-preview-mask` (`z-index: 5`), `.gen-overlay-item` (`z-index: 10`), `.gen-center-divider` (`z-index: 20`, `top: 50%` dashed `#000000` line).
+* **Layer Z-Stack:** `doc-generator-back.png` (`z-index: 1`, full 8.5x11 base), `#gen-preview-mask` (`z-index: 5`), `.gen-overlay-item` (`z-index: 10`).
 * **Default Suppression:** For `vzw` and `tmo`, a solid white masking rectangle (`#ffffff`) covers top-sheet Y: 25.5% to 50.0%, concealing notices and comparison circles.
 * **Manual Override Toggle:** A "White-out bill notices?" checkbox (`maskNotices`) allows unmasking VZW and TMO sections. When unchecked, the white mask hides, allowing reps to handwrite on the raw pre-printed lines.
 * **AT&T Visibility:** Always shows the full notice and calculation overlays.
@@ -109,4 +109,4 @@
 ### 8. INTEGRATION BOUNDARIES & CACHE BUSTING
 * **Module Ownership:** `js-generator.js` manages state calculation, input binding, and template population.
 * **Document Engine Handoff:** Dispatches print jobs directly via `window.print()`.
-* **Cache Busting:** Downstream consumers `js-app.js` and `index.html` pin version query strings (`./js-generator.js?v=0.1.4`, `styles.css?v=0.1.26`).
+* **Cache Busting:** Downstream consumers `js-app.js` and `index.html` pin version query strings (`./js-generator.js?v=0.1.4`, `styles.css?v=0.1.27`, `doc-generator-back.png?v=0.1.36`).

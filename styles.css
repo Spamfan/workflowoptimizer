@@ -1,4 +1,4 @@
-/* Prototype Crimson - styles.css v0.1.26 */
+/* Prototype Crimson - styles.css v0.1.27 */
 
 :root {
   --bg-color: #f0f2f5;
@@ -2830,7 +2830,7 @@ body {
   padding: 0;
 }
 
-.gen-bottom-sheet {
+.gen-back-sheet {
   position: absolute;
   top: 0;
   left: 0;
@@ -2838,18 +2838,6 @@ body {
   height: 100%;
   object-fit: fill;
   z-index: 1;
-  pointer-events: none;
-}
-
-.gen-base-sheet {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  clip-path: inset(0 0 50% 0);
-  z-index: 2;
   pointer-events: none;
 }
 
@@ -2861,18 +2849,6 @@ body {
   height: 24.5%;
   background-color: #ffffff;
   z-index: 5;
-  pointer-events: none;
-}
-
-.gen-center-divider {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 0;
-  border-top: 1.5px dashed #000000;
-  transform: translateY(-50%);
-  z-index: 20;
   pointer-events: none;
 }
 
