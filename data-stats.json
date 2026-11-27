@@ -376,11 +376,11 @@
     "iphone18pro": {
       "name": "iPhone 18 Pro",
       "abbr": "IP18PR",
-      "vzwMO": 31.92,
-      "attMO": 31.92,
-      "tmoDP": 867,
-      "tmoMOADP": 11.75,
-      "tmoMO": 47.88,
+      "vzwMO": 33.31,
+      "attMO": 33.31,
+      "tmoDP": 0,
+      "tmoMOADP": 0,
+      "tmoMO": 49.96,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
@@ -388,11 +388,11 @@
     "iphone18promax": {
       "name": "iPhone 18 Pro Max",
       "abbr": "IP18PM",
-      "vzwMO": 34.69,
-      "attMO": 34.69,
-      "tmoDP": 937,
-      "tmoMOADP": 13,
-      "tmoMO": 52.04,
+      "vzwMO": 36.08,
+      "attMO": 36.08,
+      "tmoDP": 0,
+      "tmoMOADP": 0,
+      "tmoMO": 54.13,
       "attBIC": null,
       "vzwBIC": null,
       "tmoBIC": null
@@ -400,7 +400,7 @@
     "iphoneair": {
       "name": "iPhone Air",
       "abbr": "IP AIR",
-      "vzwMO": 27.75,
+      "vzwMO": 30.53,
       "attMO": 30.53,
       "tmoDP": 0,
       "tmoMOADP": 0,
